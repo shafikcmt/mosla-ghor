@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             PriceSettingSeeder::class,
             ProductSeeder::class,
             ComboSeeder::class,
+            DeliveryZoneSeeder::class,
             BdAddressSeeder::class,
             FaqSeeder::class,
             ReviewSeeder::class,

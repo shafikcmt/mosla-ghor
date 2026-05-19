@@ -30,6 +30,7 @@ Route::post('/order', [OrderController::class, 'store'])->name('order.store');
 Route::get('/order/success/{orderNumber}', [OrderController::class, 'success'])->name('order.success');
 
 Route::prefix('admin')->name('admin.')->group(function () {
+    Route::get('/',      fn() => redirect()->route('admin.dashboard'));
     Route::get('login',  [AdminAuthController::class, 'showLogin'])->name('login');
     Route::post('login', [AdminAuthController::class, 'login'])->name('login.post');
     Route::post('logout', [AdminAuthController::class, 'logout'])->name('logout');
