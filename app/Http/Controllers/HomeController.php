@@ -14,9 +14,11 @@ class HomeController extends Controller
             ->with(['activePrices'])
             ->get();
 
-        $packagingCost   = PriceSetting::current()->default_packaging_cost;
+        $priceSetting    = PriceSetting::current();
+        $packagingCost   = $priceSetting->default_packaging_cost;
+        $minOrderAmount  = $priceSetting->minimum_order_amount;
         $paymentSettings = PaymentSetting::current();
 
-        return view('home', compact('products', 'packagingCost', 'paymentSettings'));
+        return view('home', compact('products', 'packagingCost', 'minOrderAmount', 'paymentSettings'));
     }
 }

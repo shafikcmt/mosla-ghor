@@ -83,8 +83,18 @@ class OrderController extends Controller
             ];
         }
 
-        $packagingCost = (float) $settings->default_packaging_cost;
-        $grandTotal    = $subtotal + $packagingCost;
+        $packagingCost   = (float) $settings->default_packaging_cost;
+        $grandTotal      = $subtotal + $packagingCost;
+        $minOrderAmount  = (float) $settings->minimum_order_amount;
+
+        if ($grandTotal < $minOrderAmount) {
+            return response()->json([
+                'message' => 'ন্যূনতম অর্ডার পরিমাণ ৳' . number_format($minOrderAmount, 0) . '।',
+                'errors'  => ['items' => ['ন্যূনতম অর্ডার পরিমাণ ৳' . number_format($minOrderAmount, 0) . '। আরো পণ্য যোগ করুন।']],
+            ], 422);
+        }
+
+        $orderType = count($processedItems) === 1 ? 'single_product' : 'custom';
 
         // ── Generate unique order number ────────────────────────────────────────
         do {
@@ -92,7 +102,7 @@ class OrderController extends Controller
         } while (Order::where('order_number', $orderNumber)->exists());
 
         // ── Persist order + items in a transaction ──────────────────────────────
-        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $grandTotal, $orderNumber, $isManualPayment) {
+        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $grandTotal, $orderNumber, $isManualPayment, $orderType) {
             $order = Order::create([
                 'order_number'       => $orderNumber,
                 'customer_name'      => $validated['full_name'],
@@ -102,7 +112,7 @@ class OrderController extends Controller
                 'district'           => $validated['district'],
                 'area'               => $validated['area'],
                 'order_note'         => $validated['order_note'] ?? null,
-                'order_type'         => 'custom',
+                'order_type'         => $orderType,
                 'subtotal'           => $subtotal,
                 'packaging_cost'     => $packagingCost,
                 'delivery_charge'    => 0.00,

@@ -518,6 +518,10 @@ $productsForJs = $products->map(function ($p) {
                                 class="w-full bg-[#c9a227] text-[#0f3d22] font-bold py-3 rounded-xl text-sm shadow-lg opacity-40 cursor-not-allowed pointer-events-none transition-all">
                             অর্ডার দিন →
                         </button>
+                        <p id="min-order-warning" style="display:none"
+                           class="text-red-400 text-[11px] text-center mt-2 leading-tight">
+                            ন্যূনতম অর্ডার ৳{{ number_format($minOrderAmount, 0) }}। আরো পণ্য যোগ করুন।
+                        </p>
                         <p class="text-green-700 text-[10px] text-center mt-2 leading-relaxed">
                             পণ্য যোগ করুন · তারপর অর্ডার দিন
                         </p>
@@ -693,14 +697,14 @@ $productsForJs = $products->map(function ($p) {
 
                 {{-- Action buttons --}}
                 <div class="flex gap-3 mt-6">
-                    <button disabled title="শীঘ্রই আসছে"
-                            class="flex-1 border-2 border-[#c9a227] text-[#c9a227] py-3 rounded-xl text-sm font-bold opacity-50 cursor-not-allowed">
-                        কম্বো তে যোগ করুন
+                    <button onclick="addToComboFromModal()"
+                            class="flex-1 border-2 border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] py-3 rounded-xl text-sm font-bold transition-colors">
+                        + কম্বোতে যোগ করুন
                     </button>
-                    <a href="#contact" onclick="closeModal()"
-                       class="flex-1 bg-[#14532d] hover:bg-[#166534] text-[#fef9ee] py-3 rounded-xl text-sm font-bold text-center transition-colors shadow">
-                        অর্ডার করুন
-                    </a>
+                    <button onclick="orderSingleProduct()"
+                            class="flex-1 bg-[#14532d] hover:bg-[#166534] text-[#fef9ee] py-3 rounded-xl text-sm font-bold transition-colors shadow">
+                        এখনই অর্ডার করুন →
+                    </button>
                 </div>
             </div>
         </div>
@@ -742,6 +746,7 @@ $productsForJs = $products->map(function ($p) {
             {{-- Customer form --}}
             <form id="order-form" action="{{ route('order.store') }}" method="POST">
                 @csrf
+                <input type="hidden" name="order_type" id="order-type-input" value="custom">
                 {{-- Hidden combo item fields populated by JS --}}
                 <div id="order-items-hidden"></div>
 
@@ -912,6 +917,7 @@ $productsForJs = $products->map(function ($p) {
 // ── Product data (server-rendered JSON, keyed by id) ──────────────────────
 const PRODUCTS          = @json($productsForJs);
 const PACKAGING_COST    = {{ (int) $packagingCost }};
+const MIN_ORDER_AMOUNT  = {{ (int) $minOrderAmount }};
 const PAYMENT_SETTINGS  = {
     bkash_number:        @json($paymentSettings->bkash_number),
     rocket_number:       @json($paymentSettings->rocket_number),
@@ -1230,14 +1236,19 @@ function renderCombo() {
     }).join('');
 
     // Totals
-    const sub   = comboItems.reduce((s, x) => s + x.price, 0);
-    const grand = sub + PACKAGING_COST;
+    const sub    = comboItems.reduce((s, x) => s + x.price, 0);
+    const grand  = sub + PACKAGING_COST;
+    const minOk  = grand >= MIN_ORDER_AMOUNT;
     subEl.textContent   = '৳' + fmt(sub);
     totalEl.textContent = '৳' + fmt(n > 0 ? grand : PACKAGING_COST);
 
+    // Min order warning
+    const minWarn = document.getElementById('min-order-warning');
+    if (minWarn) minWarn.style.display = (n > 0 && !minOk) ? 'block' : 'none';
+
     // Order button active/disabled
     if (orderBtn) {
-        if (n > 0) {
+        if (n > 0 && minOk) {
             orderBtn.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
         } else {
             orderBtn.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
@@ -1269,9 +1280,68 @@ function goToCombo(productId) {
     }, 500);
 }
 
+// ── Single Product Order ──────────────────────────────────────────────────
+function orderSingleProduct() {
+    const p = PRODUCTS[currentId];
+    if (!p) return;
+    const sel     = document.getElementById('modal-qty-sel');
+    const priceId = parseInt(sel ? sel.value : 0, 10);
+    if (!priceId) {
+        if (sel) { sel.style.borderColor = '#ef4444'; setTimeout(() => { sel.style.borderColor = ''; }, 1500); }
+        return;
+    }
+    const price = p.prices.find(x => x.id === priceId);
+    if (!price) return;
+
+    comboUid++;
+    comboItems = [{ uid: comboUid, productId: currentId, priceId, quantity_gram: price.quantity_gram, nameBn: p.name_bn, label: price.label, price: price.final_price }];
+
+    renderCombo();
+    closeModal();
+    openOrderForm();
+}
+
+// ── Add to Combo from Modal ───────────────────────────────────────────────
+function addToComboFromModal() {
+    const p = PRODUCTS[currentId];
+    if (!p) return;
+    const sel     = document.getElementById('modal-qty-sel');
+    const priceId = parseInt(sel ? sel.value : 0, 10);
+    if (!priceId) {
+        if (sel) { sel.style.borderColor = '#ef4444'; setTimeout(() => { sel.style.borderColor = ''; }, 1500); }
+        return;
+    }
+    const price = p.prices.find(x => x.id === priceId);
+    if (!price) return;
+
+    const dup = comboItems.find(x => x.productId === currentId && x.priceId === priceId);
+    if (dup) { closeModal(); flashComboItem(dup.uid); return; }
+
+    comboUid++;
+    comboItems.push({ uid: comboUid, productId: currentId, priceId, quantity_gram: price.quantity_gram, nameBn: p.name_bn, label: price.label, price: price.final_price });
+    renderCombo();
+    closeModal();
+
+    const sec = document.getElementById('combo-builder');
+    if (sec) sec.scrollIntoView({ behavior: 'smooth' });
+}
+
 // ── Order Form ────────────────────────────────────────────────────────────
 function openOrderForm() {
     if (comboItems.length === 0) return;
+
+    const sub   = comboItems.reduce((s, x) => s + x.price, 0);
+    const grand = sub + PACKAGING_COST;
+
+    if (grand < MIN_ORDER_AMOUNT) {
+        const minWarn = document.getElementById('min-order-warning');
+        if (minWarn) minWarn.style.display = 'block';
+        return;
+    }
+
+    // Set order type
+    const orderTypeInput = document.getElementById('order-type-input');
+    if (orderTypeInput) orderTypeInput.value = comboItems.length === 1 ? 'single_product' : 'custom';
 
     // Build read-only combo preview
     const preview = document.getElementById('order-items-preview');
@@ -1287,9 +1357,7 @@ function openOrderForm() {
     }
 
     // Grand total display
-    const sub   = comboItems.reduce((s, x) => s + x.price, 0);
-    const grand = sub + PACKAGING_COST;
-    const tel   = document.getElementById('order-total-display');
+    const tel = document.getElementById('order-total-display');
     if (tel) tel.textContent = '৳' + fmt(grand);
 
     clearOrderErrors();

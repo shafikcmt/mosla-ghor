@@ -15,6 +15,7 @@ class PriceSetting extends Model
         'markup_1000g',
         'rounding_type',
         'default_packaging_cost',
+        'minimum_order_amount',
         'currency_symbol',
     ];
 
@@ -26,6 +27,7 @@ class PriceSetting extends Model
         'markup_500g'            => 'decimal:2',
         'markup_1000g'           => 'decimal:2',
         'default_packaging_cost' => 'decimal:2',
+        'minimum_order_amount'   => 'decimal:2',
     ];
 
     // Always load the single settings row via this method
