@@ -1204,6 +1204,18 @@ $productsForJs = $products->map(function ($p) {
 
                 </div>
 
+                {{-- Marketing consent --}}
+                <div class="px-6 pb-4">
+                    <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                        <input type="checkbox" name="accepts_marketing" value="1"
+                               id="f-accepts_marketing"
+                               class="mt-0.5 flex-shrink-0 rounded border-green-300 text-[#14532d] focus:ring-[#14532d]">
+                        <span class="text-gray-500 text-xs leading-relaxed">
+                            আমি মসলা ঘর থেকে নতুন অফার ও আপডেট পেতে চাই।
+                        </span>
+                    </label>
+                </div>
+
                 {{-- Submit --}}
                 <div class="px-6 pb-6">
                     <button type="submit" id="order-submit-btn"

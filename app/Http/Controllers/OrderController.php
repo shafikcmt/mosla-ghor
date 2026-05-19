@@ -7,6 +7,7 @@ use App\Models\BdDivision;
 use App\Models\BdUnion;
 use App\Models\BdUpazila;
 use App\Models\Combo;
+use App\Models\Customer;
 use App\Models\DeliveryLocation;
 use App\Models\DeliveryZone;
 use App\Models\Order;
@@ -272,6 +273,7 @@ class OrderController extends Controller
                     'paid_amount'           => $isManualPayment ? ($validated['paid_amount'] ?? null) : null,
                     'payment_status'        => 'pending',
                     'order_status'          => 'pending',
+                    'accepts_marketing'     => false,
                     'combo_id'              => $orderComboId,
                     'bd_division_id'        => $bdDivision->id,
                     'bd_district_id'        => $bdDistrict->id,
@@ -310,10 +312,51 @@ class OrderController extends Controller
             $order->update(['payment_screenshot' => $path]);
         }
 
+        $this->upsertCustomer($order, $request->boolean('accepts_marketing'));
+
         return response()->json([
             'success'  => true,
             'redirect' => route('order.success', $order->order_number),
         ]);
+    }
+
+    private function upsertCustomer(Order $order, bool $acceptsMarketing): void
+    {
+        try {
+            $addressData = [
+                'last_division_name' => $order->division_name,
+                'last_district_name' => $order->district_name,
+                'last_upazila_name'  => $order->upazila_name,
+                'last_union_name'    => $order->union_name,
+                'last_full_address'  => $order->full_address,
+                'last_order_at'      => $order->created_at,
+            ];
+
+            $existing = Customer::where('mobile_number', $order->mobile_number)->first();
+
+            if ($existing) {
+                Customer::where('id', $existing->id)->update(array_merge($addressData, [
+                    'name'               => $order->customer_name,
+                    'alternative_number' => $order->alternative_number ?? $existing->alternative_number,
+                    'accepts_marketing'  => $existing->accepts_marketing || $acceptsMarketing,
+                    'total_orders'       => DB::raw('total_orders + 1'),
+                    'total_spent'        => DB::raw('total_spent + ' . (float) $order->grand_total),
+                ]));
+                $order->update(['customer_id' => $existing->id, 'accepts_marketing' => $existing->accepts_marketing || $acceptsMarketing]);
+            } else {
+                $customer = Customer::create(array_merge($addressData, [
+                    'name'               => $order->customer_name,
+                    'mobile_number'      => $order->mobile_number,
+                    'alternative_number' => $order->alternative_number,
+                    'total_orders'       => 1,
+                    'total_spent'        => (float) $order->grand_total,
+                    'accepts_marketing'  => $acceptsMarketing,
+                ]));
+                $order->update(['customer_id' => $customer->id, 'accepts_marketing' => $acceptsMarketing]);
+            }
+        } catch (\Exception) {
+            // Non-critical — order is already placed successfully
+        }
     }
 
     public function success(string $orderNumber)

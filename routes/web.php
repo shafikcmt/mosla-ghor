@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\DeliveryLocationController as AdminDeliveryLocati
 use App\Http\Controllers\Admin\DeliverySettingController as AdminDeliverySettingController;
 use App\Http\Controllers\Admin\DeliveryZoneController as AdminDeliveryZoneController;
 use App\Http\Controllers\Admin\GeneralSettingController as AdminGeneralSettingController;
+use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PaymentSettingController as AdminPaymentSettingController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
@@ -72,6 +73,11 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
 
     Route::resource('combos', AdminComboController::class);
     Route::post('combos/{combo}/toggle', [AdminComboController::class, 'toggle'])->name('combos.toggle');
+
+    Route::get('customers/export', [AdminCustomerController::class, 'export'])->name('customers.export');
+    Route::get('customers', [AdminCustomerController::class, 'index'])->name('customers.index');
+    Route::get('customers/{customer}', [AdminCustomerController::class, 'show'])->name('customers.show');
+    Route::put('customers/{customer}', [AdminCustomerController::class, 'update'])->name('customers.update');
 
     Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');

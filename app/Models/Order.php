@@ -24,6 +24,8 @@ class Order extends Model
         'sent_to_courier_at', 'delivered_at', 'returned_at',
         'delivery_charge_overridden', 'courier_cost_overridden', 'zone_overridden',
         'stock_deducted_at', 'stock_restored_at',
+        // CRM
+        'customer_id', 'accepts_marketing',
     ];
 
     protected $casts = [
@@ -43,6 +45,7 @@ class Order extends Model
         'returned_at'                => 'datetime',
         'stock_deducted_at'          => 'datetime',
         'stock_restored_at'          => 'datetime',
+        'accepts_marketing'          => 'boolean',
     ];
 
     public function items(): HasMany
@@ -68,5 +71,10 @@ class Order extends Model
     public function deliveryRate(): BelongsTo
     {
         return $this->belongsTo(DeliveryRate::class, 'delivery_rate_id');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 }
