@@ -600,6 +600,56 @@ $productsForJs = $products->map(function ($p) {
 
 <div class="gold-rule"></div>
 
+{{-- ━━━━━━━━━━━━━━━━  REVIEWS  ━━━━━━━━━━━━━━━━ --}}
+@if($reviews->isNotEmpty())
+<section id="reviews" class="py-16 md:py-20 px-5 bg-[#fef9ee]">
+    <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-12">
+            <div class="flex items-center justify-center gap-4 mb-3">
+                <div class="h-px w-14 bg-[#c9a227] opacity-40"></div>
+                <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">Customer Reviews</span>
+                <div class="h-px w-14 bg-[#c9a227] opacity-40"></div>
+            </div>
+            <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">গ্রাহকরা কী বলছেন?</h2>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            @foreach($reviews as $review)
+            <div class="bg-white rounded-2xl shadow-sm border border-amber-100 p-6 flex flex-col gap-4 hover:shadow-md transition-shadow">
+                <div class="flex items-center gap-1 text-amber-400 text-lg leading-none">
+                    @for($s = 1; $s <= 5; $s++)
+                        @if($s <= $review->rating)
+                            <span>★</span>
+                        @else
+                            <span class="text-gray-200">★</span>
+                        @endif
+                    @endfor
+                </div>
+                <p class="text-gray-700 text-sm leading-relaxed flex-1">"{{ $review->review_text }}"</p>
+                <div class="flex items-center gap-3 pt-2 border-t border-gray-50">
+                    @if($review->image)
+                        <img src="{{ $review->image }}" alt="{{ $review->customer_name }}"
+                             class="w-10 h-10 rounded-full object-cover border-2 border-amber-100">
+                    @else
+                        <div class="w-10 h-10 rounded-full bg-[#14532d] flex items-center justify-center flex-shrink-0">
+                            <span class="text-[#c9a227] font-bold text-base">{{ mb_substr($review->customer_name, 0, 1) }}</span>
+                        </div>
+                    @endif
+                    <div>
+                        <div class="text-sm font-semibold text-gray-800">{{ $review->customer_name }}</div>
+                        @if($review->customer_location)
+                            <div class="text-xs text-gray-400">{{ $review->customer_location }}</div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</section>
+
+<div class="gold-rule"></div>
+@endif
+
 {{-- ━━━━━━━━━━━━━━━━  WHY US  ━━━━━━━━━━━━━━━━ --}}
 <section id="why-us" class="bg-[#14532d] py-16 md:py-20 px-5">
     <div class="max-w-5xl mx-auto">
@@ -629,6 +679,43 @@ $productsForJs = $products->map(function ($p) {
         </div>
     </div>
 </section>
+
+{{-- ━━━━━━━━━━━━━━━━  FAQ  ━━━━━━━━━━━━━━━━ --}}
+@if($faqs->isNotEmpty())
+<section id="faq" class="py-16 md:py-20 px-5">
+    <div class="max-w-3xl mx-auto">
+        <div class="text-center mb-12">
+            <div class="flex items-center justify-center gap-4 mb-3">
+                <div class="h-px w-14 bg-[#c9a227] opacity-40"></div>
+                <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">FAQ</span>
+                <div class="h-px w-14 bg-[#c9a227] opacity-40"></div>
+            </div>
+            <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">সাধারণ প্রশ্নোত্তর</h2>
+        </div>
+        <div class="space-y-3" id="faq-list">
+            @foreach($faqs as $i => $faq)
+            <div class="border border-amber-100 rounded-xl overflow-hidden bg-white shadow-sm">
+                <button type="button"
+                        onclick="toggleFaq({{ $i }})"
+                        class="w-full text-left px-6 py-4 flex items-center justify-between gap-4 hover:bg-amber-50 transition-colors">
+                    <span class="text-[#14532d] font-semibold text-sm md:text-base leading-snug">{{ $faq->question }}</span>
+                    <svg id="faq-icon-{{ $i }}" class="w-5 h-5 text-[#c9a227] flex-shrink-0 transition-transform duration-200"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div id="faq-body-{{ $i }}" class="hidden px-6 pb-5">
+                    <div class="h-px bg-amber-100 mb-4"></div>
+                    <p class="text-gray-600 text-sm leading-relaxed">{{ $faq->answer }}</p>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</section>
+
+<div class="gold-rule"></div>
+@endif
 
 {{-- ━━━━━━━━━━━━━━━━  CONTACT  ━━━━━━━━━━━━━━━━ --}}
 <section id="contact" class="bg-[#fef9ee] py-12 px-5 border-t border-amber-100">
@@ -2187,6 +2274,15 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.textContent = 'অর্ডার দিন →';
     });
 });
+
+function toggleFaq(i) {
+    const body = document.getElementById('faq-body-' + i);
+    const icon = document.getElementById('faq-icon-' + i);
+    if (!body) return;
+    const open = !body.classList.contains('hidden');
+    body.classList.toggle('hidden', open);
+    if (icon) icon.style.transform = open ? '' : 'rotate(180deg)';
+}
 </script>
 
 </body>

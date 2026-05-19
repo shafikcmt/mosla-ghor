@@ -25,6 +25,8 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             ComboSeeder::class,
             BdAddressSeeder::class,
+            FaqSeeder::class,
+            ReviewSeeder::class,
         ]);
     }
 }
