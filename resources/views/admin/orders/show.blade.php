@@ -53,7 +53,7 @@
                 ];
                 $pColors = ['pending' => 'bg-yellow-100 text-yellow-700', 'verified' => 'bg-green-100 text-green-700', 'failed' => 'bg-red-100 text-red-700'];
                 $pLabels = ['pending' => 'পেমেন্ট অপেক্ষায়', 'verified' => 'পেমেন্ট যাচাই হয়েছে', 'failed' => 'পেমেন্ট ব্যর্থ'];
-                $typeLabels = ['single_product' => 'একক পণ্য', 'custom' => 'কাস্টম কম্বো', 'retail' => 'রিটেইল', 'wholesale' => 'হোলসেল'];
+                $typeLabels = ['single_product' => 'একক পণ্য', 'custom' => 'কাস্টম কম্বো', 'fixed_combo' => 'ফিক্সড কম্বো', 'retail' => 'রিটেইল', 'wholesale' => 'হোলসেল'];
             @endphp
             <span class="px-2.5 py-1 rounded text-xs font-semibold {{ $oColors[$order->order_status] ?? 'bg-gray-100 text-gray-600' }}">
                 {{ $oLabels[$order->order_status] ?? $order->order_status }}

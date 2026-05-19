@@ -23,6 +23,8 @@
            class="text-gray-300 hover:text-white text-sm transition-colors">ডেলিভারি সেটিং</a>
         <a href="{{ route('admin.delivery-zones.index') }}"
            class="text-gray-300 hover:text-white text-sm transition-colors">ডেলিভারি জোন</a>
+        <a href="{{ route('admin.combos.index') }}"
+           class="text-gray-300 hover:text-white text-sm transition-colors">কম্বো</a>
         <a href="{{ route('admin.general-settings.index') }}"
            class="text-gray-300 hover:text-white text-sm transition-colors">জেনারেল সেটিং</a>
     </nav>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Combo;
 use App\Models\DeliveryZone;
 use App\Models\PaymentSetting;
 use App\Models\PriceSetting;
@@ -26,6 +27,25 @@ class HomeController extends Controller
             ->orderBy('zone_name')
             ->get();
 
+        $fixedCombos = Combo::active()
+            ->with(['items.product'])
+            ->orderBy('sort_order')
+            ->get();
+
+        $fixedCombosForJs = $fixedCombos->map(fn($c) => [
+            'id'         => $c->id,
+            'name'       => $c->name,
+            'sell_price' => (float) $c->sell_price,
+            'items'      => $c->items->map(fn($item) => [
+                'product_name'  => $item->product?->name_bn ?? '',
+                'quantity_gram' => $item->quantity_gram,
+                'label'         => $item->quantity_gram >= 1000
+                    ? ($item->quantity_gram / 1000) . ' কেজি'
+                    : $item->quantity_gram . ' গ্রাম',
+                'unit_price'    => (float) $item->unit_price,
+            ])->values()->all(),
+        ])->values();
+
         $zonesForJs = $activeZones->map(fn($z) => [
             'id'                           => $z->id,
             'zone_name'                    => $z->zone_name,
@@ -40,6 +60,6 @@ class HomeController extends Controller
             ])->values()->all(),
         ])->values();
 
-        return view('home', compact('products', 'packagingCost', 'minOrderAmount', 'paymentSettings', 'activeZones', 'zonesForJs'));
+        return view('home', compact('products', 'packagingCost', 'minOrderAmount', 'paymentSettings', 'activeZones', 'zonesForJs', 'fixedCombos', 'fixedCombosForJs'));
     }
 }

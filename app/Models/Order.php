@@ -32,6 +32,7 @@ class Order extends Model
         'paid_amount',
         'payment_status',
         'order_status',
+        'combo_id',
     ];
 
     protected $casts = [

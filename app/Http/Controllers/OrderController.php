@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Combo;
 use App\Models\DeliveryLocation;
 use App\Models\DeliveryZone;
 use App\Models\Order;
@@ -27,21 +28,24 @@ class OrderController extends Controller
 
         $isManualPayment = in_array($request->input('payment_method'), ['bkash', 'rocket', 'nagad']);
 
+        $isComboOrder = $request->filled('combo_id');
+
         $validated = $request->validate([
             'full_name'                => ['required', 'string', 'max:100'],
             'mobile_number'            => ['required', 'string', 'regex:/^01[3-9]\d{8}$/'],
             'alternative_number'       => ['nullable', 'string', 'regex:/^01[3-9]\d{8}$/'],
             'full_address'             => ['required', 'string', 'max:500'],
             'order_note'               => ['nullable', 'string', 'max:500'],
+            'combo_id'                 => ['nullable', 'integer', 'exists:combos,id'],
             'delivery_zone_id'         => ['required', 'integer', 'exists:delivery_zones,id'],
             'delivery_location_id'     => ['required', 'integer', 'exists:delivery_locations,id'],
             'payment_method'           => ['required', 'string', Rule::in($enabledMethods)],
             'sender_number'            => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:30'],
             'transaction_id'           => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:100'],
             'paid_amount'              => [$isManualPayment ? 'required' : 'nullable', 'numeric', 'min:0'],
-            'items'                    => ['required', 'array', 'min:1', 'max:20'],
-            'items.*.product_id'       => ['required', 'integer', 'exists:products,id'],
-            'items.*.quantity_gram'    => ['required', 'integer', 'in:25,50,100,250,500,1000'],
+            'items'                    => [$isComboOrder ? 'nullable' : 'required', 'array', 'min:1', 'max:20'],
+            'items.*.product_id'       => ['required_with:items', 'integer', 'exists:products,id'],
+            'items.*.quantity_gram'    => ['required_with:items', 'integer', 'in:25,50,100,250,500,1000'],
         ], [
             'mobile_number.regex'          => 'সঠিক মোবাইল নম্বর দিন। যেমন: 01700000000',
             'alternative_number.regex'     => 'সঠিক বিকল্প নম্বর দিন। যেমন: 01700000000',
@@ -60,31 +64,65 @@ class OrderController extends Controller
         $priceSettings  = PriceSetting::current();
         $subtotal       = 0.0;
         $processedItems = [];
+        $orderComboId   = null;
+        $orderType      = 'custom';
 
-        foreach ($validated['items'] as $item) {
-            $productPrice = ProductPrice::with('product')
-                ->where('product_id', (int) $item['product_id'])
-                ->where('quantity_gram', (int) $item['quantity_gram'])
+        if ($isComboOrder) {
+            // Fixed combo branch — derive everything from DB
+            $combo = Combo::with('items.product')
+                ->where('id', (int) $validated['combo_id'])
                 ->where('is_active', true)
                 ->first();
 
-            if (! $productPrice || ! $productPrice->product?->is_active) {
+            if (! $combo) {
                 return response()->json([
-                    'message' => 'একটি পণ্যের মূল্য পাওয়া যায়নি। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।',
-                    'errors'  => ['items' => ['একটি পণ্যের তথ্য পাওয়া যায়নি।']],
+                    'message' => 'কম্বোটি পাওয়া যায়নি বা নিষ্ক্রিয়।',
+                    'errors'  => ['items' => ['কম্বো পাওয়া যায়নি।']],
                 ], 422);
             }
 
-            $lineTotal = (float) $productPrice->final_price;
-            $subtotal += $lineTotal;
+            $subtotal     = (float) $combo->sell_price;
+            $orderComboId = $combo->id;
+            $orderType    = 'fixed_combo';
 
-            $processedItems[] = [
-                'product_id'    => $productPrice->product->id,
-                'product_name'  => $productPrice->product->name_bn,
-                'quantity_gram' => (int) $item['quantity_gram'],
-                'unit_price'    => $lineTotal,
-                'line_total'    => $lineTotal,
-            ];
+            foreach ($combo->items as $item) {
+                $processedItems[] = [
+                    'product_id'    => $item->product_id,
+                    'product_name'  => $item->product?->name_bn ?? '',
+                    'quantity_gram' => $item->quantity_gram,
+                    'unit_price'    => (float) $item->unit_price,
+                    'line_total'    => (float) $item->line_total,
+                ];
+            }
+        } else {
+            // Custom / single product branch
+            foreach ($validated['items'] as $item) {
+                $productPrice = ProductPrice::with('product')
+                    ->where('product_id', (int) $item['product_id'])
+                    ->where('quantity_gram', (int) $item['quantity_gram'])
+                    ->where('is_active', true)
+                    ->first();
+
+                if (! $productPrice || ! $productPrice->product?->is_active) {
+                    return response()->json([
+                        'message' => 'একটি পণ্যের মূল্য পাওয়া যায়নি। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।',
+                        'errors'  => ['items' => ['একটি পণ্যের তথ্য পাওয়া যায়নি।']],
+                    ], 422);
+                }
+
+                $lineTotal = (float) $productPrice->final_price;
+                $subtotal += $lineTotal;
+
+                $processedItems[] = [
+                    'product_id'    => $productPrice->product->id,
+                    'product_name'  => $productPrice->product->name_bn,
+                    'quantity_gram' => (int) $item['quantity_gram'],
+                    'unit_price'    => $lineTotal,
+                    'line_total'    => $lineTotal,
+                ];
+            }
+
+            $orderType = count($processedItems) === 1 ? 'single_product' : 'custom';
         }
 
         // ── Backend delivery charge — zone/location lookup, never trust frontend ─
@@ -117,14 +155,12 @@ class OrderController extends Controller
         $deliveryCharge = $zone->chargeFor($location, $subtotal);
         $grandTotal     = $subtotal + $packagingCost + $deliveryCharge;
 
-        if ($grandTotal < $minOrderAmount) {
+        if (! $isComboOrder && $grandTotal < $minOrderAmount) {
             return response()->json([
                 'message' => 'ন্যূনতম অর্ডার পরিমাণ ৳' . number_format($minOrderAmount, 0) . '।',
                 'errors'  => ['items' => ['ন্যূনতম অর্ডার পরিমাণ ৳' . number_format($minOrderAmount, 0) . '। আরো পণ্য যোগ করুন।']],
             ], 422);
         }
-
-        $orderType = count($processedItems) === 1 ? 'single_product' : 'custom';
 
         // ── Generate unique order number ────────────────────────────────────────
         do {
@@ -132,7 +168,7 @@ class OrderController extends Controller
         } while (Order::where('order_number', $orderNumber)->exists());
 
         // ── Persist order + items in a transaction ──────────────────────────────
-        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge, $grandTotal, $orderNumber, $isManualPayment, $orderType, $zone, $location) {
+        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge, $grandTotal, $orderNumber, $isManualPayment, $orderType, $zone, $location, $orderComboId) {
             $order = Order::create([
                 'order_number'          => $orderNumber,
                 'customer_name'         => $validated['full_name'],
@@ -158,6 +194,7 @@ class OrderController extends Controller
                 'paid_amount'           => $isManualPayment ? ($validated['paid_amount'] ?? null) : null,
                 'payment_status'        => 'pending',
                 'order_status'          => 'pending',
+                'combo_id'              => $orderComboId,
             ]);
 
             foreach ($processedItems as $item) {

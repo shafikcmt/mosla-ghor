@@ -403,6 +403,70 @@ $productsForJs = $products->map(function ($p) {
 
 <div class="gold-rule"></div>
 
+{{-- ━━━━━━━━━━━━━━━━  FIXED COMBOS  ━━━━━━━━━━━━━━━━ --}}
+@if($fixedCombos->isNotEmpty())
+<section id="fixed-combos" class="py-16 md:py-20 px-5">
+    <div class="max-w-7xl mx-auto">
+
+        <div class="text-center mb-10">
+            <div class="flex items-center justify-center gap-4 mb-3">
+                <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
+                <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">Ready Packs</span>
+                <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
+            </div>
+            <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">ফিক্সড কম্বো প্যাক</h2>
+            <p class="text-gray-400 text-sm mt-2 max-w-md mx-auto leading-relaxed">
+                রেডি-মেড মশলার সেট — এক ক্লিকে অর্ডার করুন।
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            @foreach($fixedCombos as $combo)
+            <div class="bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col transition-shadow hover:shadow-lg">
+
+                <div class="bg-gradient-to-br from-[#14532d] to-[#1a6b3a] px-5 pt-5 pb-4 relative">
+                    @if($combo->badge_text)
+                    <span class="absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#c9a227] text-[#0f3d22]">
+                        {{ $combo->badge_text }}
+                    </span>
+                    @endif
+                    <h3 class="font-serif-bn text-[#c9a227] text-xl font-bold leading-snug pr-16">{{ $combo->name }}</h3>
+                    @if($combo->short_description)
+                    <p class="text-green-300 text-xs mt-1 leading-relaxed">{{ $combo->short_description }}</p>
+                    @endif
+                    <div class="mt-3 text-[#fef9ee] font-serif-bn text-3xl font-bold">
+                        ৳{{ number_format($combo->sell_price, 0) }}
+                    </div>
+                </div>
+
+                <div class="px-5 py-4 flex-1">
+                    <ul class="space-y-1.5">
+                        @foreach($combo->items as $item)
+                        <li class="flex justify-between items-baseline text-sm">
+                            <span class="font-medium text-[#14532d]">{{ $item->product?->name_bn ?? 'পণ্য' }}</span>
+                            <span class="text-gray-400 text-xs ml-2 flex-shrink-0">
+                                {{ $item->quantity_gram >= 1000 ? ($item->quantity_gram / 1000).' কেজি' : $item->quantity_gram.' গ্রাম' }}
+                            </span>
+                        </li>
+                        @endforeach
+                    </ul>
+                </div>
+
+                <div class="px-5 pb-5">
+                    <button onclick="orderFixedCombo({{ $combo->id }})"
+                            class="w-full bg-[#c9a227] hover:bg-[#e2bb45] text-[#0f3d22] font-bold py-3 rounded-xl text-sm shadow transition-colors">
+                        এখনই অর্ডার করুন →
+                    </button>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</section>
+
+<div class="gold-rule"></div>
+@endif
+
 {{-- ━━━━━━━━━━━━━━━━  COMBO BUILDER  ━━━━━━━━━━━━━━━━ --}}
 <section id="combo-builder" class="py-16 md:py-20 px-5 bg-[#f6fdf8]">
     <div class="max-w-7xl mx-auto">
@@ -757,6 +821,7 @@ $productsForJs = $products->map(function ($p) {
             <form id="order-form" action="{{ route('order.store') }}" method="POST">
                 @csrf
                 <input type="hidden" name="order_type" id="order-type-input" value="custom">
+                <input type="hidden" name="combo_id" id="f-combo_id">
                 {{-- Hidden combo item fields populated by JS --}}
                 <div id="order-items-hidden"></div>
 
@@ -957,8 +1022,10 @@ const PAYMENT_SETTINGS  = {
     enabled_methods:     @json($paymentSettings->enabledMethods()),
 };
 const DELIVERY_ZONES = @json($zonesForJs);
+const FIXED_COMBOS   = @json($fixedCombosForJs);
 
-let currentId = null;
+let currentId    = null;
+let fixedComboData = null;
 
 // ── Modal open/close ──────────────────────────────────────────────────────
 function openModal(id) {
@@ -1358,34 +1425,64 @@ function addToComboFromModal() {
     if (sec) sec.scrollIntoView({ behavior: 'smooth' });
 }
 
+// ── Fixed Combo Order ─────────────────────────────────────────────────────
+function orderFixedCombo(comboId) {
+    const combo = FIXED_COMBOS.find(c => c.id === comboId);
+    if (!combo) return;
+    fixedComboData = combo;
+    comboItems = [];
+    renderCombo();
+    openOrderForm();
+}
+
 // ── Order Form ────────────────────────────────────────────────────────────
 function openOrderForm() {
-    if (comboItems.length === 0) return;
+    if (!fixedComboData && comboItems.length === 0) return;
 
-    const sub   = comboItems.reduce((s, x) => s + x.price, 0);
+    const sub   = getOrderSubtotal();
     const grand = sub + PACKAGING_COST;
 
-    if (grand < MIN_ORDER_AMOUNT) {
+    if (!fixedComboData && grand < MIN_ORDER_AMOUNT) {
         const minWarn = document.getElementById('min-order-warning');
         if (minWarn) minWarn.style.display = 'block';
         return;
     }
 
-    // Set order type
+    // Set order type & combo_id
     const orderTypeInput = document.getElementById('order-type-input');
-    if (orderTypeInput) orderTypeInput.value = comboItems.length === 1 ? 'single_product' : 'custom';
+    const comboIdInput   = document.getElementById('f-combo_id');
+    if (fixedComboData) {
+        if (orderTypeInput) orderTypeInput.value = 'fixed_combo';
+        if (comboIdInput)   comboIdInput.value   = fixedComboData.id;
+    } else {
+        if (orderTypeInput) orderTypeInput.value = comboItems.length === 1 ? 'single_product' : 'custom';
+        if (comboIdInput)   comboIdInput.value   = '';
+    }
 
     // Build read-only combo preview
     const preview = document.getElementById('order-items-preview');
     if (preview) {
-        preview.innerHTML = comboItems.map(item =>
-            `<div class="flex justify-between items-baseline gap-2">
-                <span class="text-gray-700 font-serif-bn font-medium truncate">${item.nameBn}
-                    <span class="text-gray-400 text-[11px] font-sans">(${item.label})</span>
-                </span>
-                <span class="text-[#c9a227] font-bold font-serif-bn flex-shrink-0">৳${fmt(item.price)}</span>
-            </div>`
-        ).join('');
+        if (fixedComboData) {
+            const nameRow = `<div class="text-[#14532d] text-xs font-bold uppercase tracking-wider mb-1">${fixedComboData.name}</div>`;
+            const itemRows = fixedComboData.items.map(item =>
+                `<div class="flex justify-between items-baseline gap-2">
+                    <span class="text-gray-700 font-serif-bn font-medium truncate">${item.product_name}
+                        <span class="text-gray-400 text-[11px] font-sans">(${item.label})</span>
+                    </span>
+                    <span class="text-[#c9a227] font-bold font-serif-bn flex-shrink-0">৳${fmt(item.unit_price)}</span>
+                </div>`
+            ).join('');
+            preview.innerHTML = nameRow + itemRows;
+        } else {
+            preview.innerHTML = comboItems.map(item =>
+                `<div class="flex justify-between items-baseline gap-2">
+                    <span class="text-gray-700 font-serif-bn font-medium truncate">${item.nameBn}
+                        <span class="text-gray-400 text-[11px] font-sans">(${item.label})</span>
+                    </span>
+                    <span class="text-[#c9a227] font-bold font-serif-bn flex-shrink-0">৳${fmt(item.price)}</span>
+                </div>`
+            ).join('');
+        }
     }
 
     // Reset zone/location selection
@@ -1416,7 +1513,7 @@ function openOrderForm() {
 
     // Show subtotal + packaging; delivery will be added when location is selected
     const tel = document.getElementById('order-total-display');
-    if (tel) tel.textContent = '৳' + fmt(sub + PACKAGING_COST);
+    if (tel) tel.textContent = '৳' + fmt(getOrderSubtotal() + PACKAGING_COST);
 
     clearOrderErrors();
     initPaymentMethods();
@@ -1433,6 +1530,9 @@ function closeOrderForm() {
     ov.style.display = 'none';
     wr.style.display = 'none';
     document.body.style.overflow = '';
+    fixedComboData = null;
+    const comboIdInput = document.getElementById('f-combo_id');
+    if (comboIdInput) comboIdInput.value = '';
 }
 
 function clearOrderErrors() {
@@ -1456,9 +1556,14 @@ const ZONE_CARD_SELECTED = 'border-2 border-[#14532d] rounded-xl px-3 py-3 text-
 const LOC_CARD_DEFAULT   = 'border border-green-200 rounded-xl px-4 py-2.5 flex justify-between items-center transition-colors bg-white hover:border-[#14532d]';
 const LOC_CARD_SELECTED  = 'border border-[#14532d] rounded-xl px-4 py-2.5 flex justify-between items-center transition-colors bg-green-50';
 
+function getOrderSubtotal() {
+    if (fixedComboData) return fixedComboData.sell_price;
+    return comboItems.reduce((s, x) => s + x.price, 0);
+}
+
 function calcDeliveryCharge(zone, location) {
     if (!zone || !location) return 0;
-    const sub = comboItems.reduce((s, x) => s + x.price, 0);
+    const sub = getOrderSubtotal();
     if (zone.free_delivery_minimum_amount !== null && sub >= zone.free_delivery_minimum_amount) {
         return 0;
     }
@@ -1504,9 +1609,8 @@ function onZoneSelect(zoneId) {
     if (delivEl) { delivEl.textContent = 'এলাকা বেছে নিন'; delivEl.className = 'text-gray-400 italic'; }
 
     // Update total (no delivery yet)
-    const sub = comboItems.reduce((s, x) => s + x.price, 0);
     const tel = document.getElementById('order-total-display');
-    if (tel) tel.textContent = '৳' + fmt(sub + PACKAGING_COST);
+    if (tel) tel.textContent = '৳' + fmt(getOrderSubtotal() + PACKAGING_COST);
 }
 
 function filterLocations(query) {
@@ -1565,8 +1669,7 @@ function onLocationSelect(locationId) {
     // Update delivery display
     const delivEl = document.getElementById('order-delivery-display');
     if (delivEl) {
-        const sub = comboItems.reduce((s, x) => s + x.price, 0);
-        const isFree = zone && zone.free_delivery_minimum_amount !== null && sub >= zone.free_delivery_minimum_amount;
+        const isFree = zone && zone.free_delivery_minimum_amount !== null && getOrderSubtotal() >= zone.free_delivery_minimum_amount;
         if (isFree) {
             delivEl.textContent = 'বিনামূল্যে ডেলিভারি!';
             delivEl.className   = 'text-green-600 font-semibold';
@@ -1577,8 +1680,7 @@ function onLocationSelect(locationId) {
     }
 
     // Update grand total
-    const sub   = comboItems.reduce((s, x) => s + x.price, 0);
-    const grand = sub + PACKAGING_COST + charge;
+    const grand = getOrderSubtotal() + PACKAGING_COST + charge;
     const tel   = document.getElementById('order-total-display');
     if (tel) tel.textContent = '৳' + fmt(grand);
 }
@@ -1681,7 +1783,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         clearOrderErrors();
 
-        if (comboItems.length === 0) {
+        if (!fixedComboData && comboItems.length === 0) {
             const el = document.getElementById('err-items');
             if (el) { el.textContent = 'কমপক্ষে একটি পণ্য যোগ করুন।'; el.classList.remove('hidden'); }
             return;
@@ -1707,7 +1809,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        populateOrderItems();
+        if (fixedComboData) {
+            const ci = document.getElementById('f-combo_id');
+            if (ci) ci.value = fixedComboData.id;
+            document.getElementById('order-items-hidden').innerHTML = '';
+        } else {
+            populateOrderItems();
+        }
 
         const btn = document.getElementById('order-submit-btn');
         btn.disabled    = true;

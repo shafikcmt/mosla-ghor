@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ComboController as AdminComboController;
 use App\Http\Controllers\Admin\DeliveryLocationController as AdminDeliveryLocationController;
 use App\Http\Controllers\Admin\DeliverySettingController as AdminDeliverySettingController;
 use App\Http\Controllers\Admin\DeliveryZoneController as AdminDeliveryZoneController;
@@ -44,6 +45,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::get('payment-settings', [AdminPaymentSettingController::class, 'index'])->name('payment-settings.index');
     Route::post('payment-settings', [AdminPaymentSettingController::class, 'update'])->name('payment-settings.update');
+
+    Route::resource('combos', AdminComboController::class);
+    Route::post('combos/{combo}/toggle', [AdminComboController::class, 'toggle'])->name('combos.toggle');
 
     Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
