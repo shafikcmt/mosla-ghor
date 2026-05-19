@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Admin') — মসলা স্টোর</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    @stack('styles')
 </head>
 <body class="bg-gray-100 min-h-screen">
 
@@ -14,6 +15,8 @@
            class="text-gray-300 hover:text-white text-sm transition-colors">পণ্য তালিকা</a>
         <a href="{{ route('admin.products.create') }}"
            class="text-gray-300 hover:text-white text-sm transition-colors">+ নতুন পণ্য</a>
+        <a href="{{ route('admin.orders.index') }}"
+           class="text-gray-300 hover:text-white text-sm transition-colors">অর্ডার তালিকা</a>
     </nav>
 
     <main class="max-w-5xl mx-auto px-4 py-6">
