@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BdDistrict;
+use App\Models\BdDivision;
+use App\Models\BdUnion;
+use App\Models\BdUpazila;
 use App\Models\Combo;
 use App\Models\DeliveryLocation;
 use App\Models\DeliveryZone;
@@ -36,6 +40,10 @@ class OrderController extends Controller
             'alternative_number'       => ['nullable', 'string', 'regex:/^01[3-9]\d{8}$/'],
             'full_address'             => ['required', 'string', 'max:500'],
             'order_note'               => ['nullable', 'string', 'max:500'],
+            'bd_division_id'           => ['required', 'integer', 'exists:bd_divisions,id'],
+            'bd_district_id'           => ['required', 'integer', 'exists:bd_districts,id'],
+            'bd_upazila_id'            => ['required', 'integer', 'exists:bd_upazilas,id'],
+            'bd_union_id'              => ['nullable', 'integer', 'exists:bd_unions,id'],
             'combo_id'                 => ['nullable', 'integer', 'exists:combos,id'],
             'delivery_zone_id'         => ['required', 'integer', 'exists:delivery_zones,id'],
             'delivery_location_id'     => ['required', 'integer', 'exists:delivery_locations,id'],
@@ -55,10 +63,44 @@ class OrderController extends Controller
             'sender_number.required'       => 'সেন্ডার নম্বর দিন।',
             'transaction_id.required'      => 'ট্রানজেকশন আইডি দিন।',
             'paid_amount.required'         => 'পেমেন্ট করা পরিমাণ দিন।',
+            'bd_division_id.required'      => 'বিভাগ বেছে নিন।',
+            'bd_district_id.required'      => 'জেলা বেছে নিন।',
+            'bd_upazila_id.required'       => 'উপজেলা বেছে নিন।',
             'items.required'               => 'কমপক্ষে একটি পণ্য যোগ করুন।',
             'items.min'                    => 'কমপক্ষে একটি পণ্য যোগ করুন।',
             'items.max'                    => 'সর্বোচ্চ ২০টি পণ্য যোগ করা যাবে।',
         ]);
+
+        // ── Verify BD address hierarchy (prevents tampered IDs from DevTools) ────
+        $bdDivision = BdDivision::where('id', (int) $validated['bd_division_id'])
+            ->where('is_active', true)->first();
+        if (! $bdDivision) {
+            return response()->json(['message' => 'বিভাগ পাওয়া যায়নি।', 'errors' => ['bd_division_id' => ['বিভাগ পাওয়া যায়নি।']]], 422);
+        }
+
+        $bdDistrict = BdDistrict::where('id', (int) $validated['bd_district_id'])
+            ->where('division_id', $bdDivision->id)
+            ->where('is_active', true)->first();
+        if (! $bdDistrict) {
+            return response()->json(['message' => 'জেলা পাওয়া যায়নি বা বিভাগের সাথে মিলছে না।', 'errors' => ['bd_district_id' => ['জেলা পাওয়া যায়নি।']]], 422);
+        }
+
+        $bdUpazila = BdUpazila::where('id', (int) $validated['bd_upazila_id'])
+            ->where('district_id', $bdDistrict->id)
+            ->where('is_active', true)->first();
+        if (! $bdUpazila) {
+            return response()->json(['message' => 'উপজেলা পাওয়া যায়নি বা জেলার সাথে মিলছে না।', 'errors' => ['bd_upazila_id' => ['উপজেলা পাওয়া যায়নি।']]], 422);
+        }
+
+        $bdUnion = null;
+        if (! empty($validated['bd_union_id'])) {
+            $bdUnion = BdUnion::where('id', (int) $validated['bd_union_id'])
+                ->where('upazila_id', $bdUpazila->id)
+                ->where('is_active', true)->first();
+            if (! $bdUnion) {
+                return response()->json(['message' => 'ইউনিয়ন পাওয়া যায়নি বা উপজেলার সাথে মিলছে না।', 'errors' => ['bd_union_id' => ['ইউনিয়ন পাওয়া যায়নি।']]], 422);
+            }
+        }
 
         // ── Backend price recalculation (never trust frontend prices) ──────────
         $priceSettings  = PriceSetting::current();
@@ -168,7 +210,7 @@ class OrderController extends Controller
         } while (Order::where('order_number', $orderNumber)->exists());
 
         // ── Persist order + items in a transaction ──────────────────────────────
-        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge, $grandTotal, $orderNumber, $isManualPayment, $orderType, $zone, $location, $orderComboId) {
+        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge, $grandTotal, $orderNumber, $isManualPayment, $orderType, $zone, $location, $orderComboId, $bdDivision, $bdDistrict, $bdUpazila, $bdUnion) {
             $order = Order::create([
                 'order_number'          => $orderNumber,
                 'customer_name'         => $validated['full_name'],
@@ -195,6 +237,14 @@ class OrderController extends Controller
                 'payment_status'        => 'pending',
                 'order_status'          => 'pending',
                 'combo_id'              => $orderComboId,
+                'bd_division_id'        => $bdDivision->id,
+                'bd_district_id'        => $bdDistrict->id,
+                'bd_upazila_id'         => $bdUpazila->id,
+                'bd_union_id'           => $bdUnion?->id,
+                'division_name'         => $bdDivision->bn_name,
+                'district_name'         => $bdDistrict->bn_name,
+                'upazila_name'          => $bdUpazila->bn_name,
+                'union_name'            => $bdUnion?->bn_name,
             ]);
 
             foreach ($processedItems as $item) {

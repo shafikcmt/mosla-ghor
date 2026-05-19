@@ -33,6 +33,14 @@ class Order extends Model
         'payment_status',
         'order_status',
         'combo_id',
+        'bd_division_id',
+        'bd_district_id',
+        'bd_upazila_id',
+        'bd_union_id',
+        'division_name',
+        'district_name',
+        'upazila_name',
+        'union_name',
     ];
 
     protected $casts = [

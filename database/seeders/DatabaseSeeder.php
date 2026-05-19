@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             PriceSettingSeeder::class,
             ProductSeeder::class,
             ComboSeeder::class,
+            BdAddressSeeder::class,
         ]);
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Admin\ComboController as AdminComboController;
 use App\Http\Controllers\Admin\DeliveryLocationController as AdminDeliveryLocationController;
 use App\Http\Controllers\Admin\DeliverySettingController as AdminDeliverySettingController;
@@ -13,6 +14,8 @@ use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class);
+
+Route::get('/address/unions/{upazila}', [AddressController::class, 'unions'])->name('address.unions');
 
 Route::post('/order', [OrderController::class, 'store'])->name('order.store');
 Route::get('/order/success/{orderNumber}', [OrderController::class, 'success'])->name('order.success');

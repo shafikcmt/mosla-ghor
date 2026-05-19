@@ -860,10 +860,92 @@ $productsForJs = $products->map(function ($p) {
                         </div>
                     </div>
 
+                    {{-- BD Address cascade --}}
+                    <div>
+                        <div class="text-[#14532d] text-[10px] font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <span>ঠিকানা</span>
+                            <span class="flex-1 h-px bg-green-100 inline-block"></span>
+                        </div>
+
+                        {{-- Division --}}
+                        <div class="mb-3" id="division-wrap">
+                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">বিভাগ <span class="text-red-400">*</span></label>
+                            <button type="button" id="division-btn" onclick="toggleAddrSection('division')"
+                                    class="w-full flex justify-between items-center border border-green-200 rounded-xl px-4 py-2.5 bg-white text-sm hover:border-[#14532d] transition-colors">
+                                <span id="division-display" class="text-gray-400">বিভাগ বেছে নিন</span>
+                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            <div id="division-section" class="hidden mt-2">
+                                <input type="text" id="division-search" placeholder="বিভাগ খুঁজুন..."
+                                       oninput="searchAddr('division', this.value)"
+                                       class="w-full border border-green-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#14532d] bg-white mb-1">
+                                <div id="division-list" class="border border-green-100 rounded-xl max-h-40 overflow-y-auto bg-white"></div>
+                            </div>
+                            <p id="err-bd_division_id" class="text-red-500 text-xs mt-1 hidden"></p>
+                        </div>
+
+                        {{-- District --}}
+                        <div class="mb-3" id="district-wrap" style="display:none">
+                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">জেলা <span class="text-red-400">*</span></label>
+                            <button type="button" id="district-btn" onclick="toggleAddrSection('district')"
+                                    class="w-full flex justify-between items-center border border-green-200 rounded-xl px-4 py-2.5 bg-white text-sm hover:border-[#14532d] transition-colors">
+                                <span id="district-display" class="text-gray-400">জেলা বেছে নিন</span>
+                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            <div id="district-section" class="hidden mt-2">
+                                <input type="text" id="district-search" placeholder="জেলা খুঁজুন..."
+                                       oninput="searchAddr('district', this.value)"
+                                       class="w-full border border-green-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#14532d] bg-white mb-1">
+                                <div id="district-list" class="border border-green-100 rounded-xl max-h-40 overflow-y-auto bg-white"></div>
+                            </div>
+                            <p id="err-bd_district_id" class="text-red-500 text-xs mt-1 hidden"></p>
+                        </div>
+
+                        {{-- Upazila --}}
+                        <div class="mb-3" id="upazila-wrap" style="display:none">
+                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">উপজেলা <span class="text-red-400">*</span></label>
+                            <button type="button" id="upazila-btn" onclick="toggleAddrSection('upazila')"
+                                    class="w-full flex justify-between items-center border border-green-200 rounded-xl px-4 py-2.5 bg-white text-sm hover:border-[#14532d] transition-colors">
+                                <span id="upazila-display" class="text-gray-400">উপজেলা বেছে নিন</span>
+                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            <div id="upazila-section" class="hidden mt-2">
+                                <input type="text" id="upazila-search" placeholder="উপজেলা খুঁজুন..."
+                                       oninput="searchAddr('upazila', this.value)"
+                                       class="w-full border border-green-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#14532d] bg-white mb-1">
+                                <div id="upazila-list" class="border border-green-100 rounded-xl max-h-40 overflow-y-auto bg-white"></div>
+                            </div>
+                            <p id="err-bd_upazila_id" class="text-red-500 text-xs mt-1 hidden"></p>
+                        </div>
+
+                        {{-- Union --}}
+                        <div class="mb-0" id="union-wrap" style="display:none">
+                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">ইউনিয়ন / এলাকা</label>
+                            <button type="button" id="union-btn" onclick="toggleAddrSection('union')"
+                                    class="w-full flex justify-between items-center border border-green-200 rounded-xl px-4 py-2.5 bg-white text-sm hover:border-[#14532d] transition-colors">
+                                <span id="union-display" class="text-gray-400">ইউনিয়ন / এলাকা বেছে নিন</span>
+                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            <div id="union-section" class="hidden mt-2">
+                                <input type="text" id="union-search" placeholder="ইউনিয়ন / এলাকা খুঁজুন..."
+                                       oninput="searchAddr('union', this.value)"
+                                       class="w-full border border-green-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#14532d] bg-white mb-1">
+                                <div id="union-list" class="border border-green-100 rounded-xl max-h-40 overflow-y-auto bg-white"></div>
+                            </div>
+                            <p id="err-bd_union_id" class="text-red-500 text-xs mt-1 hidden"></p>
+                        </div>
+
+                        {{-- Hidden address IDs --}}
+                        <input type="hidden" name="bd_division_id" id="f-bd_division_id">
+                        <input type="hidden" name="bd_district_id" id="f-bd_district_id">
+                        <input type="hidden" name="bd_upazila_id" id="f-bd_upazila_id">
+                        <input type="hidden" name="bd_union_id" id="f-bd_union_id">
+                    </div>
+
                     {{-- full_address --}}
                     <div>
                         <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
-                            পূর্ণ ঠিকানা <span class="text-red-400">*</span>
+                            বাড়ি / ফ্ল্যাট / রাস্তা <span class="text-red-400">*</span>
                         </label>
                         <textarea name="full_address" id="f-full_address" rows="2"
                                   placeholder="বাড়ি/ফ্ল্যাট নম্বর, রাস্তা, মহল্লা..."
@@ -1023,6 +1105,9 @@ const PAYMENT_SETTINGS  = {
 };
 const DELIVERY_ZONES = @json($zonesForJs);
 const FIXED_COMBOS   = @json($fixedCombosForJs);
+const BD_DIVISIONS   = @json($bdDivisions);
+const BD_DISTRICTS   = @json($bdDistricts);
+const BD_UPAZILAS    = @json($bdUpazilas);
 
 let currentId    = null;
 let fixedComboData = null;
@@ -1485,6 +1570,9 @@ function openOrderForm() {
         }
     }
 
+    // Reset BD address
+    resetBdAddress();
+
     // Reset zone/location selection
     selectedZoneId = null;
     selectedLocationId = null;
@@ -1533,10 +1621,13 @@ function closeOrderForm() {
     fixedComboData = null;
     const comboIdInput = document.getElementById('f-combo_id');
     if (comboIdInput) comboIdInput.value = '';
+    resetBdAddress();
 }
 
 function clearOrderErrors() {
-    ['full_name','mobile_number','alternative_number','full_address',
+    ['full_name','mobile_number','alternative_number',
+     'bd_division_id','bd_district_id','bd_upazila_id','bd_union_id',
+     'full_address',
      'delivery_zone_id','delivery_location_id',
      'items','payment_method','sender_number','transaction_id','paid_amount'].forEach(f => {
         const el = document.getElementById('err-' + f);
@@ -1555,6 +1646,224 @@ const ZONE_CARD_DEFAULT  = 'border-2 border-green-200 rounded-xl px-3 py-3 text-
 const ZONE_CARD_SELECTED = 'border-2 border-[#14532d] rounded-xl px-3 py-3 text-center transition-colors bg-green-50';
 const LOC_CARD_DEFAULT   = 'border border-green-200 rounded-xl px-4 py-2.5 flex justify-between items-center transition-colors bg-white hover:border-[#14532d]';
 const LOC_CARD_SELECTED  = 'border border-[#14532d] rounded-xl px-4 py-2.5 flex justify-between items-center transition-colors bg-green-50';
+
+// ── BD Address Autofill ───────────────────────────────────────────────────
+let bdDivisionId        = null;
+let bdDistrictId        = null;
+let bdUpazilaId         = null;
+let bdUnionId           = null;
+let bdUnionsForUpazila  = [];
+
+const ADDR_PLACEHOLDERS = {
+    division: 'বিভাগ বেছে নিন',
+    district: 'জেলা বেছে নিন',
+    upazila:  'উপজেলা বেছে নিন',
+    union:    'ইউনিয়ন / এলাকা বেছে নিন',
+};
+
+function resetBdAddress() {
+    bdDivisionId = bdDistrictId = bdUpazilaId = bdUnionId = null;
+    bdUnionsForUpazila = [];
+
+    ['division', 'district', 'upazila', 'union'].forEach(t => {
+        const display = document.getElementById(t + '-display');
+        const hidden  = document.getElementById('f-bd_' + t + '_id');
+        const section = document.getElementById(t + '-section');
+        const search  = document.getElementById(t + '-search');
+        const list    = document.getElementById(t + '-list');
+        const wrap    = document.getElementById(t + '-wrap');
+
+        if (display) { display.textContent = ADDR_PLACEHOLDERS[t]; display.className = 'text-gray-400'; }
+        if (hidden)  hidden.value = '';
+        if (section) section.classList.add('hidden');
+        if (search)  search.value = '';
+        if (list)    list.innerHTML = '';
+        if (wrap && t !== 'division') wrap.style.display = 'none';
+    });
+}
+
+function openAddrSection(type) {
+    // Close all sections
+    ['division', 'district', 'upazila', 'union'].forEach(t => {
+        const s = document.getElementById(t + '-section');
+        if (s) s.classList.add('hidden');
+    });
+
+    const section = document.getElementById(type + '-section');
+    if (!section) return;
+    section.classList.remove('hidden');
+
+    const search = document.getElementById(type + '-search');
+    if (search) { search.value = ''; search.focus(); }
+    renderAddrList(type, '');
+}
+
+function toggleAddrSection(type) {
+    const section = document.getElementById(type + '-section');
+    if (!section) return;
+    if (section.classList.contains('hidden')) {
+        openAddrSection(type);
+    } else {
+        section.classList.add('hidden');
+    }
+}
+
+function searchAddr(type, query) {
+    renderAddrList(type, query);
+}
+
+function renderAddrList(type, query) {
+    const list = document.getElementById(type + '-list');
+    if (!list) return;
+
+    const q = query.trim().toLowerCase();
+    let items = [];
+
+    if (type === 'division') {
+        items = q ? BD_DIVISIONS.filter(d =>
+            d.name.toLowerCase().includes(q) || d.bn_name.includes(query.trim())
+        ) : BD_DIVISIONS;
+    } else if (type === 'district') {
+        const all = BD_DISTRICTS.filter(d => d.division_id == bdDivisionId);
+        items = q ? all.filter(d =>
+            d.name.toLowerCase().includes(q) || d.bn_name.includes(query.trim())
+        ) : all;
+    } else if (type === 'upazila') {
+        const all = BD_UPAZILAS.filter(u => u.district_id == bdDistrictId);
+        items = q ? all.filter(u =>
+            u.name.toLowerCase().includes(q) || u.bn_name.includes(query.trim())
+        ) : all;
+    } else if (type === 'union') {
+        items = q ? bdUnionsForUpazila.filter(u =>
+            u.name.toLowerCase().includes(q) || u.bn_name.includes(query.trim())
+        ) : bdUnionsForUpazila;
+    }
+
+    if (items.length === 0) {
+        list.innerHTML = '<div class="text-gray-400 text-sm text-center py-3 px-4">পাওয়া যায়নি।</div>';
+        return;
+    }
+
+    list.innerHTML = items.map(item => `
+        <button type="button"
+                data-addr-type="${type}"
+                data-addr-id="${item.id}"
+                data-addr-name="${(item.bn_name || '').replace(/"/g,'&quot;')}"
+                class="addr-opt w-full text-left px-4 py-2.5 text-sm hover:bg-green-50 border-b border-gray-50 last:border-0">
+            <span class="font-medium text-[#14532d]">${item.bn_name}</span>
+            <span class="text-gray-400 text-[11px] ml-1.5">${item.name}</span>
+        </button>
+    `).join('');
+
+    list.querySelectorAll('.addr-opt').forEach(btn => {
+        btn.addEventListener('click', () => {
+            selectAddr(btn.dataset.addrType, parseInt(btn.dataset.addrId, 10), btn.dataset.addrName);
+        });
+    });
+}
+
+function selectAddr(type, id, displayName) {
+    const display = document.getElementById(type + '-display');
+    const hidden  = document.getElementById('f-bd_' + type + '_id');
+    const section = document.getElementById(type + '-section');
+
+    if (display) { display.textContent = displayName; display.className = 'text-[#14532d] font-medium text-sm'; }
+    if (hidden)  hidden.value = id;
+    if (section) section.classList.add('hidden');
+
+    // Clear error
+    const errEl = document.getElementById('err-bd_' + type + '_id');
+    if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+
+    if (type === 'division') {
+        bdDivisionId = id;
+        // Reset downstream
+        bdDistrictId = bdUpazilaId = bdUnionId = null;
+        bdUnionsForUpazila = [];
+        ['district', 'upazila', 'union'].forEach(t => {
+            const d = document.getElementById(t + '-display');
+            const h = document.getElementById('f-bd_' + t + '_id');
+            const s = document.getElementById(t + '-section');
+            const sr = document.getElementById(t + '-search');
+            const l = document.getElementById(t + '-list');
+            const w = document.getElementById(t + '-wrap');
+            if (d) { d.textContent = ADDR_PLACEHOLDERS[t]; d.className = 'text-gray-400'; }
+            if (h) h.value = '';
+            if (s) s.classList.add('hidden');
+            if (sr) sr.value = '';
+            if (l) l.innerHTML = '';
+            if (w) w.style.display = 'none';
+        });
+        // Show and auto-open district
+        const dw = document.getElementById('district-wrap');
+        if (dw) dw.style.display = 'block';
+        openAddrSection('district');
+
+    } else if (type === 'district') {
+        bdDistrictId = id;
+        bdUpazilaId = bdUnionId = null;
+        bdUnionsForUpazila = [];
+        ['upazila', 'union'].forEach(t => {
+            const d = document.getElementById(t + '-display');
+            const h = document.getElementById('f-bd_' + t + '_id');
+            const s = document.getElementById(t + '-section');
+            const sr = document.getElementById(t + '-search');
+            const l = document.getElementById(t + '-list');
+            const w = document.getElementById(t + '-wrap');
+            if (d) { d.textContent = ADDR_PLACEHOLDERS[t]; d.className = 'text-gray-400'; }
+            if (h) h.value = '';
+            if (s) s.classList.add('hidden');
+            if (sr) sr.value = '';
+            if (l) l.innerHTML = '';
+            if (w) w.style.display = 'none';
+        });
+        const uw = document.getElementById('upazila-wrap');
+        if (uw) uw.style.display = 'block';
+        openAddrSection('upazila');
+
+    } else if (type === 'upazila') {
+        bdUpazilaId = id;
+        bdUnionId = null;
+        bdUnionsForUpazila = [];
+        const uniDisplay = document.getElementById('union-display');
+        const uniHidden  = document.getElementById('f-bd_union_id');
+        const uniSection = document.getElementById('union-section');
+        const uniSearch  = document.getElementById('union-search');
+        const uniList    = document.getElementById('union-list');
+        if (uniDisplay) { uniDisplay.textContent = ADDR_PLACEHOLDERS.union; uniDisplay.className = 'text-gray-400'; }
+        if (uniHidden)  uniHidden.value = '';
+        if (uniSection) uniSection.classList.add('hidden');
+        if (uniSearch)  uniSearch.value = '';
+        if (uniList)    uniList.innerHTML = '';
+        const uw = document.getElementById('union-wrap');
+        if (uw) uw.style.display = 'block';
+        loadUnions(id); // AJAX + auto-open
+
+    } else if (type === 'union') {
+        bdUnionId = id;
+    }
+}
+
+async function loadUnions(upazilaId) {
+    bdUnionsForUpazila = [];
+    const section = document.getElementById('union-section');
+    const list    = document.getElementById('union-list');
+    const search  = document.getElementById('union-search');
+
+    if (section) section.classList.remove('hidden');
+    if (search)  { search.value = ''; }
+    if (list)    list.innerHTML = '<div class="text-gray-400 text-sm text-center py-4">লোড হচ্ছে...</div>';
+
+    try {
+        const res  = await fetch('/address/unions/' + upazilaId, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error('http-error');
+        bdUnionsForUpazila = await res.json();
+        renderAddrList('union', '');
+        if (search) search.focus();
+    } catch (_) {
+        if (list) list.innerHTML = '<div class="text-red-400 text-sm text-center py-3">লোড করতে সমস্যা। আবার চেষ্টা করুন।</div>';
+    }
+}
 
 function getOrderSubtotal() {
     if (fixedComboData) return fixedComboData.sell_price;
@@ -1786,6 +2095,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!fixedComboData && comboItems.length === 0) {
             const el = document.getElementById('err-items');
             if (el) { el.textContent = 'কমপক্ষে একটি পণ্য যোগ করুন।'; el.classList.remove('hidden'); }
+            return;
+        }
+
+        // Validate BD address
+        if (!bdDivisionId) {
+            const el = document.getElementById('err-bd_division_id');
+            if (el) { el.textContent = 'বিভাগ বেছে নিন।'; el.classList.remove('hidden'); }
+            document.getElementById('division-btn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        if (!bdDistrictId) {
+            const el = document.getElementById('err-bd_district_id');
+            if (el) { el.textContent = 'জেলা বেছে নিন।'; el.classList.remove('hidden'); }
+            return;
+        }
+        if (!bdUpazilaId) {
+            const el = document.getElementById('err-bd_upazila_id');
+            if (el) { el.textContent = 'উপজেলা বেছে নিন।'; el.classList.remove('hidden'); }
             return;
         }
 

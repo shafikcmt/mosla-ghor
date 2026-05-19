@@ -87,9 +87,17 @@
                 <span class="text-gray-500">অর্ডারের ধরন:</span>
                 <span class="ml-2 text-gray-800">{{ $typeLabels[$order->order_type] ?? $order->order_type }}</span>
             </div>
+            @if($order->division_name || $order->district_name)
             <div class="col-span-2">
-                <span class="text-gray-500">ঠিকানা:</span>
-                <span class="ml-2 text-gray-800">{{ $order->full_address }}, {{ $order->area }}, {{ $order->district }}</span>
+                <span class="text-gray-500">বিভাগ / জেলা / উপজেলা:</span>
+                <span class="ml-2 text-gray-800">
+                    {{ implode(' › ', array_filter([$order->division_name, $order->district_name, $order->upazila_name, $order->union_name])) }}
+                </span>
+            </div>
+            @endif
+            <div class="col-span-2">
+                <span class="text-gray-500">বাড়ি/রাস্তা:</span>
+                <span class="ml-2 text-gray-800">{{ $order->full_address }}</span>
             </div>
             @if($order->delivery_zone_name || $order->delivery_area)
             <div>
