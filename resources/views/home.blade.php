@@ -141,7 +141,6 @@ $productsForJs = $products->map(function ($p) {
             <a href="#products" class="text-green-200 hover:text-[#c9a227] text-sm transition-colors">পণ্যসমূহ</a>
             <a href="#why-us"   class="text-green-200 hover:text-[#c9a227] text-sm transition-colors">আমাদের সম্পর্কে</a>
             <a href="#contact"  class="text-green-200 hover:text-[#c9a227] text-sm transition-colors">যোগাযোগ</a>
-            <a href="/admin/products" class="border border-green-600 text-green-300 hover:border-[#c9a227] hover:text-[#c9a227] text-xs px-3 py-1.5 rounded-full transition-colors">Admin</a>
         </div>
 
         <button id="nav-toggle" class="md:hidden text-green-300 hover:text-[#c9a227] p-1" aria-label="menu">
@@ -154,7 +153,6 @@ $productsForJs = $products->map(function ($p) {
         <a href="#products" class="text-green-200 hover:text-[#c9a227] text-sm">পণ্যসমূহ</a>
         <a href="#why-us"   class="text-green-200 hover:text-[#c9a227] text-sm">আমাদের সম্পর্কে</a>
         <a href="#contact"  class="text-green-200 hover:text-[#c9a227] text-sm">যোগাযোগ</a>
-        <a href="/admin/products" class="text-green-400 hover:text-[#c9a227] text-xs">Admin Panel →</a>
     </div>
 </nav>
 
