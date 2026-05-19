@@ -24,7 +24,7 @@ class WebsiteSettingSeeder extends Seeder
         ];
 
         foreach ($defaults as $key => $value) {
-            WebsiteSetting::firstOrCreate(['key' => $key], ['value' => $value]);
+            WebsiteSetting::updateOrCreate(['key' => $key], ['value' => $value]);
         }
     }
 }
