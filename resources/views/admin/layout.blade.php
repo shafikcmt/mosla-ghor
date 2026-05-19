@@ -159,15 +159,42 @@
     </nav>
 
     {{-- Sidebar footer --}}
-    <div class="px-4 py-3 border-t border-[#14532d]">
+    <div class="px-4 py-3 border-t border-[#14532d] space-y-2.5">
+
+        {{-- Logged-in user --}}
+        <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-full bg-[#1a6b3a] flex items-center justify-center flex-shrink-0">
+                <span class="text-white text-xs font-bold">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+            </div>
+            <div class="min-w-0">
+                <div class="text-white text-xs font-medium truncate">{{ auth()->user()->name }}</div>
+                <div class="text-[#4d7a5a] text-[10px] truncate">{{ auth()->user()->email }}</div>
+            </div>
+        </div>
+
+        {{-- View website --}}
         <a href="{{ url('/') }}" target="_blank"
            class="flex items-center gap-2 text-[#4d7a5a] hover:text-[#c9a227] text-xs transition-colors">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
             </svg>
             ওয়েবসাইট দেখুন
         </a>
+
+        {{-- Logout --}}
+        <form method="POST" action="{{ route('admin.logout') }}">
+            @csrf
+            <button type="submit"
+                    class="flex items-center gap-2 text-[#4d7a5a] hover:text-red-400 text-xs transition-colors w-full">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                লগআউট
+            </button>
+        </form>
+
     </div>
 
 </aside>

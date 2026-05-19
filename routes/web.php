@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\ComboController as AdminComboController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\FaqController as AdminFaqController;
@@ -25,6 +26,12 @@ Route::post('/order', [OrderController::class, 'store'])->name('order.store');
 Route::get('/order/success/{orderNumber}', [OrderController::class, 'success'])->name('order.success');
 
 Route::prefix('admin')->name('admin.')->group(function () {
+    Route::get('login',  [AdminAuthController::class, 'showLogin'])->name('login');
+    Route::post('login', [AdminAuthController::class, 'login'])->name('login.post');
+    Route::post('logout', [AdminAuthController::class, 'logout'])->name('logout');
+});
+
+Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
     Route::get('website-settings', [AdminWebsiteSettingController::class, 'index'])->name('website-settings.index');
