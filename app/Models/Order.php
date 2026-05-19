@@ -22,6 +22,9 @@ class Order extends Model
         'delivery_charge',
         'grand_total',
         'payment_method',
+        'sender_number',
+        'transaction_id',
+        'paid_amount',
         'payment_status',
         'order_status',
     ];
@@ -31,6 +34,7 @@ class Order extends Model
         'packaging_cost'  => 'decimal:2',
         'delivery_charge' => 'decimal:2',
         'grand_total'     => 'decimal:2',
+        'paid_amount'     => 'decimal:2',
     ];
 
     public function items(): HasMany

@@ -176,6 +176,24 @@
                     {{ $oLabels[$order->order_status] ?? $order->order_status }}
                 </span>
             </div>
+            @if($order->sender_number)
+            <div>
+                <span class="text-gray-500">সেন্ডার নম্বর:</span>
+                <span class="ml-2 text-gray-800 font-medium">{{ $order->sender_number }}</span>
+            </div>
+            @endif
+            @if($order->transaction_id)
+            <div>
+                <span class="text-gray-500">ট্রানজেকশন আইডি:</span>
+                <span class="ml-2 text-gray-800 font-mono font-medium">{{ $order->transaction_id }}</span>
+            </div>
+            @endif
+            @if($order->paid_amount !== null)
+            <div>
+                <span class="text-gray-500">পেমেন্ট করা পরিমাণ:</span>
+                <span class="ml-2 text-gray-800 font-semibold">৳ {{ number_format($order->paid_amount, 2) }}</span>
+            </div>
+            @endif
         </div>
     </div>
 

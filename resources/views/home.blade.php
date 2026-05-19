@@ -717,7 +717,7 @@ $productsForJs = $products->map(function ($p) {
             <div class="bg-[#14532d] px-6 py-4 flex items-center justify-between">
                 <div>
                     <h2 class="font-serif-bn text-[#c9a227] text-xl font-bold">অর্ডার ফর্ম</h2>
-                    <p class="text-green-400 text-xs mt-0.5">পেমেন্ট: ক্যাশ অন ডেলিভারি</p>
+                    <p class="text-green-400 text-xs mt-0.5" id="order-hdr-payment-method">পেমেন্ট পদ্ধতি বেছে নিন</p>
                 </div>
                 <button onclick="closeOrderForm()"
                         class="w-8 h-8 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center text-xl leading-none transition-colors"
@@ -824,6 +824,56 @@ $productsForJs = $products->map(function ($p) {
                     </div>
 
                     <p id="err-items" class="text-red-500 text-xs hidden"></p>
+
+                    {{-- Payment Method --}}
+                    <div>
+                        <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-2">
+                            পেমেন্ট পদ্ধতি <span class="text-red-400">*</span>
+                        </label>
+                        <div class="grid grid-cols-2 gap-2" id="payment-method-grid">
+                            {{-- Rendered by JS based on PAYMENT_SETTINGS.enabled_methods --}}
+                        </div>
+                        <p id="err-payment_method" class="text-red-500 text-xs mt-1 hidden"></p>
+
+                        {{-- Payment info (number + instruction) --}}
+                        <div id="payment-info-panel" style="display:none"
+                             class="mt-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm">
+                            <p id="payment-info-number" class="font-bold text-[#14532d]"></p>
+                            <p id="payment-info-instruction" class="text-gray-600 text-xs mt-1"></p>
+                        </div>
+
+                        {{-- Transaction fields (shown only for manual payment) --}}
+                        <div id="payment-tx-fields" style="display:none" class="mt-3 space-y-3">
+                            <div>
+                                <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
+                                    সেন্ডার নম্বর <span class="text-red-400">*</span>
+                                </label>
+                                <input type="text" name="sender_number" id="f-sender_number"
+                                       placeholder="যে নম্বর থেকে পাঠিয়েছেন"
+                                       class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white">
+                                <p id="err-sender_number" class="text-red-500 text-xs mt-1 hidden"></p>
+                            </div>
+                            <div>
+                                <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
+                                    ট্রানজেকশন আইডি <span class="text-red-400">*</span>
+                                </label>
+                                <input type="text" name="transaction_id" id="f-transaction_id"
+                                       placeholder="TrxID / Ref নম্বর"
+                                       class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white">
+                                <p id="err-transaction_id" class="text-red-500 text-xs mt-1 hidden"></p>
+                            </div>
+                            <div>
+                                <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
+                                    পেমেন্ট করা পরিমাণ (৳) <span class="text-red-400">*</span>
+                                </label>
+                                <input type="number" name="paid_amount" id="f-paid_amount"
+                                       placeholder="যত টাকা পাঠিয়েছেন" min="0" step="1"
+                                       class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white">
+                                <p id="err-paid_amount" class="text-red-500 text-xs mt-1 hidden"></p>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 {{-- Submit --}}
@@ -860,8 +910,15 @@ $productsForJs = $products->map(function ($p) {
 {{-- ━━━━━━━━━━━━━━━━  SCRIPTS  ━━━━━━━━━━━━━━━━ --}}
 <script>
 // ── Product data (server-rendered JSON, keyed by id) ──────────────────────
-const PRODUCTS       = @json($productsForJs);
-const PACKAGING_COST = {{ (int) $packagingCost }};
+const PRODUCTS          = @json($productsForJs);
+const PACKAGING_COST    = {{ (int) $packagingCost }};
+const PAYMENT_SETTINGS  = @json([
+    'bkash_number'        => $paymentSettings->bkash_number,
+    'rocket_number'       => $paymentSettings->rocket_number,
+    'nagad_number'        => $paymentSettings->nagad_number,
+    'payment_instruction' => $paymentSettings->payment_instruction,
+    'enabled_methods'     => $paymentSettings->enabledMethods(),
+]);
 
 let currentId = null;
 
@@ -1236,6 +1293,7 @@ function openOrderForm() {
     if (tel) tel.textContent = '৳' + fmt(grand);
 
     clearOrderErrors();
+    initPaymentMethods();
 
     document.getElementById('order-overlay').style.display = 'block';
     document.getElementById('order-wrapper').style.display = 'block';
@@ -1252,12 +1310,91 @@ function closeOrderForm() {
 }
 
 function clearOrderErrors() {
-    ['full_name','mobile_number','alternative_number','full_address','district','area','items'].forEach(f => {
+    ['full_name','mobile_number','alternative_number','full_address','district','area','items',
+     'payment_method','sender_number','transaction_id','paid_amount'].forEach(f => {
         const el = document.getElementById('err-' + f);
         if (el) { el.textContent = ''; el.classList.add('hidden'); }
     });
     const ge = document.getElementById('order-general-error');
     if (ge) ge.classList.add('hidden');
+}
+
+// ── Payment Method UI ─────────────────────────────────────────────────────
+const PM_LABELS = {
+    cash_on_delivery: '💵 ক্যাশ অন ডেলিভারি',
+    bkash:            '🔴 বিকাশ',
+    rocket:           '🟣 রকেট',
+    nagad:            '🟠 নগদ',
+};
+const PM_NAMES = {
+    cash_on_delivery: 'ক্যাশ অন ডেলিভারি',
+    bkash:            'বিকাশ',
+    rocket:           'রকেট',
+    nagad:            'নগদ',
+};
+const MANUAL_METHODS = ['bkash', 'rocket', 'nagad'];
+
+function initPaymentMethods() {
+    const grid    = document.getElementById('payment-method-grid');
+    const methods = PAYMENT_SETTINGS.enabled_methods || ['cash_on_delivery'];
+    if (!grid) return;
+
+    grid.innerHTML = methods.map(m => `
+        <label for="pm-${m}" class="block cursor-pointer">
+            <input type="radio" name="payment_method" id="pm-${m}" value="${m}" class="sr-only"
+                   onchange="onPaymentMethodChange('${m}')">
+            <div id="pm-display-${m}"
+                 class="border-2 border-green-200 rounded-xl px-3 py-2.5 text-center text-xs font-semibold text-[#14532d] bg-white hover:border-[#14532d] transition-colors">
+                ${PM_LABELS[m] || m}
+            </div>
+        </label>
+    `).join('');
+
+    // Auto-select if only one method available
+    if (methods.length === 1) {
+        const radio = document.getElementById('pm-' + methods[0]);
+        if (radio) { radio.checked = true; onPaymentMethodChange(methods[0]); }
+    }
+}
+
+function onPaymentMethodChange(method) {
+    // Update header subtitle
+    const hdr = document.getElementById('order-hdr-payment-method');
+    if (hdr) hdr.textContent = PM_NAMES[method] || method;
+
+    // Update button styles
+    const methods = PAYMENT_SETTINGS.enabled_methods || ['cash_on_delivery'];
+    methods.forEach(m => {
+        const d = document.getElementById('pm-display-' + m);
+        if (!d) return;
+        if (m === method) {
+            d.style.background   = '#14532d';
+            d.style.borderColor  = '#14532d';
+            d.style.color        = '#fef9ee';
+        } else {
+            d.style.background   = '';
+            d.style.borderColor  = '';
+            d.style.color        = '';
+        }
+    });
+
+    const isManual   = MANUAL_METHODS.includes(method);
+    const infoPanel  = document.getElementById('payment-info-panel');
+    const txFields   = document.getElementById('payment-tx-fields');
+    const numEl      = document.getElementById('payment-info-number');
+    const instEl     = document.getElementById('payment-info-instruction');
+
+    if (isManual) {
+        const numbers = { bkash: PAYMENT_SETTINGS.bkash_number, rocket: PAYMENT_SETTINGS.rocket_number, nagad: PAYMENT_SETTINGS.nagad_number };
+        const num = numbers[method];
+        if (numEl) numEl.textContent = num ? (PM_NAMES[method] + ' নম্বর: ' + num) : (PM_NAMES[method] + ' নম্বরে পাঠান');
+        if (instEl) instEl.textContent = PAYMENT_SETTINGS.payment_instruction || '';
+        if (infoPanel) infoPanel.style.display = 'block';
+        if (txFields)  txFields.style.display  = 'block';
+    } else {
+        if (infoPanel) infoPanel.style.display = 'none';
+        if (txFields)  txFields.style.display  = 'none';
+    }
 }
 
 function populateOrderItems() {
@@ -1283,6 +1420,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (comboItems.length === 0) {
             const el = document.getElementById('err-items');
             if (el) { el.textContent = 'কমপক্ষে একটি পণ্য যোগ করুন।'; el.classList.remove('hidden'); }
+            return;
+        }
+
+        // Validate payment method selected
+        const selectedMethod = form.querySelector('input[name="payment_method"]:checked');
+        if (!selectedMethod) {
+            const pmErr = document.getElementById('err-payment_method');
+            if (pmErr) { pmErr.textContent = 'একটি পেমেন্ট পদ্ধতি বেছে নিন।'; pmErr.classList.remove('hidden'); }
             return;
         }
 

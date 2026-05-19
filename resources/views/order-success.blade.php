@@ -124,10 +124,24 @@
                     <span>সর্বমোট</span>
                     <span>৳{{ number_format($order->grand_total, 0) }}</span>
                 </div>
+                @php
+                    $methodLabels = [
+                        'cash_on_delivery' => 'ক্যাশ অন ডেলিভারি',
+                        'bkash'            => 'বিকাশ',
+                        'rocket'           => 'রকেট',
+                        'nagad'            => 'নগদ',
+                    ];
+                @endphp
                 <div class="flex items-center gap-2 mt-1">
                     <span class="text-green-500 text-xs">💳</span>
-                    <span class="text-green-500 text-xs">পেমেন্ট পদ্ধতি: ক্যাশ অন ডেলিভারি</span>
+                    <span class="text-green-500 text-xs">পেমেন্ট পদ্ধতি: {{ $methodLabels[$order->payment_method] ?? $order->payment_method }}</span>
                 </div>
+                @if($order->transaction_id)
+                <div class="flex items-center gap-2 mt-0.5">
+                    <span class="text-green-500 text-xs">🔖</span>
+                    <span class="text-green-500 text-xs">ট্রানজেকশন আইডি: {{ $order->transaction_id }}</span>
+                </div>
+                @endif
             </div>
         </div>
 

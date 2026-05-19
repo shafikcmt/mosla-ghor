@@ -3,17 +3,28 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\PaymentSetting;
 use App\Models\PriceSetting;
 use App\Models\ProductPrice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
     public function store(Request $request): JsonResponse
     {
+        $paymentSettings = PaymentSetting::current();
+        $enabledMethods  = $paymentSettings->enabledMethods();
+
+        if (empty($enabledMethods)) {
+            $enabledMethods = ['cash_on_delivery'];
+        }
+
+        $isManualPayment = in_array($request->input('payment_method'), ['bkash', 'rocket', 'nagad']);
+
         $validated = $request->validate([
             'full_name'                => ['required', 'string', 'max:100'],
             'mobile_number'            => ['required', 'string', 'regex:/^01[3-9]\d{8}$/'],
@@ -22,20 +33,28 @@ class OrderController extends Controller
             'district'                 => ['required', 'string', 'max:80'],
             'area'                     => ['required', 'string', 'max:80'],
             'order_note'               => ['nullable', 'string', 'max:500'],
+            'payment_method'           => ['required', 'string', Rule::in($enabledMethods)],
+            'sender_number'            => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:30'],
+            'transaction_id'           => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:100'],
+            'paid_amount'              => [$isManualPayment ? 'required' : 'nullable', 'numeric', 'min:0'],
             'items'                    => ['required', 'array', 'min:1', 'max:20'],
             'items.*.product_id'       => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity_gram'    => ['required', 'integer', 'in:25,50,100,250,500,1000'],
         ], [
             'mobile_number.regex'      => 'সঠিক মোবাইল নম্বর দিন। যেমন: 01700000000',
             'alternative_number.regex' => 'সঠিক বিকল্প নম্বর দিন। যেমন: 01700000000',
+            'payment_method.in'        => 'একটি বৈধ পেমেন্ট পদ্ধতি বেছে নিন।',
+            'sender_number.required'   => 'সেন্ডার নম্বর দিন।',
+            'transaction_id.required'  => 'ট্রানজেকশন আইডি দিন।',
+            'paid_amount.required'     => 'পেমেন্ট করা পরিমাণ দিন।',
             'items.required'           => 'কমপক্ষে একটি পণ্য যোগ করুন।',
             'items.min'                => 'কমপক্ষে একটি পণ্য যোগ করুন।',
             'items.max'                => 'সর্বোচ্চ ২০টি পণ্য যোগ করা যাবে।',
         ]);
 
         // ── Backend price recalculation (never trust frontend prices) ──────────
-        $settings  = PriceSetting::current();
-        $subtotal  = 0.0;
+        $settings       = PriceSetting::current();
+        $subtotal       = 0.0;
         $processedItems = [];
 
         foreach ($validated['items'] as $item) {
@@ -73,7 +92,7 @@ class OrderController extends Controller
         } while (Order::where('order_number', $orderNumber)->exists());
 
         // ── Persist order + items in a transaction ──────────────────────────────
-        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $grandTotal, $orderNumber) {
+        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $grandTotal, $orderNumber, $isManualPayment) {
             $order = Order::create([
                 'order_number'       => $orderNumber,
                 'customer_name'      => $validated['full_name'],
@@ -88,7 +107,10 @@ class OrderController extends Controller
                 'packaging_cost'     => $packagingCost,
                 'delivery_charge'    => 0.00,
                 'grand_total'        => $grandTotal,
-                'payment_method'     => 'cash_on_delivery',
+                'payment_method'     => $validated['payment_method'],
+                'sender_number'      => $isManualPayment ? ($validated['sender_number'] ?? null) : null,
+                'transaction_id'     => $isManualPayment ? ($validated['transaction_id'] ?? null) : null,
+                'paid_amount'        => $isManualPayment ? ($validated['paid_amount'] ?? null) : null,
                 'payment_status'     => 'pending',
                 'order_status'       => 'pending',
             ]);

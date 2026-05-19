@@ -1,0 +1,24 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('orders', function (Blueprint $table) {
+            $table->string('sender_number', 30)->nullable()->after('payment_method');
+            $table->string('transaction_id', 100)->nullable()->after('sender_number');
+            $table->decimal('paid_amount', 10, 2)->nullable()->after('transaction_id');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('orders', function (Blueprint $table) {
+            $table->dropColumn(['sender_number', 'transaction_id', 'paid_amount']);
+        });
+    }
+};

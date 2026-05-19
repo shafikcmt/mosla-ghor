@@ -17,6 +17,8 @@
            class="text-gray-300 hover:text-white text-sm transition-colors">+ নতুন পণ্য</a>
         <a href="{{ route('admin.orders.index') }}"
            class="text-gray-300 hover:text-white text-sm transition-colors">অর্ডার তালিকা</a>
+        <a href="{{ route('admin.payment-settings.index') }}"
+           class="text-gray-300 hover:text-white text-sm transition-colors">পেমেন্ট সেটিং</a>
     </nav>
 
     <main class="max-w-5xl mx-auto px-4 py-6">

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PaymentSetting;
 use App\Models\PriceSetting;
 use App\Models\Product;
 
@@ -13,8 +14,9 @@ class HomeController extends Controller
             ->with(['activePrices'])
             ->get();
 
-        $packagingCost = PriceSetting::current()->default_packaging_cost;
+        $packagingCost   = PriceSetting::current()->default_packaging_cost;
+        $paymentSettings = PaymentSetting::current();
 
-        return view('home', compact('products', 'packagingCost'));
+        return view('home', compact('products', 'packagingCost', 'paymentSettings'));
     }
 }
