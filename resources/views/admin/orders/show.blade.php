@@ -52,10 +52,10 @@
 {{-- Top bar --}}
 <div class="no-print flex items-center justify-between mb-5">
     <a href="{{ route('admin.orders.index') }}" class="text-sm text-gray-500 hover:text-gray-800">← অর্ডার তালিকায় ফিরুন</a>
-    <button onclick="window.print()"
-            class="bg-gray-800 text-white text-sm px-4 py-2 rounded hover:bg-gray-700 transition-colors">
-        Print Invoice
-    </button>
+    <a href="{{ route('admin.orders.invoice', $order) }}" target="_blank"
+       class="bg-gray-800 text-white text-sm px-4 py-2 rounded hover:bg-gray-700 transition-colors">
+        🖨️ Print Invoice
+    </a>
 </div>
 
 <div class="print-shadow bg-white rounded shadow divide-y divide-gray-100">

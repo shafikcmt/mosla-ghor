@@ -14,6 +14,7 @@ use App\Models\PaymentSetting;
 use App\Models\PriceSetting;
 use App\Models\Product;
 use App\Models\ProductPrice;
+use App\Models\WebsiteSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -321,6 +322,9 @@ class OrderController extends Controller
             ->where('order_number', $orderNumber)
             ->firstOrFail();
 
-        return view('order-success', compact('order'));
+        $whatsappNumber = WebsiteSetting::get('whatsapp_number');
+        $siteName       = WebsiteSetting::get('site_name', 'মসলা ঘর');
+
+        return view('order-success', compact('order', 'whatsappNumber', 'siteName'));
     }
 }

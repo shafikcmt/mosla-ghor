@@ -7,6 +7,7 @@ use App\Models\Courier;
 use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\WebsiteSetting;
 use App\Services\SteadfastService;
 use Illuminate\Http\Request;
 
@@ -38,6 +39,15 @@ class OrderController extends Controller
         ];
 
         return view('admin.orders.show', compact('order', 'couriers', 'zones', 'courierStatuses'));
+    }
+
+    public function invoice(Order $order)
+    {
+        $order->load(['items', 'selectedCourier']);
+        $siteName = WebsiteSetting::get('site_name', 'মসলা ঘর');
+        $sitePhone = WebsiteSetting::get('phone', '');
+
+        return view('admin.orders.invoice', compact('order', 'siteName', 'sitePhone'));
     }
 
     public function updateStatus(Request $request, Order $order)
