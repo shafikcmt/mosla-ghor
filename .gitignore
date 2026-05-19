@@ -22,3 +22,10 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Local SQLite database files
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+spice_ecommercec
