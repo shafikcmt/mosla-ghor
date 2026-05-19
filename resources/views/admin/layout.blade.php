@@ -87,6 +87,45 @@
             অর্ডার
         </a>
 
+        {{-- Delivery --}}
+        <p class="nav-group-label">Delivery</p>
+
+        <a href="{{ route('admin.couriers.index') }}"
+           class="nav-link {{ $active('admin.couriers.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 17l4 4 4-4m0-5l-4-4-4 4M12 3v13"/>
+            </svg>
+            কুরিয়ার
+        </a>
+
+        <a href="{{ route('admin.delivery-rates.index') }}"
+           class="nav-link {{ $active('admin.delivery-rates.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            ডেলিভারি রেট
+        </a>
+
+        <a href="{{ route('admin.courier-api-settings.index') }}"
+           class="nav-link {{ $active('admin.courier-api-settings.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+            </svg>
+            API সেটিং
+        </a>
+
+        <a href="{{ route('admin.courier-orders.index') }}"
+           class="nav-link {{ $active('admin.courier-orders.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+            </svg>
+            পার্সেল অর্ডার
+        </a>
+
         {{-- Settings --}}
         <p class="nav-group-label">Settings</p>
 

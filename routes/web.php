@@ -3,6 +3,10 @@
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\ComboController as AdminComboController;
+use App\Http\Controllers\Admin\CourierController as AdminCourierController;
+use App\Http\Controllers\Admin\CourierApiSettingController as AdminCourierApiSettingController;
+use App\Http\Controllers\Admin\CourierOrderController as AdminCourierOrderController;
+use App\Http\Controllers\Admin\DeliveryRateController as AdminDeliveryRateController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\FaqController as AdminFaqController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
@@ -71,6 +75,20 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::post('orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.updateStatus');
+    Route::post('orders/{order}/update-courier', [AdminOrderController::class, 'updateCourier'])->name('orders.updateCourier');
+    Route::post('orders/{order}/send-to-courier', [AdminOrderController::class, 'sendToCourier'])->name('orders.sendToCourier');
+    Route::post('orders/{order}/mark-delivered', [AdminOrderController::class, 'markDelivered'])->name('orders.markDelivered');
+    Route::post('orders/{order}/mark-returned', [AdminOrderController::class, 'markReturned'])->name('orders.markReturned');
+
+    Route::resource('couriers', AdminCourierController::class)->except(['show']);
+    Route::post('couriers/{courier}/toggle', [AdminCourierController::class, 'toggle'])->name('couriers.toggle');
+
+    Route::resource('delivery-rates', AdminDeliveryRateController::class)->except(['show']);
+
+    Route::get('courier-api-settings', [AdminCourierApiSettingController::class, 'index'])->name('courier-api-settings.index');
+    Route::put('courier-api-settings/{courier}', [AdminCourierApiSettingController::class, 'update'])->name('courier-api-settings.update');
+
+    Route::get('courier-orders', [AdminCourierOrderController::class, 'index'])->name('courier-orders.index');
 
     Route::resource('faqs', AdminFaqController::class);
     Route::post('faqs/{faq}/toggle', [AdminFaqController::class, 'toggle'])->name('faqs.toggle');
