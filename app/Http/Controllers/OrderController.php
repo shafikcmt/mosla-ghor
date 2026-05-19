@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\DeliverySetting;
+use App\Models\DeliveryLocation;
+use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Models\PaymentSetting;
 use App\Models\PriceSetting;
@@ -31,10 +32,9 @@ class OrderController extends Controller
             'mobile_number'            => ['required', 'string', 'regex:/^01[3-9]\d{8}$/'],
             'alternative_number'       => ['nullable', 'string', 'regex:/^01[3-9]\d{8}$/'],
             'full_address'             => ['required', 'string', 'max:500'],
-            'district'                 => ['required', 'string', 'max:80'],
-            'area'                     => ['required', 'string', 'max:80'],
-            'delivery_area'            => ['required', 'string', Rule::in(['inside_dhaka', 'outside_dhaka'])],
             'order_note'               => ['nullable', 'string', 'max:500'],
+            'delivery_zone_id'         => ['required', 'integer', 'exists:delivery_zones,id'],
+            'delivery_location_id'     => ['required', 'integer', 'exists:delivery_locations,id'],
             'payment_method'           => ['required', 'string', Rule::in($enabledMethods)],
             'sender_number'            => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:30'],
             'transaction_id'           => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:100'],
@@ -43,17 +43,17 @@ class OrderController extends Controller
             'items.*.product_id'       => ['required', 'integer', 'exists:products,id'],
             'items.*.quantity_gram'    => ['required', 'integer', 'in:25,50,100,250,500,1000'],
         ], [
-            'mobile_number.regex'      => 'সঠিক মোবাইল নম্বর দিন। যেমন: 01700000000',
-            'alternative_number.regex' => 'সঠিক বিকল্প নম্বর দিন। যেমন: 01700000000',
-            'delivery_area.required'   => 'ডেলিভারি এলাকা বেছে নিন।',
-            'delivery_area.in'         => 'ডেলিভারি এলাকা বেছে নিন।',
-            'payment_method.in'        => 'একটি বৈধ পেমেন্ট পদ্ধতি বেছে নিন।',
-            'sender_number.required'   => 'সেন্ডার নম্বর দিন।',
-            'transaction_id.required'  => 'ট্রানজেকশন আইডি দিন।',
-            'paid_amount.required'     => 'পেমেন্ট করা পরিমাণ দিন।',
-            'items.required'           => 'কমপক্ষে একটি পণ্য যোগ করুন।',
-            'items.min'                => 'কমপক্ষে একটি পণ্য যোগ করুন।',
-            'items.max'                => 'সর্বোচ্চ ২০টি পণ্য যোগ করা যাবে।',
+            'mobile_number.regex'          => 'সঠিক মোবাইল নম্বর দিন। যেমন: 01700000000',
+            'alternative_number.regex'     => 'সঠিক বিকল্প নম্বর দিন। যেমন: 01700000000',
+            'delivery_zone_id.required'    => 'ডেলিভারি জোন বেছে নিন।',
+            'delivery_location_id.required' => 'ডেলিভারি এলাকা বেছে নিন।',
+            'payment_method.in'            => 'একটি বৈধ পেমেন্ট পদ্ধতি বেছে নিন।',
+            'sender_number.required'       => 'সেন্ডার নম্বর দিন।',
+            'transaction_id.required'      => 'ট্রানজেকশন আইডি দিন।',
+            'paid_amount.required'         => 'পেমেন্ট করা পরিমাণ দিন।',
+            'items.required'               => 'কমপক্ষে একটি পণ্য যোগ করুন।',
+            'items.min'                    => 'কমপক্ষে একটি পণ্য যোগ করুন।',
+            'items.max'                    => 'সর্বোচ্চ ২০টি পণ্য যোগ করা যাবে।',
         ]);
 
         // ── Backend price recalculation (never trust frontend prices) ──────────
@@ -87,12 +87,35 @@ class OrderController extends Controller
             ];
         }
 
-        // ── Backend delivery charge (never trust frontend) ─────────────────────
-        $deliverySettings = DeliverySetting::current();
-        $packagingCost    = (float) $priceSettings->default_packaging_cost;
-        $deliveryCharge   = $deliverySettings->chargeFor($validated['delivery_area'], $subtotal);
-        $grandTotal       = $subtotal + $packagingCost + $deliveryCharge;
-        $minOrderAmount   = (float) $priceSettings->minimum_order_amount;
+        // ── Backend delivery charge — zone/location lookup, never trust frontend ─
+        $packagingCost  = (float) $priceSettings->default_packaging_cost;
+        $minOrderAmount = (float) $priceSettings->minimum_order_amount;
+
+        $zone = DeliveryZone::where('id', (int) $validated['delivery_zone_id'])
+            ->where('is_active', true)
+            ->first();
+
+        if (! $zone) {
+            return response()->json([
+                'message' => 'ডেলিভারি জোন পাওয়া যায়নি বা নিষ্ক্রিয়।',
+                'errors'  => ['delivery_zone_id' => ['ডেলিভারি জোন পাওয়া যায়নি।']],
+            ], 422);
+        }
+
+        $location = DeliveryLocation::where('id', (int) $validated['delivery_location_id'])
+            ->where('zone_id', $zone->id)
+            ->where('is_active', true)
+            ->first();
+
+        if (! $location) {
+            return response()->json([
+                'message' => 'ডেলিভারি এলাকা পাওয়া যায়নি বা নিষ্ক্রিয়।',
+                'errors'  => ['delivery_location_id' => ['ডেলিভারি এলাকা পাওয়া যায়নি।']],
+            ], 422);
+        }
+
+        $deliveryCharge = $zone->chargeFor($location, $subtotal);
+        $grandTotal     = $subtotal + $packagingCost + $deliveryCharge;
 
         if ($grandTotal < $minOrderAmount) {
             return response()->json([
@@ -109,28 +132,32 @@ class OrderController extends Controller
         } while (Order::where('order_number', $orderNumber)->exists());
 
         // ── Persist order + items in a transaction ──────────────────────────────
-        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge, $grandTotal, $orderNumber, $isManualPayment, $orderType) {
+        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge, $grandTotal, $orderNumber, $isManualPayment, $orderType, $zone, $location) {
             $order = Order::create([
-                'order_number'       => $orderNumber,
-                'customer_name'      => $validated['full_name'],
-                'mobile_number'      => $validated['mobile_number'],
-                'alternative_number' => $validated['alternative_number'] ?? null,
-                'full_address'       => $validated['full_address'],
-                'district'           => $validated['district'],
-                'area'               => $validated['area'],
-                'delivery_area'      => $validated['delivery_area'],
-                'order_note'         => $validated['order_note'] ?? null,
-                'order_type'         => $orderType,
-                'subtotal'           => $subtotal,
-                'packaging_cost'     => $packagingCost,
-                'delivery_charge'    => $deliveryCharge,
-                'grand_total'        => $grandTotal,
-                'payment_method'     => $validated['payment_method'],
-                'sender_number'      => $isManualPayment ? ($validated['sender_number'] ?? null) : null,
-                'transaction_id'     => $isManualPayment ? ($validated['transaction_id'] ?? null) : null,
-                'paid_amount'        => $isManualPayment ? ($validated['paid_amount'] ?? null) : null,
-                'payment_status'     => 'pending',
-                'order_status'       => 'pending',
+                'order_number'          => $orderNumber,
+                'customer_name'         => $validated['full_name'],
+                'mobile_number'         => $validated['mobile_number'],
+                'alternative_number'    => $validated['alternative_number'] ?? null,
+                'full_address'          => $validated['full_address'],
+                'district'              => $zone->zone_name,
+                'area'                  => $location->location_name,
+                'delivery_area'         => $zone->zone_type,
+                'delivery_zone_id'      => $zone->id,
+                'delivery_location_id'  => $location->id,
+                'delivery_zone_name'    => $zone->zone_name,
+                'delivery_location_name' => $location->location_name,
+                'order_note'            => $validated['order_note'] ?? null,
+                'order_type'            => $orderType,
+                'subtotal'              => $subtotal,
+                'packaging_cost'        => $packagingCost,
+                'delivery_charge'       => $deliveryCharge,
+                'grand_total'           => $grandTotal,
+                'payment_method'        => $validated['payment_method'],
+                'sender_number'         => $isManualPayment ? ($validated['sender_number'] ?? null) : null,
+                'transaction_id'        => $isManualPayment ? ($validated['transaction_id'] ?? null) : null,
+                'paid_amount'           => $isManualPayment ? ($validated['paid_amount'] ?? null) : null,
+                'payment_status'        => 'pending',
+                'order_status'          => 'pending',
             ]);
 
             foreach ($processedItems as $item) {

@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\DeliveryLocationController as AdminDeliveryLocationController;
 use App\Http\Controllers\Admin\DeliverySettingController as AdminDeliverySettingController;
+use App\Http\Controllers\Admin\DeliveryZoneController as AdminDeliveryZoneController;
 use App\Http\Controllers\Admin\GeneralSettingController as AdminGeneralSettingController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PaymentSettingController as AdminPaymentSettingController;
@@ -19,6 +21,23 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::get('delivery-settings', [AdminDeliverySettingController::class, 'index'])->name('delivery-settings.index');
     Route::post('delivery-settings', [AdminDeliverySettingController::class, 'update'])->name('delivery-settings.update');
+
+    Route::prefix('delivery-zones')->name('delivery-zones.')->group(function () {
+        Route::get('/',              [AdminDeliveryZoneController::class, 'index'])->name('index');
+        Route::get('/create',        [AdminDeliveryZoneController::class, 'create'])->name('create');
+        Route::post('/',             [AdminDeliveryZoneController::class, 'store'])->name('store');
+        Route::get('/{deliveryZone}',       [AdminDeliveryZoneController::class, 'show'])->name('show');
+        Route::get('/{deliveryZone}/edit',  [AdminDeliveryZoneController::class, 'edit'])->name('edit');
+        Route::put('/{deliveryZone}',       [AdminDeliveryZoneController::class, 'update'])->name('update');
+        Route::delete('/{deliveryZone}',    [AdminDeliveryZoneController::class, 'destroy'])->name('destroy');
+        Route::post('/{deliveryZone}/toggle', [AdminDeliveryZoneController::class, 'toggle'])->name('toggle');
+
+        Route::post('/{deliveryZone}/locations',                           [AdminDeliveryLocationController::class, 'store'])->name('locations.store');
+        Route::get('/{deliveryZone}/locations/{location}/edit',            [AdminDeliveryLocationController::class, 'edit'])->name('locations.edit');
+        Route::put('/{deliveryZone}/locations/{location}',                 [AdminDeliveryLocationController::class, 'update'])->name('locations.update');
+        Route::delete('/{deliveryZone}/locations/{location}',              [AdminDeliveryLocationController::class, 'destroy'])->name('locations.destroy');
+        Route::post('/{deliveryZone}/locations/{location}/toggle',         [AdminDeliveryLocationController::class, 'toggle'])->name('locations.toggle');
+    });
 
     Route::get('general-settings', [AdminGeneralSettingController::class, 'index'])->name('general-settings.index');
     Route::post('general-settings', [AdminGeneralSettingController::class, 'update'])->name('general-settings.update');

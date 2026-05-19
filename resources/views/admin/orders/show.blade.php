@@ -91,16 +91,22 @@
                 <span class="text-gray-500">ঠিকানা:</span>
                 <span class="ml-2 text-gray-800">{{ $order->full_address }}, {{ $order->area }}, {{ $order->district }}</span>
             </div>
-            @if($order->delivery_area)
+            @if($order->delivery_zone_name || $order->delivery_area)
+            <div>
+                <span class="text-gray-500">ডেলিভারি জোন:</span>
+                <span class="ml-2 text-gray-800 font-medium">{{ $order->delivery_zone_name ?: ($order->delivery_area === 'inside_dhaka' ? 'ঢাকার ভেতরে' : 'ঢাকার বাইরে') }}</span>
+            </div>
+            @endif
+            @if($order->delivery_location_name)
             <div>
                 <span class="text-gray-500">ডেলিভারি এলাকা:</span>
-                <span class="ml-2 text-gray-800">{{ $order->delivery_area === 'inside_dhaka' ? 'ঢাকার ভেতরে' : 'ঢাকার বাইরে' }}</span>
+                <span class="ml-2 text-gray-800">{{ $order->delivery_location_name }}</span>
             </div>
+            @endif
             <div>
                 <span class="text-gray-500">ডেলিভারি চার্জ:</span>
                 <span class="ml-2 text-gray-800 font-semibold">৳ {{ number_format($order->delivery_charge, 2) }}</span>
             </div>
-            @endif
             @if($order->order_note)
             <div class="col-span-2">
                 <span class="text-gray-500">নোট:</span>

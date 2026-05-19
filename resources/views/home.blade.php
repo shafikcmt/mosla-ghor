@@ -806,54 +806,47 @@ $productsForJs = $products->map(function ($p) {
                         <p id="err-full_address" class="text-red-500 text-xs mt-1 hidden"></p>
                     </div>
 
-                    {{-- district + area --}}
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
-                                জেলা <span class="text-red-400">*</span>
-                            </label>
-                            <input type="text" name="district" id="f-district"
-                                   placeholder="যেমন: ঢাকা"
-                                   class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white">
-                            <p id="err-district" class="text-red-500 text-xs mt-1 hidden"></p>
-                        </div>
-                        <div>
-                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
-                                এলাকা <span class="text-red-400">*</span>
-                            </label>
-                            <input type="text" name="area" id="f-area"
-                                   placeholder="যেমন: মিরপুর-১০"
-                                   class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white">
-                            <p id="err-area" class="text-red-500 text-xs mt-1 hidden"></p>
-                        </div>
-                    </div>
+                    {{-- hidden fields populated by JS --}}
+                    <input type="hidden" name="delivery_zone_id"     id="f-delivery_zone_id">
+                    <input type="hidden" name="delivery_location_id" id="f-delivery_location_id">
 
-                    {{-- delivery_area --}}
+                    {{-- Zone selection --}}
                     <div>
                         <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-2">
-                            ডেলিভারি এলাকা <span class="text-red-400">*</span>
+                            ডেলিভারি জোন <span class="text-red-400">*</span>
                         </label>
+                        @if($activeZones->isEmpty())
+                            <p class="text-gray-400 text-sm">কোনো ডেলিভারি জোন পাওয়া যায়নি। অ্যাডমিনকে জানান।</p>
+                        @else
                         <div class="grid grid-cols-2 gap-3">
-                            <label for="da-inside" class="block cursor-pointer">
-                                <input type="radio" name="delivery_area" id="da-inside" value="inside_dhaka" class="sr-only"
-                                       onchange="onDeliveryAreaChange('inside_dhaka')">
-                                <div id="da-display-inside"
+                            @foreach($activeZones as $zone)
+                            <label for="zone-radio-{{ $zone->id }}" class="block cursor-pointer">
+                                <input type="radio" name="_zone_radio" id="zone-radio-{{ $zone->id }}"
+                                       value="{{ $zone->id }}" class="sr-only"
+                                       onchange="onZoneSelect({{ $zone->id }})">
+                                <div id="zone-display-{{ $zone->id }}"
                                      class="border-2 border-green-200 rounded-xl px-3 py-3 text-center transition-colors bg-white hover:border-[#14532d]">
-                                    <div class="text-sm font-bold text-[#14532d]">ঢাকার ভেতরে</div>
-                                    <div class="text-xs text-gray-400 mt-0.5">৳{{ number_format($deliverySettings->inside_dhaka_charge, 0) }}</div>
+                                    <div class="text-sm font-bold text-[#14532d]">{{ $zone->zone_name }}</div>
+                                    <div class="text-xs text-gray-400 mt-0.5">৳{{ number_format($zone->delivery_charge, 0) }}</div>
                                 </div>
                             </label>
-                            <label for="da-outside" class="block cursor-pointer">
-                                <input type="radio" name="delivery_area" id="da-outside" value="outside_dhaka" class="sr-only"
-                                       onchange="onDeliveryAreaChange('outside_dhaka')">
-                                <div id="da-display-outside"
-                                     class="border-2 border-green-200 rounded-xl px-3 py-3 text-center transition-colors bg-white hover:border-[#14532d]">
-                                    <div class="text-sm font-bold text-[#14532d]">ঢাকার বাইরে</div>
-                                    <div class="text-xs text-gray-400 mt-0.5">৳{{ number_format($deliverySettings->outside_dhaka_charge, 0) }}</div>
-                                </div>
-                            </label>
+                            @endforeach
                         </div>
-                        <p id="err-delivery_area" class="text-red-500 text-xs mt-1 hidden"></p>
+                        @endif
+                        <p id="err-delivery_zone_id" class="text-red-500 text-xs mt-1 hidden"></p>
+                    </div>
+
+                    {{-- Location selection (appears after zone is chosen) --}}
+                    <div id="location-section" style="display:none">
+                        <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-2">
+                            এলাকা বেছে নিন <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" id="location-search"
+                               placeholder="এলাকা খুঁজুন..."
+                               oninput="filterLocations(this.value)"
+                               class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white mb-2">
+                        <div id="location-list" class="space-y-2 max-h-52 overflow-y-auto pr-1"></div>
+                        <p id="err-delivery_location_id" class="text-red-500 text-xs mt-1 hidden"></p>
                     </div>
 
                     {{-- order_note --}}
@@ -963,12 +956,7 @@ const PAYMENT_SETTINGS  = {
     payment_instruction: @json($paymentSettings->payment_instruction),
     enabled_methods:     @json($paymentSettings->enabledMethods()),
 };
-const DELIVERY_SETTINGS = {
-    inside_dhaka_charge:          {{ (float) $deliverySettings->inside_dhaka_charge }},
-    outside_dhaka_charge:         {{ (float) $deliverySettings->outside_dhaka_charge }},
-    enable_free_delivery:         @json((bool) $deliverySettings->enable_free_delivery),
-    free_delivery_minimum_amount: @json($deliverySettings->free_delivery_minimum_amount !== null ? (float) $deliverySettings->free_delivery_minimum_amount : null),
-};
+const DELIVERY_ZONES = @json($zonesForJs);
 
 let currentId = null;
 
@@ -1400,17 +1388,33 @@ function openOrderForm() {
         ).join('');
     }
 
-    // Reset delivery area selection
-    ['inside', 'outside'].forEach(k => {
-        const r = document.getElementById('da-' + k);
-        if (r) r.checked = false;
-        const d = document.getElementById('da-display-' + k);
-        if (d) d.className = 'border-2 border-green-200 rounded-xl px-3 py-3 text-center transition-colors bg-white hover:border-[#14532d]';
+    // Reset zone/location selection
+    selectedZoneId = null;
+    selectedLocationId = null;
+    currentZoneLocations = [];
+
+    document.querySelectorAll('input[name="_zone_radio"]').forEach(r => r.checked = false);
+    DELIVERY_ZONES.forEach(z => {
+        const d = document.getElementById('zone-display-' + z.id);
+        if (d) d.className = ZONE_CARD_DEFAULT;
     });
+
+    const zInput = document.getElementById('f-delivery_zone_id');
+    if (zInput) zInput.value = '';
+    const lInput = document.getElementById('f-delivery_location_id');
+    if (lInput) lInput.value = '';
+
+    const locSec = document.getElementById('location-section');
+    if (locSec) { locSec.style.display = 'none'; }
+    const locList = document.getElementById('location-list');
+    if (locList) locList.innerHTML = '';
+    const locSearch = document.getElementById('location-search');
+    if (locSearch) locSearch.value = '';
+
     const delivEl = document.getElementById('order-delivery-display');
     if (delivEl) { delivEl.textContent = 'এলাকা বেছে নিন'; delivEl.className = 'text-gray-400 italic'; }
 
-    // Show subtotal + packaging; delivery will be added when area is selected
+    // Show subtotal + packaging; delivery will be added when location is selected
     const tel = document.getElementById('order-total-display');
     if (tel) tel.textContent = '৳' + fmt(sub + PACKAGING_COST);
 
@@ -1432,8 +1436,9 @@ function closeOrderForm() {
 }
 
 function clearOrderErrors() {
-    ['full_name','mobile_number','alternative_number','full_address','district','area',
-     'delivery_area','items','payment_method','sender_number','transaction_id','paid_amount'].forEach(f => {
+    ['full_name','mobile_number','alternative_number','full_address',
+     'delivery_zone_id','delivery_location_id',
+     'items','payment_method','sender_number','transaction_id','paid_amount'].forEach(f => {
         const el = document.getElementById('err-' + f);
         if (el) { el.textContent = ''; el.classList.add('hidden'); }
     });
@@ -1441,25 +1446,128 @@ function clearOrderErrors() {
     if (ge) ge.classList.add('hidden');
 }
 
-// ── Delivery Area ─────────────────────────────────────────────────────────
-function onDeliveryAreaChange(area) {
-    const sub = comboItems.reduce((s, x) => s + x.price, 0);
+// ── Delivery Zone + Location ──────────────────────────────────────────────
+let selectedZoneId       = null;
+let selectedLocationId   = null;
+let currentZoneLocations = [];
 
-    let charge;
-    if (DELIVERY_SETTINGS.enable_free_delivery
-        && DELIVERY_SETTINGS.free_delivery_minimum_amount !== null
-        && sub >= DELIVERY_SETTINGS.free_delivery_minimum_amount) {
-        charge = 0;
-    } else {
-        charge = area === 'inside_dhaka'
-            ? DELIVERY_SETTINGS.inside_dhaka_charge
-            : DELIVERY_SETTINGS.outside_dhaka_charge;
+const ZONE_CARD_DEFAULT  = 'border-2 border-green-200 rounded-xl px-3 py-3 text-center transition-colors bg-white hover:border-[#14532d]';
+const ZONE_CARD_SELECTED = 'border-2 border-[#14532d] rounded-xl px-3 py-3 text-center transition-colors bg-green-50';
+const LOC_CARD_DEFAULT   = 'border border-green-200 rounded-xl px-4 py-2.5 flex justify-between items-center transition-colors bg-white hover:border-[#14532d]';
+const LOC_CARD_SELECTED  = 'border border-[#14532d] rounded-xl px-4 py-2.5 flex justify-between items-center transition-colors bg-green-50';
+
+function calcDeliveryCharge(zone, location) {
+    if (!zone || !location) return 0;
+    const sub = comboItems.reduce((s, x) => s + x.price, 0);
+    if (zone.free_delivery_minimum_amount !== null && sub >= zone.free_delivery_minimum_amount) {
+        return 0;
     }
+    return location.delivery_charge !== null ? location.delivery_charge : zone.delivery_charge;
+}
+
+function onZoneSelect(zoneId) {
+    selectedZoneId     = zoneId;
+    selectedLocationId = null;
+    currentZoneLocations = [];
+
+    // Update zone card styles
+    DELIVERY_ZONES.forEach(z => {
+        const d = document.getElementById('zone-display-' + z.id);
+        if (d) d.className = z.id === zoneId ? ZONE_CARD_SELECTED : ZONE_CARD_DEFAULT;
+    });
+
+    // Set hidden zone input
+    const zInput = document.getElementById('f-delivery_zone_id');
+    if (zInput) zInput.value = zoneId;
+
+    // Clear location selection
+    const lInput = document.getElementById('f-delivery_location_id');
+    if (lInput) lInput.value = '';
+
+    // Reset search
+    const search = document.getElementById('location-search');
+    if (search) search.value = '';
+
+    // Load this zone's locations
+    const zone = DELIVERY_ZONES.find(z => z.id === zoneId);
+    currentZoneLocations = zone ? zone.locations : [];
+
+    // Render locations
+    renderLocations('');
+
+    // Show location section
+    const locSec = document.getElementById('location-section');
+    if (locSec) locSec.style.display = 'block';
+
+    // Reset delivery display
+    const delivEl = document.getElementById('order-delivery-display');
+    if (delivEl) { delivEl.textContent = 'এলাকা বেছে নিন'; delivEl.className = 'text-gray-400 italic'; }
+
+    // Update total (no delivery yet)
+    const sub = comboItems.reduce((s, x) => s + x.price, 0);
+    const tel = document.getElementById('order-total-display');
+    if (tel) tel.textContent = '৳' + fmt(sub + PACKAGING_COST);
+}
+
+function filterLocations(query) {
+    renderLocations(query.trim().toLowerCase());
+}
+
+function renderLocations(query) {
+    const list = document.getElementById('location-list');
+    if (!list) return;
+
+    const filtered = query
+        ? currentZoneLocations.filter(l =>
+            l.location_name.toLowerCase().includes(query) ||
+            (l.keywords && l.keywords.toLowerCase().includes(query))
+          )
+        : currentZoneLocations;
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<p class="text-gray-400 text-sm text-center py-3">কোনো এলাকা পাওয়া যায়নি।</p>';
+        return;
+    }
+
+    const zone = DELIVERY_ZONES.find(z => z.id === selectedZoneId);
+    list.innerHTML = filtered.map(l => {
+        const charge = l.delivery_charge !== null ? l.delivery_charge : (zone ? zone.delivery_charge : 0);
+        const isSelected = l.id === selectedLocationId;
+        return `<label class="block cursor-pointer">
+            <input type="radio" name="_location_radio" value="${l.id}" class="sr-only"
+                   onchange="onLocationSelect(${l.id})"${isSelected ? ' checked' : ''}>
+            <div id="loc-display-${l.id}" class="${isSelected ? LOC_CARD_SELECTED : LOC_CARD_DEFAULT}">
+                <span class="text-sm font-medium text-[#14532d]">${l.location_name}</span>
+                <span class="text-xs text-gray-400 flex-shrink-0">৳${fmt(charge)}</span>
+            </div>
+        </label>`;
+    }).join('');
+}
+
+function onLocationSelect(locationId) {
+    selectedLocationId = locationId;
+
+    // Set hidden location input
+    const lInput = document.getElementById('f-delivery_location_id');
+    if (lInput) lInput.value = locationId;
+
+    // Update card styles in current render
+    currentZoneLocations.forEach(l => {
+        const d = document.getElementById('loc-display-' + l.id);
+        if (d) d.className = l.id === locationId ? LOC_CARD_SELECTED : LOC_CARD_DEFAULT;
+    });
+
+    // Calculate charge
+    const zone     = DELIVERY_ZONES.find(z => z.id === selectedZoneId);
+    const location = currentZoneLocations.find(l => l.id === locationId);
+    const charge   = calcDeliveryCharge(zone, location);
 
     // Update delivery display
     const delivEl = document.getElementById('order-delivery-display');
     if (delivEl) {
-        if (charge === 0) {
+        const sub = comboItems.reduce((s, x) => s + x.price, 0);
+        const isFree = zone && zone.free_delivery_minimum_amount !== null && sub >= zone.free_delivery_minimum_amount;
+        if (isFree) {
             delivEl.textContent = 'বিনামূল্যে ডেলিভারি!';
             delivEl.className   = 'text-green-600 font-semibold';
         } else {
@@ -1468,19 +1576,10 @@ function onDeliveryAreaChange(area) {
         }
     }
 
-    // Update selected card styles
-    ['inside', 'outside'].forEach(k => {
-        const d = document.getElementById('da-display-' + k);
-        if (!d) return;
-        const isSelected = (k === 'inside' && area === 'inside_dhaka') || (k === 'outside' && area === 'outside_dhaka');
-        d.className = isSelected
-            ? 'border-2 border-[#14532d] rounded-xl px-3 py-3 text-center transition-colors bg-green-50'
-            : 'border-2 border-green-200 rounded-xl px-3 py-3 text-center transition-colors bg-white hover:border-[#14532d]';
-    });
-
     // Update grand total
+    const sub   = comboItems.reduce((s, x) => s + x.price, 0);
     const grand = sub + PACKAGING_COST + charge;
-    const tel = document.getElementById('order-total-display');
+    const tel   = document.getElementById('order-total-display');
     if (tel) tel.textContent = '৳' + fmt(grand);
 }
 
@@ -1588,11 +1687,15 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Validate delivery area selected
-        const selectedArea = form.querySelector('input[name="delivery_area"]:checked');
-        if (!selectedArea) {
-            const daErr = document.getElementById('err-delivery_area');
-            if (daErr) { daErr.textContent = 'ডেলিভারি এলাকা বেছে নিন।'; daErr.classList.remove('hidden'); }
+        // Validate zone + location selected
+        if (!selectedZoneId) {
+            const zErr = document.getElementById('err-delivery_zone_id');
+            if (zErr) { zErr.textContent = 'ডেলিভারি জোন বেছে নিন।'; zErr.classList.remove('hidden'); }
+            return;
+        }
+        if (!selectedLocationId) {
+            const lErr = document.getElementById('err-delivery_location_id');
+            if (lErr) { lErr.textContent = 'ডেলিভারি এলাকা বেছে নিন।'; lErr.classList.remove('hidden'); }
             return;
         }
 
