@@ -12,6 +12,7 @@ use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Models\PaymentSetting;
 use App\Models\PriceSetting;
+use App\Models\Product;
 use App\Models\ProductPrice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -204,55 +205,102 @@ class OrderController extends Controller
             ], 422);
         }
 
+        // ── Aggregate required grams per product ────────────────────────────────
+        $neededByProduct = [];
+        foreach ($processedItems as $item) {
+            $pid = $item['product_id'];
+            $neededByProduct[$pid] = ($neededByProduct[$pid] ?? 0) + $item['quantity_gram'];
+        }
+
+        // Pre-check stock (fast-fail before acquiring locks)
+        foreach ($neededByProduct as $productId => $neededGram) {
+            $product = Product::find($productId);
+            if (! $product || $product->stock * 1000 < $neededGram) {
+                $name = $product?->name_bn ?? 'পণ্যটি';
+                return response()->json([
+                    'message' => 'দুঃখিত, ' . $name . '-এর পর্যাপ্ত স্টক নেই। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।',
+                    'errors'  => ['items' => ['পণ্যটির পর্যাপ্ত স্টক নেই।']],
+                ], 422);
+            }
+        }
+
         // ── Generate unique order number ────────────────────────────────────────
         do {
             $orderNumber = 'MSL-' . date('Ymd') . '-' . strtoupper(Str::random(5));
         } while (Order::where('order_number', $orderNumber)->exists());
 
-        // ── Persist order + items in a transaction ──────────────────────────────
-        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge, $grandTotal, $orderNumber, $isManualPayment, $orderType, $zone, $location, $orderComboId, $bdDivision, $bdDistrict, $bdUpazila, $bdUnion) {
-            $order = Order::create([
-                'order_number'          => $orderNumber,
-                'customer_name'         => $validated['full_name'],
-                'mobile_number'         => $validated['mobile_number'],
-                'alternative_number'    => $validated['alternative_number'] ?? null,
-                'full_address'          => $validated['full_address'],
-                'district'              => $zone->zone_name,
-                'area'                  => $location->location_name,
-                'delivery_area'         => $zone->zone_type,
-                'delivery_zone_id'      => $zone->id,
-                'delivery_location_id'  => $location->id,
-                'delivery_zone_name'    => $zone->zone_name,
-                'delivery_location_name' => $location->location_name,
-                'order_note'            => $validated['order_note'] ?? null,
-                'order_type'            => $orderType,
-                'subtotal'              => $subtotal,
-                'packaging_cost'        => $packagingCost,
-                'delivery_charge'       => $deliveryCharge,
-                'grand_total'           => $grandTotal,
-                'payment_method'        => $validated['payment_method'],
-                'sender_number'         => $isManualPayment ? ($validated['sender_number'] ?? null) : null,
-                'transaction_id'        => $isManualPayment ? ($validated['transaction_id'] ?? null) : null,
-                'paid_amount'           => $isManualPayment ? ($validated['paid_amount'] ?? null) : null,
-                'payment_status'        => 'pending',
-                'order_status'          => 'pending',
-                'combo_id'              => $orderComboId,
-                'bd_division_id'        => $bdDivision->id,
-                'bd_district_id'        => $bdDistrict->id,
-                'bd_upazila_id'         => $bdUpazila->id,
-                'bd_union_id'           => $bdUnion?->id,
-                'division_name'         => $bdDivision->bn_name,
-                'district_name'         => $bdDistrict->bn_name,
-                'upazila_name'          => $bdUpazila->bn_name,
-                'union_name'            => $bdUnion?->bn_name,
-            ]);
+        // ── Persist order + items + stock deduction in a transaction ────────────
+        try {
+            $order = DB::transaction(function () use (
+                $validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge,
+                $grandTotal, $orderNumber, $isManualPayment, $orderType, $zone, $location,
+                $orderComboId, $bdDivision, $bdDistrict, $bdUpazila, $bdUnion, $neededByProduct
+            ) {
+                // Re-validate stock with row-level locks to prevent race conditions
+                foreach ($neededByProduct as $productId => $neededGram) {
+                    $product = Product::lockForUpdate()->find($productId);
+                    if (! $product || $product->stock * 1000 < $neededGram) {
+                        $name = $product?->name_bn ?? 'পণ্যটি';
+                        throw new \RuntimeException($name . '-এর পর্যাপ্ত স্টক নেই। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।');
+                    }
+                }
 
-            foreach ($processedItems as $item) {
-                $order->items()->create($item);
-            }
+                $order = Order::create([
+                    'order_number'          => $orderNumber,
+                    'customer_name'         => $validated['full_name'],
+                    'mobile_number'         => $validated['mobile_number'],
+                    'alternative_number'    => $validated['alternative_number'] ?? null,
+                    'full_address'          => $validated['full_address'],
+                    'district'              => $zone->zone_name,
+                    'area'                  => $location->location_name,
+                    'delivery_area'         => $zone->zone_type,
+                    'delivery_zone_id'      => $zone->id,
+                    'delivery_location_id'  => $location->id,
+                    'delivery_zone_name'    => $zone->zone_name,
+                    'delivery_location_name' => $location->location_name,
+                    'order_note'            => $validated['order_note'] ?? null,
+                    'order_type'            => $orderType,
+                    'subtotal'              => $subtotal,
+                    'packaging_cost'        => $packagingCost,
+                    'delivery_charge'       => $deliveryCharge,
+                    'grand_total'           => $grandTotal,
+                    'payment_method'        => $validated['payment_method'],
+                    'sender_number'         => $isManualPayment ? ($validated['sender_number'] ?? null) : null,
+                    'transaction_id'        => $isManualPayment ? ($validated['transaction_id'] ?? null) : null,
+                    'paid_amount'           => $isManualPayment ? ($validated['paid_amount'] ?? null) : null,
+                    'payment_status'        => 'pending',
+                    'order_status'          => 'pending',
+                    'combo_id'              => $orderComboId,
+                    'bd_division_id'        => $bdDivision->id,
+                    'bd_district_id'        => $bdDistrict->id,
+                    'bd_upazila_id'         => $bdUpazila->id,
+                    'bd_union_id'           => $bdUnion?->id,
+                    'division_name'         => $bdDivision->bn_name,
+                    'district_name'         => $bdDistrict->bn_name,
+                    'upazila_name'          => $bdUpazila->bn_name,
+                    'union_name'            => $bdUnion?->bn_name,
+                ]);
 
-            return $order;
-        });
+                foreach ($processedItems as $item) {
+                    $order->items()->create($item);
+                }
+
+                // Deduct stock (ceil to whole kg)
+                foreach ($neededByProduct as $productId => $neededGram) {
+                    Product::where('id', $productId)
+                        ->decrement('stock', (int) ceil($neededGram / 1000));
+                }
+
+                $order->update(['stock_deducted_at' => now()]);
+
+                return $order;
+            });
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors'  => ['items' => [$e->getMessage()]],
+            ], 422);
+        }
 
         return response()->json([
             'success'  => true,

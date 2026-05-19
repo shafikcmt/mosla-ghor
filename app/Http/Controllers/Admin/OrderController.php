@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Courier;
 use App\Models\DeliveryZone;
 use App\Models\Order;
+use App\Models\Product;
 use App\Services\SteadfastService;
 use Illuminate\Http\Request;
 
@@ -46,10 +47,18 @@ class OrderController extends Controller
             'order_status'   => 'required|in:pending,confirmed,processing,shipped,delivered,cancelled',
         ]);
 
+        $needsStockRestore = $request->order_status === 'cancelled'
+            && $order->stock_deducted_at
+            && ! $order->stock_restored_at;
+
         $order->update([
             'payment_status' => $request->payment_status,
             'order_status'   => $request->order_status,
         ]);
+
+        if ($needsStockRestore) {
+            $this->deductedStockRestore($order);
+        }
 
         return redirect()->route('admin.orders.show', $order)
             ->with('success', 'অর্ডার স্ট্যাটাস আপডেট হয়েছে।');
@@ -108,11 +117,12 @@ class OrderController extends Controller
         // Validation before sending
         $warnings = [];
 
-        if (! $order->mobile_number) $warnings[] = 'কাস্টমারের ফোন নম্বর নেই।';
-        if (! $order->full_address)  $warnings[] = 'সম্পূর্ণ ঠিকানা নেই।';
-        if (! $order->delivery_zone_id) $warnings[] = 'ডেলিভারি জোন নির্বাচিত নেই।';
+        if (! $order->mobile_number)      $warnings[] = 'কাস্টমারের ফোন নম্বর নেই।';
+        if (! $order->full_address)       $warnings[] = 'সম্পূর্ণ ঠিকানা নেই।';
+        if (! $order->delivery_zone_id)   $warnings[] = 'ডেলিভারি জোন নির্বাচিত নেই।';
         if (! $order->selected_courier_id) $warnings[] = 'কুরিয়ার নির্বাচিত নেই।';
-        if ($order->items->isEmpty()) $warnings[] = 'অর্ডারে কোনো পণ্য নেই।';
+        if ($order->items->isEmpty())     $warnings[] = 'অর্ডারে কোনো পণ্য নেই।';
+        if (! $order->stock_deducted_at)  $warnings[] = 'স্টক এখনো কাটা হয়নি।';
 
         if (! empty($warnings)) {
             return redirect()->route('admin.orders.show', $order)
@@ -127,11 +137,11 @@ class OrderController extends Controller
 
             if ($result['success']) {
                 $order->update([
-                    'tracking_id'       => $result['tracking_id'],
-                    'consignment_id'    => $result['consignment_id'],
-                    'courier_status'    => 'sent_to_courier',
-                    'sent_to_courier_at'=> now(),
-                    'order_status'      => 'shipped',
+                    'tracking_id'        => $result['tracking_id'],
+                    'consignment_id'     => $result['consignment_id'],
+                    'courier_status'     => 'sent_to_courier',
+                    'sent_to_courier_at' => now(),
+                    'order_status'       => 'shipped',
                 ]);
 
                 return redirect()->route('admin.orders.show', $order)
@@ -145,10 +155,10 @@ class OrderController extends Controller
         // Manual / non-API couriers — mark as sent with manual tracking
         $tracking = $request->input('tracking_id') ?: $order->tracking_id;
         $order->update([
-            'courier_status'    => 'sent_to_courier',
-            'sent_to_courier_at'=> now(),
-            'tracking_id'       => $tracking,
-            'order_status'      => 'shipped',
+            'courier_status'     => 'sent_to_courier',
+            'sent_to_courier_at' => now(),
+            'tracking_id'        => $tracking,
+            'order_status'       => 'shipped',
         ]);
 
         return redirect()->route('admin.orders.show', $order)
@@ -174,7 +184,48 @@ class OrderController extends Controller
             'returned_at'    => now(),
         ]);
 
+        // Auto-restore stock when an order is returned
+        if ($order->stock_deducted_at && ! $order->stock_restored_at) {
+            $this->deductedStockRestore($order);
+        }
+
         return redirect()->route('admin.orders.show', $order)
-            ->with('success', 'অর্ডার ফেরত চিহ্নিত হয়েছে।');
+            ->with('success', 'অর্ডার ফেরত চিহ্নিত হয়েছে। স্টক পুনরুদ্ধার হয়েছে।');
+    }
+
+    public function restoreStock(Order $order)
+    {
+        if (! $order->stock_deducted_at) {
+            return redirect()->route('admin.orders.show', $order)
+                ->with('error', 'এই অর্ডারের স্টক কখনো কাটা হয়নি।');
+        }
+
+        if ($order->stock_restored_at) {
+            return redirect()->route('admin.orders.show', $order)
+                ->with('error', 'স্টক ইতোমধ্যেই পুনরুদ্ধার হয়েছে।');
+        }
+
+        $this->deductedStockRestore($order);
+
+        return redirect()->route('admin.orders.show', $order)
+            ->with('success', 'স্টক সফলভাবে পুনরুদ্ধার হয়েছে।');
+    }
+
+    private function deductedStockRestore(Order $order): void
+    {
+        $order->loadMissing('items');
+
+        $neededByProduct = [];
+        foreach ($order->items as $item) {
+            $pid = $item->product_id;
+            $neededByProduct[$pid] = ($neededByProduct[$pid] ?? 0) + $item->quantity_gram;
+        }
+
+        foreach ($neededByProduct as $productId => $totalGram) {
+            Product::where('id', $productId)
+                ->increment('stock', (int) ceil($totalGram / 1000));
+        }
+
+        $order->update(['stock_restored_at' => now()]);
     }
 }

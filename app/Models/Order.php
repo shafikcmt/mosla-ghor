@@ -23,6 +23,7 @@ class Order extends Model
         'courier_status', 'tracking_id', 'consignment_id', 'courier_note',
         'sent_to_courier_at', 'delivered_at', 'returned_at',
         'delivery_charge_overridden', 'courier_cost_overridden', 'zone_overridden',
+        'stock_deducted_at', 'stock_restored_at',
     ];
 
     protected $casts = [
@@ -40,6 +41,8 @@ class Order extends Model
         'sent_to_courier_at'         => 'datetime',
         'delivered_at'               => 'datetime',
         'returned_at'                => 'datetime',
+        'stock_deducted_at'          => 'datetime',
+        'stock_restored_at'          => 'datetime',
     ];
 
     public function items(): HasMany

@@ -421,6 +421,47 @@
         </div>
     </div>
 
+    {{-- ── Stock Section ─────────────────────────────── --}}
+    <div class="no-print px-6 py-5 bg-emerald-50">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">স্টক ম্যানেজমেন্ট</h3>
+        <div class="flex flex-wrap items-start gap-4 text-sm">
+            <div class="bg-white rounded p-3 shadow-sm">
+                <div class="text-xs text-gray-400 mb-1">স্টক স্ট্যাটাস</div>
+                @if($order->stock_restored_at)
+                    <span class="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-700">স্টক ফেরত দেওয়া হয়েছে</span>
+                @elseif($order->stock_deducted_at)
+                    <span class="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-700">স্টক কাটা হয়েছে</span>
+                @else
+                    <span class="px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-500">স্টক কাটা হয়নি</span>
+                @endif
+            </div>
+            @if($order->stock_deducted_at)
+            <div class="bg-white rounded p-3 shadow-sm">
+                <div class="text-xs text-gray-400 mb-1">কাটার সময়</div>
+                <div class="text-xs text-gray-800">{{ $order->stock_deducted_at->format('d M Y, h:i A') }}</div>
+            </div>
+            @endif
+            @if($order->stock_restored_at)
+            <div class="bg-white rounded p-3 shadow-sm">
+                <div class="text-xs text-gray-400 mb-1">পুনরুদ্ধারের সময়</div>
+                <div class="text-xs text-gray-800">{{ $order->stock_restored_at->format('d M Y, h:i A') }}</div>
+            </div>
+            @endif
+        </div>
+        @if($order->stock_deducted_at && !$order->stock_restored_at)
+        <div class="mt-4">
+            <form method="POST" action="{{ route('admin.orders.restoreStock', $order) }}"
+                  onsubmit="return confirm('স্টক পুনরুদ্ধার করবেন? পণ্যের স্টক পূর্বের মতো বাড়ানো হবে।')">
+                @csrf
+                <button type="submit"
+                        class="bg-orange-600 text-white text-sm px-4 py-2 rounded hover:bg-orange-700 transition-colors">
+                    স্টক পুনরুদ্ধার করুন
+                </button>
+            </form>
+        </div>
+        @endif
+    </div>
+
     {{-- Status Update Form --}}
     <div class="no-print px-6 py-5 bg-gray-50">
         <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">অর্ডার ও পেমেন্ট স্ট্যাটাস আপডেট</h3>
