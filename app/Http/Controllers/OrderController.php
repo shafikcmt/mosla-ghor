@@ -52,6 +52,7 @@ class OrderController extends Controller
             'sender_number'            => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:30'],
             'transaction_id'           => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:100'],
             'paid_amount'              => [$isManualPayment ? 'required' : 'nullable', 'numeric', 'min:0'],
+            'payment_screenshot'       => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'items'                    => [$isComboOrder ? 'nullable' : 'required', 'array', 'min:1', 'max:20'],
             'items.*.product_id'       => ['required_with:items', 'integer', 'exists:products,id'],
             'items.*.quantity_gram'    => ['required_with:items', 'integer', 'in:25,50,100,250,500,1000'],
@@ -300,6 +301,12 @@ class OrderController extends Controller
                 'message' => $e->getMessage(),
                 'errors'  => ['items' => [$e->getMessage()]],
             ], 422);
+        }
+
+        if ($request->hasFile('payment_screenshot')) {
+            $path = $request->file('payment_screenshot')
+                ->store('payment-screenshots', 'public');
+            $order->update(['payment_screenshot' => $path]);
         }
 
         return response()->json([

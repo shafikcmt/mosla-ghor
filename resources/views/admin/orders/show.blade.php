@@ -220,7 +220,7 @@
                 <span class="text-gray-500">পেমেন্ট পদ্ধতি:</span>
                 <span class="ml-2 text-gray-800 font-medium">{{ $methodLabels[$order->payment_method] ?? $order->payment_method }}</span>
             </div>
-            <div>
+            <div class="flex items-center gap-2">
                 <span class="text-gray-500">পেমেন্ট স্ট্যাটাস:</span>
                 <span class="ml-2 font-medium {{ $pColors[$order->payment_status] ?? '' }} px-2 py-0.5 rounded text-xs">
                     {{ $pLabels[$order->payment_status] ?? $order->payment_status }}
@@ -236,6 +236,46 @@
             <div><span class="text-gray-500">পেমেন্ট করা পরিমাণ:</span><span class="ml-2 text-gray-800 font-semibold">৳ {{ number_format($order->paid_amount, 2) }}</span></div>
             @endif
         </div>
+
+        {{-- Payment screenshot --}}
+        @if($order->payment_screenshot)
+        <div class="mt-4">
+            <p class="text-xs text-gray-500 mb-2">পেমেন্ট স্ক্রিনশট:</p>
+            <a href="{{ asset('storage/' . $order->payment_screenshot) }}" target="_blank" rel="noopener"
+               class="inline-block">
+                <img src="{{ asset('storage/' . $order->payment_screenshot) }}"
+                     alt="পেমেন্ট স্ক্রিনশট"
+                     class="h-32 w-auto rounded border border-gray-200 shadow-sm hover:opacity-90 transition-opacity object-cover cursor-zoom-in">
+            </a>
+            <p class="text-[10px] text-gray-400 mt-1">ক্লিক করলে পূর্ণ ছবি নতুন ট্যাবে খুলবে</p>
+        </div>
+        @endif
+
+        {{-- Quick payment status actions (no-print) --}}
+        @if($order->payment_method !== 'cash_on_delivery')
+        <div class="no-print mt-4 pt-4 border-t border-gray-100">
+            <p class="text-xs text-gray-500 mb-2 font-medium">পেমেন্ট দ্রুত যাচাই:</p>
+            <form method="POST" action="{{ route('admin.orders.updateStatus', $order) }}" class="flex flex-wrap gap-2">
+                @csrf
+                <input type="hidden" name="order_status" value="{{ $order->order_status }}">
+                <button type="submit" name="payment_status" value="verified"
+                        class="px-3 py-1.5 rounded text-xs font-semibold transition-colors
+                               {{ $order->payment_status === 'verified' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-600 hover:text-white' }}">
+                    ✓ যাচাই হয়েছে
+                </button>
+                <button type="submit" name="payment_status" value="failed"
+                        class="px-3 py-1.5 rounded text-xs font-semibold transition-colors
+                               {{ $order->payment_status === 'failed' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-600 hover:text-white' }}">
+                    ✗ ব্যর্থ
+                </button>
+                <button type="submit" name="payment_status" value="pending"
+                        class="px-3 py-1.5 rounded text-xs font-semibold transition-colors
+                               {{ $order->payment_status === 'pending' ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-500 hover:text-white' }}">
+                    ↺ পেন্ডিং
+                </button>
+            </form>
+        </div>
+        @endif
     </div>
 
     {{-- ── Courier / Delivery Section ─────────────────────────────── --}}

@@ -14,7 +14,7 @@ class Order extends Model
         'delivery_zone_id', 'delivery_location_id', 'delivery_zone_name', 'delivery_location_name',
         'order_note', 'order_type', 'subtotal', 'packaging_cost', 'delivery_charge', 'grand_total',
         'payment_method', 'sender_number', 'transaction_id', 'paid_amount',
-        'payment_status', 'order_status', 'combo_id',
+        'payment_status', 'order_status', 'combo_id', 'payment_screenshot',
         'bd_division_id', 'bd_district_id', 'bd_upazila_id', 'bd_union_id',
         'division_name', 'district_name', 'upazila_name', 'union_name',
         // Courier fields

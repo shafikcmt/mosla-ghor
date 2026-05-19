@@ -1183,6 +1183,24 @@ $productsForJs = $products->map(function ($p) {
                                        class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white">
                                 <p id="err-paid_amount" class="text-red-500 text-xs mt-1 hidden"></p>
                             </div>
+                            <div>
+                                <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
+                                    পেমেন্ট স্ক্রিনশট
+                                    <span class="text-gray-400 text-xs font-normal normal-case">(ঐচ্ছিক)</span>
+                                </label>
+                                <label for="f-payment_screenshot"
+                                       class="flex items-center gap-3 w-full border-2 border-dashed border-green-200 rounded-xl px-4 py-3 cursor-pointer bg-white hover:border-[#14532d] transition-colors">
+                                    <span class="text-2xl">📷</span>
+                                    <span id="screenshot-label-text" class="text-sm text-gray-500">
+                                        ছবি বেছে নিন (JPG, PNG, WebP • সর্বোচ্চ ২ MB)
+                                    </span>
+                                </label>
+                                <input type="file" name="payment_screenshot" id="f-payment_screenshot"
+                                       accept="image/jpeg,image/png,image/webp"
+                                       class="sr-only"
+                                       onchange="onScreenshotChange(this)">
+                                <p id="err-payment_screenshot" class="text-red-500 text-xs mt-1 hidden"></p>
+                            </div>
                         </div>
                     </div>
 
@@ -1758,7 +1776,7 @@ function clearOrderErrors() {
      'bd_division_id','bd_district_id','bd_upazila_id','bd_union_id',
      'full_address',
      'delivery_zone_id','delivery_location_id',
-     'items','payment_method','sender_number','transaction_id','paid_amount'].forEach(f => {
+     'items','payment_method','sender_number','transaction_id','paid_amount','payment_screenshot'].forEach(f => {
         const el = document.getElementById('err-' + f);
         if (el) { el.textContent = ''; el.classList.add('hidden'); }
     });
@@ -2121,6 +2139,25 @@ function onLocationSelect(locationId) {
     const grand = getOrderSubtotal() + PACKAGING_COST + charge;
     const tel   = document.getElementById('order-total-display');
     if (tel) tel.textContent = '৳' + fmt(grand);
+}
+
+// ── Payment Screenshot ────────────────────────────────────────────────────
+function onScreenshotChange(input) {
+    const label = document.getElementById('screenshot-label-text');
+    if (!label) return;
+    if (input.files && input.files[0]) {
+        const f = input.files[0];
+        if (f.size > 2 * 1024 * 1024) {
+            const err = document.getElementById('err-payment_screenshot');
+            if (err) { err.textContent = 'ফাইলের সাইজ ২ MB-এর বেশি হওয়া যাবে না।'; err.classList.remove('hidden'); }
+            input.value = '';
+            label.textContent = 'ছবি বেছে নিন (JPG, PNG, WebP • সর্বোচ্চ ২ MB)';
+            return;
+        }
+        label.textContent = '✓ ' + f.name;
+    } else {
+        label.textContent = 'ছবি বেছে নিন (JPG, PNG, WebP • সর্বোচ্চ ২ MB)';
+    }
 }
 
 // ── Payment Method UI ─────────────────────────────────────────────────────
