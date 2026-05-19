@@ -86,8 +86,13 @@ class ProductSeeder extends Seeder
         ];
 
         foreach ($products as $data) {
-            $product = Product::create(array_merge($data, ['is_active' => true]));
-            $product->syncPrices();
+            $product = Product::firstOrCreate(
+                ['slug' => $data['slug']],
+                array_merge($data, ['is_active' => true])
+            );
+            if ($product->wasRecentlyCreated) {
+                $product->syncPrices();
+            }
         }
     }
 }
