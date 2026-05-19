@@ -1,0 +1,148 @@
+@extends('admin.layout')
+
+@section('title', 'ওয়েবসাইট সেটিং')
+
+@section('content')
+
+<h1 class="text-xl font-bold text-gray-800 mb-6">ওয়েবসাইট কন্টেন্ট সেটিং</h1>
+
+<form action="{{ route('admin.website-settings.update') }}" method="POST">
+    @csrf
+
+    {{-- ── Site identity ──────────────────────────────────────────── --}}
+    <div class="bg-white rounded shadow-sm border border-gray-100 mb-6">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="text-sm font-semibold text-gray-600">সাইটের পরিচয়</h2>
+        </div>
+        <div class="px-6 py-5">
+            <div class="max-w-md">
+                <label class="block text-xs font-medium text-gray-600 mb-1" for="site_name">
+                    সাইটের নাম <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="site_name" id="site_name" maxlength="100" required
+                       value="{{ old('site_name', $settings['site_name'] ?? 'মসলা ঘর') }}"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                @error('site_name')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+            </div>
+        </div>
+    </div>
+
+    {{-- ── Hero section ────────────────────────────────────────────── --}}
+    <div class="bg-white rounded shadow-sm border border-gray-100 mb-6">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="text-sm font-semibold text-gray-600">হিরো সেকশন</h2>
+        </div>
+        <div class="px-6 py-5 space-y-5">
+
+            <div class="grid grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="hero_badge_text">ব্যাজ টেক্সট</label>
+                    <input type="text" name="hero_badge_text" id="hero_badge_text" maxlength="100"
+                           value="{{ old('hero_badge_text', $settings['hero_badge_text'] ?? '') }}"
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                    <p class="text-gray-400 text-xs mt-1">যেমন: ঈদ স্পেশাল কালেকশন</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="hero_title">
+                        শিরোনাম <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="hero_title" id="hero_title" maxlength="200" required
+                           value="{{ old('hero_title', $settings['hero_title'] ?? '') }}"
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1" for="hero_subtitle">সাবটাইটেল / বিবরণ</label>
+                <textarea name="hero_subtitle" id="hero_subtitle" rows="3" maxlength="500"
+                          class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none">{{ old('hero_subtitle', $settings['hero_subtitle'] ?? '') }}</textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="primary_cta_text">প্রাইমারি বাটন</label>
+                    <input type="text" name="primary_cta_text" id="primary_cta_text" maxlength="60"
+                           value="{{ old('primary_cta_text', $settings['primary_cta_text'] ?? '') }}"
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                    <p class="text-gray-400 text-xs mt-1">যেমন: পণ্য দেখুন</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="secondary_cta_text">সেকেন্ডারি বাটন</label>
+                    <input type="text" name="secondary_cta_text" id="secondary_cta_text" maxlength="60"
+                           value="{{ old('secondary_cta_text', $settings['secondary_cta_text'] ?? '') }}"
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                    <p class="text-gray-400 text-xs mt-1">যেমন: কম্বো দেখুন</p>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1" for="hero_image_url">হিরো ব্যাকগ্রাউন্ড ছবির URL (ঐচ্ছিক)</label>
+                <input type="text" name="hero_image_url" id="hero_image_url" maxlength="500"
+                       value="{{ old('hero_image_url', $settings['hero_image_url'] ?? '') }}"
+                       placeholder="https://..."
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+            </div>
+
+        </div>
+    </div>
+
+    {{-- ── Contact & social ────────────────────────────────────────── --}}
+    <div class="bg-white rounded shadow-sm border border-gray-100 mb-6">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="text-sm font-semibold text-gray-600">যোগাযোগ ও সোশ্যাল</h2>
+        </div>
+        <div class="px-6 py-5 space-y-5">
+
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1" for="whatsapp_number">WhatsApp / ফোন নম্বর</label>
+                <input type="text" name="whatsapp_number" id="whatsapp_number" maxlength="20"
+                       value="{{ old('whatsapp_number', $settings['whatsapp_number'] ?? '') }}"
+                       placeholder="01700000000"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                <p class="text-gray-400 text-xs mt-1">সংখ্যা শুধু, যেমন: 01700000000</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="messenger_url">Messenger URL (ঐচ্ছিক)</label>
+                    <input type="text" name="messenger_url" id="messenger_url" maxlength="300"
+                           value="{{ old('messenger_url', $settings['messenger_url'] ?? '') }}"
+                           placeholder="https://m.me/..."
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1" for="facebook_page_url">Facebook Page URL (ঐচ্ছিক)</label>
+                    <input type="text" name="facebook_page_url" id="facebook_page_url" maxlength="300"
+                           value="{{ old('facebook_page_url', $settings['facebook_page_url'] ?? '') }}"
+                           placeholder="https://facebook.com/..."
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    {{-- ── Footer ──────────────────────────────────────────────────── --}}
+    <div class="bg-white rounded shadow-sm border border-gray-100 mb-6">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="text-sm font-semibold text-gray-600">ফুটার</h2>
+        </div>
+        <div class="px-6 py-5">
+            <label class="block text-xs font-medium text-gray-600 mb-1" for="footer_text">কপিরাইট টেক্সট</label>
+            <input type="text" name="footer_text" id="footer_text" maxlength="200"
+                   value="{{ old('footer_text', $settings['footer_text'] ?? '') }}"
+                   class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <p class="text-gray-400 text-xs mt-1">সাইটের নাম ও সাল স্বয়ংক্রিয়ভাবে যুক্ত হয়।</p>
+        </div>
+    </div>
+
+    <div class="flex gap-3">
+        <button type="submit"
+                class="bg-gray-800 text-white px-8 py-2.5 rounded text-sm font-medium hover:bg-gray-700 transition-colors">
+            সংরক্ষণ করুন
+        </button>
+    </div>
+
+</form>
+
+@endsection

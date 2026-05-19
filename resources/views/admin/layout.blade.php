@@ -10,7 +10,9 @@
 <body class="bg-gray-100 min-h-screen">
 
     <nav class="bg-gray-900 text-white px-6 py-3 flex items-center gap-6 shadow">
-        <span class="font-bold text-base tracking-wide">মসলা Admin</span>
+        <a href="{{ route('admin.dashboard') }}" class="font-bold text-base tracking-wide hover:text-[#c9a227] transition-colors">মসলা Admin</a>
+        <a href="{{ route('admin.dashboard') }}"
+           class="text-gray-300 hover:text-white text-sm transition-colors">ড্যাশবোর্ড</a>
         <a href="{{ route('admin.products.index') }}"
            class="text-gray-300 hover:text-white text-sm transition-colors">পণ্য তালিকা</a>
         <a href="{{ route('admin.products.create') }}"
@@ -29,6 +31,8 @@
            class="text-gray-300 hover:text-white text-sm transition-colors">FAQ</a>
         <a href="{{ route('admin.reviews.index') }}"
            class="text-gray-300 hover:text-white text-sm transition-colors">রিভিউ</a>
+        <a href="{{ route('admin.website-settings.index') }}"
+           class="text-gray-300 hover:text-white text-sm transition-colors">ওয়েব সেটিং</a>
         <a href="{{ route('admin.general-settings.index') }}"
            class="text-gray-300 hover:text-white text-sm transition-colors">জেনারেল সেটিং</a>
     </nav>

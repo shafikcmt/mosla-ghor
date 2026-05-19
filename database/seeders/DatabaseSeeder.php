@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             BdAddressSeeder::class,
             FaqSeeder::class,
             ReviewSeeder::class,
+            WebsiteSettingSeeder::class,
         ]);
     }
 }

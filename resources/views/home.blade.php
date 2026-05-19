@@ -164,20 +164,26 @@ $productsForJs = $products->map(function ($p) {
 
         <div class="flex items-center justify-center gap-4 mb-8">
             <div class="h-px w-20 bg-gradient-to-r from-transparent to-[#c9a227] opacity-70"></div>
-            <span class="text-[#c9a227] text-xs tracking-[.35em] uppercase font-semibold">ঈদ স্পেশাল কালেকশন</span>
+            <span class="text-[#c9a227] text-xs tracking-[.35em] uppercase font-semibold">{{ $ws['hero_badge_text'] ?? 'ঈদ স্পেশাল কালেকশন' }}</span>
             <div class="h-px w-20 bg-gradient-to-l from-transparent to-[#c9a227] opacity-70"></div>
         </div>
 
         <h1 class="font-serif-bn text-cream leading-tight mb-6">
-            <span class="block text-5xl md:text-7xl font-bold">খাঁটি মশলার</span>
+            <span class="block text-5xl md:text-7xl font-bold">{{ $ws['hero_title'] ?? 'খাঁটি মশলার' }}</span>
             <span class="block text-4xl md:text-6xl font-bold text-[#c9a227] mt-1">অপূর্ব স্বাদ</span>
         </h1>
+        @if(!empty($ws['hero_subtitle']))
+        <p class="text-green-200 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-10">
+            {{ $ws['hero_subtitle'] }}
+        </p>
+        @else
         <p class="text-green-200 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-10">
             প্রকৃতির সেরা উপাদান থেকে তৈরি, ভেজালমুক্ত খাঁটি মশলা —
             আপনার রান্নাকে করে তুলুন অতুলনীয় ও সুস্বাদু।
         </p>
+        @endif
         <a href="#products" class="btn-gold inline-flex items-center gap-2 text-[#0f3d22] font-bold text-base px-10 py-3.5 rounded-full shadow-xl">
-            পণ্য দেখুন
+            {{ $ws['primary_cta_text'] ?? 'পণ্য দেখুন' }}
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
         </a>
 
@@ -719,14 +725,50 @@ $productsForJs = $products->map(function ($p) {
 
 {{-- ━━━━━━━━━━━━━━━━  CONTACT  ━━━━━━━━━━━━━━━━ --}}
 <section id="contact" class="bg-[#fef9ee] py-12 px-5 border-t border-amber-100">
+    @php
+        $waNum    = $ws['whatsapp_number']   ?? '';
+        $msgrUrl  = $ws['messenger_url']     ?? '';
+        $fbUrl    = $ws['facebook_page_url'] ?? '';
+        $waClean  = preg_replace('/\D/', '', $waNum);
+    @endphp
     <div class="max-w-3xl mx-auto text-center">
         <h2 class="font-serif-bn text-[#14532d] text-2xl md:text-3xl font-bold mb-2">অর্ডার করুন এখনই</h2>
         <p class="text-gray-500 text-sm mb-6">ফোনে বা WhatsApp-এ যোগাযোগ করুন — আমরা সর্বদা প্রস্তুত</p>
-        <a href="tel:+8801700000000"
-           class="inline-flex items-center gap-2 bg-[#14532d] text-[#fef9ee] font-semibold px-8 py-3.5 rounded-full hover:bg-[#166534] transition-colors shadow-lg text-base">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
-            ০১৭০০-০০০০০০
-        </a>
+        <div class="flex flex-wrap items-center justify-center gap-3">
+            @if($waNum)
+            <a href="https://wa.me/88{{ $waClean }}"
+               class="inline-flex items-center gap-2 bg-[#14532d] text-[#fef9ee] font-semibold px-7 py-3.5 rounded-full hover:bg-[#166534] transition-colors shadow-lg text-base">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                {{ $waNum }}
+            </a>
+            <a href="tel:+88{{ $waClean }}"
+               class="inline-flex items-center gap-2 border-2 border-[#14532d] text-[#14532d] font-semibold px-7 py-3.5 rounded-full hover:bg-[#14532d] hover:text-white transition-colors text-base">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+                ফোন করুন
+            </a>
+            @endif
+            @if($msgrUrl)
+            <a href="{{ $msgrUrl }}"
+               class="inline-flex items-center gap-2 bg-blue-600 text-white font-semibold px-7 py-3.5 rounded-full hover:bg-blue-700 transition-colors shadow-lg text-base">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 4.975 0 11.111c0 3.497 1.745 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.627 0 12-4.975 12-11.111C24 4.975 18.627 0 12 0zm1.193 14.963l-3.056-3.259-5.963 3.259L10.986 8.4l3.13 3.259L20 8.4l-6.807 6.563z"/></svg>
+                Messenger
+            </a>
+            @endif
+            @if($fbUrl)
+            <a href="{{ $fbUrl }}"
+               class="inline-flex items-center gap-2 bg-[#1877F2] text-white font-semibold px-7 py-3.5 rounded-full hover:bg-blue-800 transition-colors shadow-lg text-base">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                Facebook
+            </a>
+            @endif
+            @if(!$waNum && !$msgrUrl && !$fbUrl)
+            <a href="tel:+8801700000000"
+               class="inline-flex items-center gap-2 bg-[#14532d] text-[#fef9ee] font-semibold px-8 py-3.5 rounded-full hover:bg-[#166534] transition-colors shadow-lg text-base">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
+                ০১৭০০-০০০০০০
+            </a>
+            @endif
+        </div>
     </div>
 </section>
 
@@ -735,7 +777,7 @@ $productsForJs = $products->map(function ($p) {
     <div class="max-w-6xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
-                <h3 class="font-serif-bn text-[#c9a227] text-xl font-bold">মসলা ঘর</h3>
+                <h3 class="font-serif-bn text-[#c9a227] text-xl font-bold">{{ $ws['site_name'] ?? 'মসলা ঘর' }}</h3>
                 <p class="text-green-500 text-xs mt-1">খাঁটি মশলার আস্থার দোকান</p>
             </div>
             <div class="flex gap-6 text-green-500 text-xs">
@@ -745,7 +787,7 @@ $productsForJs = $products->map(function ($p) {
             </div>
         </div>
         <div class="gold-rule mt-8 mb-6 opacity-20"></div>
-        <p class="text-center text-green-700 text-xs">&copy; {{ date('Y') }} মসলা ঘর — সমস্ত অধিকার সংরক্ষিত।</p>
+        <p class="text-center text-green-700 text-xs">&copy; {{ date('Y') }} {{ $ws['site_name'] ?? 'মসলা ঘর' }} — {{ $ws['footer_text'] ?? 'সমস্ত অধিকার সংরক্ষিত।' }}</p>
     </div>
 </footer>
 

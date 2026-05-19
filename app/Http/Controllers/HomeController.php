@@ -8,6 +8,7 @@ use App\Models\BdUpazila;
 use App\Models\Combo;
 use App\Models\Faq;
 use App\Models\Review;
+use App\Models\WebsiteSetting;
 use App\Models\DeliveryZone;
 use App\Models\PaymentSetting;
 use App\Models\PriceSetting;
@@ -73,11 +74,13 @@ class HomeController extends Controller
 
         $reviews = Review::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
 
+        $ws = WebsiteSetting::allKeyed();
+
         return view('home', compact(
             'products', 'packagingCost', 'minOrderAmount', 'paymentSettings',
             'activeZones', 'zonesForJs', 'fixedCombos', 'fixedCombosForJs',
             'bdDivisions', 'bdDistricts', 'bdUpazilas',
-            'faqs', 'reviews'
+            'faqs', 'reviews', 'ws'
         ));
     }
 }
