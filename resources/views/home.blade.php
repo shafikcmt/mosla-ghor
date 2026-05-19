@@ -912,13 +912,13 @@ $productsForJs = $products->map(function ($p) {
 // ── Product data (server-rendered JSON, keyed by id) ──────────────────────
 const PRODUCTS          = @json($productsForJs);
 const PACKAGING_COST    = {{ (int) $packagingCost }};
-const PAYMENT_SETTINGS  = @json([
-    'bkash_number'        => $paymentSettings->bkash_number,
-    'rocket_number'       => $paymentSettings->rocket_number,
-    'nagad_number'        => $paymentSettings->nagad_number,
-    'payment_instruction' => $paymentSettings->payment_instruction,
-    'enabled_methods'     => $paymentSettings->enabledMethods(),
-]);
+const PAYMENT_SETTINGS  = {
+    bkash_number:        @json($paymentSettings->bkash_number),
+    rocket_number:       @json($paymentSettings->rocket_number),
+    nagad_number:        @json($paymentSettings->nagad_number),
+    payment_instruction: @json($paymentSettings->payment_instruction),
+    enabled_methods:     @json($paymentSettings->enabledMethods()),
+};
 
 let currentId = null;
 
