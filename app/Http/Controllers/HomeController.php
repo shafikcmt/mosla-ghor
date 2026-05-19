@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DeliverySetting;
 use App\Models\PaymentSetting;
 use App\Models\PriceSetting;
 use App\Models\Product;
@@ -17,8 +18,9 @@ class HomeController extends Controller
         $priceSetting    = PriceSetting::current();
         $packagingCost   = $priceSetting->default_packaging_cost;
         $minOrderAmount  = $priceSetting->minimum_order_amount;
-        $paymentSettings = PaymentSetting::current();
+        $paymentSettings  = PaymentSetting::current();
+        $deliverySettings = DeliverySetting::current();
 
-        return view('home', compact('products', 'packagingCost', 'minOrderAmount', 'paymentSettings'));
+        return view('home', compact('products', 'packagingCost', 'minOrderAmount', 'paymentSettings', 'deliverySettings'));
     }
 }

@@ -19,6 +19,8 @@
            class="text-gray-300 hover:text-white text-sm transition-colors">অর্ডার তালিকা</a>
         <a href="{{ route('admin.payment-settings.index') }}"
            class="text-gray-300 hover:text-white text-sm transition-colors">পেমেন্ট সেটিং</a>
+        <a href="{{ route('admin.delivery-settings.index') }}"
+           class="text-gray-300 hover:text-white text-sm transition-colors">ডেলিভারি সেটিং</a>
         <a href="{{ route('admin.general-settings.index') }}"
            class="text-gray-300 hover:text-white text-sm transition-colors">জেনারেল সেটিং</a>
     </nav>

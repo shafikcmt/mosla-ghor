@@ -70,6 +70,12 @@
                     <div class="text-gray-800 font-semibold">{{ $order->full_address }}</div>
                     <div class="text-gray-500 text-xs mt-0.5">{{ $order->area }}, {{ $order->district }}</div>
                 </div>
+                @if($order->delivery_area)
+                <div>
+                    <div class="text-gray-400 text-[10px] uppercase tracking-wider mb-0.5">ডেলিভারি এলাকা</div>
+                    <div class="text-gray-800 font-semibold">{{ $order->delivery_area === 'inside_dhaka' ? 'ঢাকার ভেতরে' : 'ঢাকার বাইরে' }}</div>
+                </div>
+                @endif
                 @if($order->order_note)
                 <div class="sm:col-span-2">
                     <div class="text-gray-400 text-[10px] uppercase tracking-wider mb-0.5">বিশেষ নির্দেশনা</div>

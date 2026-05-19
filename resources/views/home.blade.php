@@ -732,8 +732,18 @@ $productsForJs = $products->map(function ($p) {
             <div class="bg-[#f0faf4] px-6 py-4 border-b border-green-100">
                 <h4 class="text-[#14532d] text-[11px] font-bold uppercase tracking-wider mb-2">আপনার কম্বো</h4>
                 <div id="order-items-preview" class="space-y-1.5 text-sm max-h-32 overflow-y-auto"></div>
-                <div class="flex justify-between items-center font-bold text-[#14532d] pt-2.5 mt-2 border-t border-green-200">
-                    <span class="text-sm">মোট (প্যাকেজিংসহ)</span>
+                <div class="mt-2.5 border-t border-green-200 pt-2 space-y-1">
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>প্যাকেজিং চার্জ</span>
+                        <span>৳{{ number_format($packagingCost, 0) }}</span>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>ডেলিভারি চার্জ</span>
+                        <span id="order-delivery-display" class="text-gray-400 italic">এলাকা বেছে নিন</span>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center font-bold text-[#14532d] pt-2.5 mt-1 border-t border-green-200">
+                    <span class="text-sm">সর্বমোট</span>
                     <span id="order-total-display" class="text-[#c9a227] font-serif-bn text-xl"></span>
                 </div>
             </div>
@@ -816,6 +826,34 @@ $productsForJs = $products->map(function ($p) {
                                    class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white">
                             <p id="err-area" class="text-red-500 text-xs mt-1 hidden"></p>
                         </div>
+                    </div>
+
+                    {{-- delivery_area --}}
+                    <div>
+                        <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-2">
+                            ডেলিভারি এলাকা <span class="text-red-400">*</span>
+                        </label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label for="da-inside" class="block cursor-pointer">
+                                <input type="radio" name="delivery_area" id="da-inside" value="inside_dhaka" class="sr-only"
+                                       onchange="onDeliveryAreaChange('inside_dhaka')">
+                                <div id="da-display-inside"
+                                     class="border-2 border-green-200 rounded-xl px-3 py-3 text-center transition-colors bg-white hover:border-[#14532d]">
+                                    <div class="text-sm font-bold text-[#14532d]">ঢাকার ভেতরে</div>
+                                    <div class="text-xs text-gray-400 mt-0.5">৳{{ number_format($deliverySettings->inside_dhaka_charge, 0) }}</div>
+                                </div>
+                            </label>
+                            <label for="da-outside" class="block cursor-pointer">
+                                <input type="radio" name="delivery_area" id="da-outside" value="outside_dhaka" class="sr-only"
+                                       onchange="onDeliveryAreaChange('outside_dhaka')">
+                                <div id="da-display-outside"
+                                     class="border-2 border-green-200 rounded-xl px-3 py-3 text-center transition-colors bg-white hover:border-[#14532d]">
+                                    <div class="text-sm font-bold text-[#14532d]">ঢাকার বাইরে</div>
+                                    <div class="text-xs text-gray-400 mt-0.5">৳{{ number_format($deliverySettings->outside_dhaka_charge, 0) }}</div>
+                                </div>
+                            </label>
+                        </div>
+                        <p id="err-delivery_area" class="text-red-500 text-xs mt-1 hidden"></p>
                     </div>
 
                     {{-- order_note --}}
@@ -924,6 +962,12 @@ const PAYMENT_SETTINGS  = {
     nagad_number:        @json($paymentSettings->nagad_number),
     payment_instruction: @json($paymentSettings->payment_instruction),
     enabled_methods:     @json($paymentSettings->enabledMethods()),
+};
+const DELIVERY_SETTINGS = {
+    inside_dhaka_charge:          {{ (float) $deliverySettings->inside_dhaka_charge }},
+    outside_dhaka_charge:         {{ (float) $deliverySettings->outside_dhaka_charge }},
+    enable_free_delivery:         @json((bool) $deliverySettings->enable_free_delivery),
+    free_delivery_minimum_amount: @json($deliverySettings->free_delivery_minimum_amount !== null ? (float) $deliverySettings->free_delivery_minimum_amount : null),
 };
 
 let currentId = null;
@@ -1356,9 +1400,19 @@ function openOrderForm() {
         ).join('');
     }
 
-    // Grand total display
+    // Reset delivery area selection
+    ['inside', 'outside'].forEach(k => {
+        const r = document.getElementById('da-' + k);
+        if (r) r.checked = false;
+        const d = document.getElementById('da-display-' + k);
+        if (d) d.className = 'border-2 border-green-200 rounded-xl px-3 py-3 text-center transition-colors bg-white hover:border-[#14532d]';
+    });
+    const delivEl = document.getElementById('order-delivery-display');
+    if (delivEl) { delivEl.textContent = 'এলাকা বেছে নিন'; delivEl.className = 'text-gray-400 italic'; }
+
+    // Show subtotal + packaging; delivery will be added when area is selected
     const tel = document.getElementById('order-total-display');
-    if (tel) tel.textContent = '৳' + fmt(grand);
+    if (tel) tel.textContent = '৳' + fmt(sub + PACKAGING_COST);
 
     clearOrderErrors();
     initPaymentMethods();
@@ -1378,13 +1432,56 @@ function closeOrderForm() {
 }
 
 function clearOrderErrors() {
-    ['full_name','mobile_number','alternative_number','full_address','district','area','items',
-     'payment_method','sender_number','transaction_id','paid_amount'].forEach(f => {
+    ['full_name','mobile_number','alternative_number','full_address','district','area',
+     'delivery_area','items','payment_method','sender_number','transaction_id','paid_amount'].forEach(f => {
         const el = document.getElementById('err-' + f);
         if (el) { el.textContent = ''; el.classList.add('hidden'); }
     });
     const ge = document.getElementById('order-general-error');
     if (ge) ge.classList.add('hidden');
+}
+
+// ── Delivery Area ─────────────────────────────────────────────────────────
+function onDeliveryAreaChange(area) {
+    const sub = comboItems.reduce((s, x) => s + x.price, 0);
+
+    let charge;
+    if (DELIVERY_SETTINGS.enable_free_delivery
+        && DELIVERY_SETTINGS.free_delivery_minimum_amount !== null
+        && sub >= DELIVERY_SETTINGS.free_delivery_minimum_amount) {
+        charge = 0;
+    } else {
+        charge = area === 'inside_dhaka'
+            ? DELIVERY_SETTINGS.inside_dhaka_charge
+            : DELIVERY_SETTINGS.outside_dhaka_charge;
+    }
+
+    // Update delivery display
+    const delivEl = document.getElementById('order-delivery-display');
+    if (delivEl) {
+        if (charge === 0) {
+            delivEl.textContent = 'বিনামূল্যে ডেলিভারি!';
+            delivEl.className   = 'text-green-600 font-semibold';
+        } else {
+            delivEl.textContent = '৳' + fmt(charge);
+            delivEl.className   = '';
+        }
+    }
+
+    // Update selected card styles
+    ['inside', 'outside'].forEach(k => {
+        const d = document.getElementById('da-display-' + k);
+        if (!d) return;
+        const isSelected = (k === 'inside' && area === 'inside_dhaka') || (k === 'outside' && area === 'outside_dhaka');
+        d.className = isSelected
+            ? 'border-2 border-[#14532d] rounded-xl px-3 py-3 text-center transition-colors bg-green-50'
+            : 'border-2 border-green-200 rounded-xl px-3 py-3 text-center transition-colors bg-white hover:border-[#14532d]';
+    });
+
+    // Update grand total
+    const grand = sub + PACKAGING_COST + charge;
+    const tel = document.getElementById('order-total-display');
+    if (tel) tel.textContent = '৳' + fmt(grand);
 }
 
 // ── Payment Method UI ─────────────────────────────────────────────────────
@@ -1488,6 +1585,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (comboItems.length === 0) {
             const el = document.getElementById('err-items');
             if (el) { el.textContent = 'কমপক্ষে একটি পণ্য যোগ করুন।'; el.classList.remove('hidden'); }
+            return;
+        }
+
+        // Validate delivery area selected
+        const selectedArea = form.querySelector('input[name="delivery_area"]:checked');
+        if (!selectedArea) {
+            const daErr = document.getElementById('err-delivery_area');
+            if (daErr) { daErr.textContent = 'ডেলিভারি এলাকা বেছে নিন।'; daErr.classList.remove('hidden'); }
             return;
         }
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DeliverySetting;
 use App\Models\Order;
 use App\Models\PaymentSetting;
 use App\Models\PriceSetting;
@@ -32,6 +33,7 @@ class OrderController extends Controller
             'full_address'             => ['required', 'string', 'max:500'],
             'district'                 => ['required', 'string', 'max:80'],
             'area'                     => ['required', 'string', 'max:80'],
+            'delivery_area'            => ['required', 'string', Rule::in(['inside_dhaka', 'outside_dhaka'])],
             'order_note'               => ['nullable', 'string', 'max:500'],
             'payment_method'           => ['required', 'string', Rule::in($enabledMethods)],
             'sender_number'            => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:30'],
@@ -43,6 +45,8 @@ class OrderController extends Controller
         ], [
             'mobile_number.regex'      => 'সঠিক মোবাইল নম্বর দিন। যেমন: 01700000000',
             'alternative_number.regex' => 'সঠিক বিকল্প নম্বর দিন। যেমন: 01700000000',
+            'delivery_area.required'   => 'ডেলিভারি এলাকা বেছে নিন।',
+            'delivery_area.in'         => 'ডেলিভারি এলাকা বেছে নিন।',
             'payment_method.in'        => 'একটি বৈধ পেমেন্ট পদ্ধতি বেছে নিন।',
             'sender_number.required'   => 'সেন্ডার নম্বর দিন।',
             'transaction_id.required'  => 'ট্রানজেকশন আইডি দিন।',
@@ -53,7 +57,7 @@ class OrderController extends Controller
         ]);
 
         // ── Backend price recalculation (never trust frontend prices) ──────────
-        $settings       = PriceSetting::current();
+        $priceSettings  = PriceSetting::current();
         $subtotal       = 0.0;
         $processedItems = [];
 
@@ -83,9 +87,12 @@ class OrderController extends Controller
             ];
         }
 
-        $packagingCost   = (float) $settings->default_packaging_cost;
-        $grandTotal      = $subtotal + $packagingCost;
-        $minOrderAmount  = (float) $settings->minimum_order_amount;
+        // ── Backend delivery charge (never trust frontend) ─────────────────────
+        $deliverySettings = DeliverySetting::current();
+        $packagingCost    = (float) $priceSettings->default_packaging_cost;
+        $deliveryCharge   = $deliverySettings->chargeFor($validated['delivery_area'], $subtotal);
+        $grandTotal       = $subtotal + $packagingCost + $deliveryCharge;
+        $minOrderAmount   = (float) $priceSettings->minimum_order_amount;
 
         if ($grandTotal < $minOrderAmount) {
             return response()->json([
@@ -102,7 +109,7 @@ class OrderController extends Controller
         } while (Order::where('order_number', $orderNumber)->exists());
 
         // ── Persist order + items in a transaction ──────────────────────────────
-        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $grandTotal, $orderNumber, $isManualPayment, $orderType) {
+        $order = DB::transaction(function () use ($validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge, $grandTotal, $orderNumber, $isManualPayment, $orderType) {
             $order = Order::create([
                 'order_number'       => $orderNumber,
                 'customer_name'      => $validated['full_name'],
@@ -111,11 +118,12 @@ class OrderController extends Controller
                 'full_address'       => $validated['full_address'],
                 'district'           => $validated['district'],
                 'area'               => $validated['area'],
+                'delivery_area'      => $validated['delivery_area'],
                 'order_note'         => $validated['order_note'] ?? null,
                 'order_type'         => $orderType,
                 'subtotal'           => $subtotal,
                 'packaging_cost'     => $packagingCost,
-                'delivery_charge'    => 0.00,
+                'delivery_charge'    => $deliveryCharge,
                 'grand_total'        => $grandTotal,
                 'payment_method'     => $validated['payment_method'],
                 'sender_number'      => $isManualPayment ? ($validated['sender_number'] ?? null) : null,

@@ -15,6 +15,7 @@ class Order extends Model
         'full_address',
         'district',
         'area',
+        'delivery_area',
         'order_note',
         'order_type',
         'subtotal',

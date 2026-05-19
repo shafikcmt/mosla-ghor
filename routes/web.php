@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\DeliverySettingController as AdminDeliverySettingController;
 use App\Http\Controllers\Admin\GeneralSettingController as AdminGeneralSettingController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PaymentSettingController as AdminPaymentSettingController;
@@ -15,6 +16,9 @@ Route::get('/order/success/{orderNumber}', [OrderController::class, 'success'])-
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::resource('products', AdminProductController::class);
+
+    Route::get('delivery-settings', [AdminDeliverySettingController::class, 'index'])->name('delivery-settings.index');
+    Route::post('delivery-settings', [AdminDeliverySettingController::class, 'update'])->name('delivery-settings.update');
 
     Route::get('general-settings', [AdminGeneralSettingController::class, 'index'])->name('general-settings.index');
     Route::post('general-settings', [AdminGeneralSettingController::class, 'update'])->name('general-settings.update');

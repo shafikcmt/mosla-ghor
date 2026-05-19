@@ -53,7 +53,7 @@
                 ];
                 $pColors = ['pending' => 'bg-yellow-100 text-yellow-700', 'verified' => 'bg-green-100 text-green-700', 'failed' => 'bg-red-100 text-red-700'];
                 $pLabels = ['pending' => 'পেমেন্ট অপেক্ষায়', 'verified' => 'পেমেন্ট যাচাই হয়েছে', 'failed' => 'পেমেন্ট ব্যর্থ'];
-                $typeLabels = ['custom' => 'কাস্টম কম্বো', 'retail' => 'রিটেইল', 'wholesale' => 'হোলসেল'];
+                $typeLabels = ['single_product' => 'একক পণ্য', 'custom' => 'কাস্টম কম্বো', 'retail' => 'রিটেইল', 'wholesale' => 'হোলসেল'];
             @endphp
             <span class="px-2.5 py-1 rounded text-xs font-semibold {{ $oColors[$order->order_status] ?? 'bg-gray-100 text-gray-600' }}">
                 {{ $oLabels[$order->order_status] ?? $order->order_status }}
@@ -91,6 +91,16 @@
                 <span class="text-gray-500">ঠিকানা:</span>
                 <span class="ml-2 text-gray-800">{{ $order->full_address }}, {{ $order->area }}, {{ $order->district }}</span>
             </div>
+            @if($order->delivery_area)
+            <div>
+                <span class="text-gray-500">ডেলিভারি এলাকা:</span>
+                <span class="ml-2 text-gray-800">{{ $order->delivery_area === 'inside_dhaka' ? 'ঢাকার ভেতরে' : 'ঢাকার বাইরে' }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500">ডেলিভারি চার্জ:</span>
+                <span class="ml-2 text-gray-800 font-semibold">৳ {{ number_format($order->delivery_charge, 2) }}</span>
+            </div>
+            @endif
             @if($order->order_note)
             <div class="col-span-2">
                 <span class="text-gray-500">নোট:</span>
