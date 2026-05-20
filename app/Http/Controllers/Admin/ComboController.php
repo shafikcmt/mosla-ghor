@@ -74,7 +74,7 @@ class ComboController extends Controller
     private function activeProducts()
     {
         return Product::active()
-            ->with(['activePrices' => fn($q) => $q->orderBy('quantity_gram')])
+            ->with(['activePrices' => fn($q) => $q->with('variant')->orderBy('sell_type')->orderBy('quantity_gram')])
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
@@ -85,6 +85,7 @@ class ComboController extends Controller
         $request->validate([
             'name'              => 'required|string|max:150',
             'slug'              => ['required', 'string', 'max:150', Rule::unique('combos', 'slug')->ignore($ignoreId)],
+            'sell_type'         => ['required', 'string', 'in:retail,wholesale'],
             'short_description' => 'nullable|string|max:300',
             'badge_text'        => 'nullable|string|max:60',
             'sell_price'        => 'required|numeric|min:1',
@@ -94,6 +95,7 @@ class ComboController extends Controller
         return [
             'name'              => $request->name,
             'slug'              => $request->slug,
+            'sell_type'         => $request->sell_type,
             'short_description' => $request->short_description ?: null,
             'badge_text'        => $request->badge_text ?: null,
             'sell_price'        => $request->sell_price,
@@ -112,13 +114,14 @@ class ComboController extends Controller
                 continue;
             }
 
-            $quantityGram = (int) ($itemData['quantity_gram'] ?? 0);
-            if ($quantityGram <= 0) {
+            $priceId = (int) ($itemData['price_id'] ?? 0);
+            if ($priceId <= 0) {
                 continue;
             }
 
-            $productPrice = ProductPrice::where('product_id', (int) $productId)
-                ->where('quantity_gram', $quantityGram)
+            $productPrice = ProductPrice::where('id', $priceId)
+                ->where('product_id', (int) $productId)
+                ->where('sell_type', $combo->sell_type)
                 ->where('is_active', true)
                 ->first();
 
@@ -127,10 +130,13 @@ class ComboController extends Controller
             }
 
             $newItems[] = [
-                'product_id'    => (int) $productId,
-                'quantity_gram' => $quantityGram,
-                'unit_price'    => (float) $productPrice->final_price,
-                'line_total'    => (float) $productPrice->final_price,
+                'sell_type'          => $combo->sell_type,
+                'product_id'         => (int) $productId,
+                'product_variant_id' => $productPrice->product_variant_id,
+                'product_price_id'   => $productPrice->id,
+                'quantity_gram'      => (int) $productPrice->quantity_gram,
+                'unit_price'         => (float) $productPrice->final_price,
+                'line_total'         => (float) $productPrice->final_price,
             ];
         }
 

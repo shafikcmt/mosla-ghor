@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductPrice;
+use App\Models\ProductVariant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -34,6 +35,8 @@ class ProductController extends Controller
         }
 
         $product->syncPrices();
+        $this->saveWholesalePrices($request, $product);
+        $this->saveVariants($request, $product);
 
         return redirect()->route('admin.products.edit', $product)
             ->with('success', 'পণ্য তৈরি হয়েছে। সব প্যাকের দাম স্বয়ংক্রিয়ভাবে সেট হয়েছে।');
@@ -46,9 +49,11 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
-        $prices = $product->prices()->get();
+        $retailPrices    = $product->prices()->whereNull('product_variant_id')->where('sell_type', 'retail')->get();
+        $wholesalePrices = $product->prices()->whereNull('product_variant_id')->where('sell_type', 'wholesale')->get();
+        $variants        = $product->variants()->with(['prices' => fn($q) => $q->orderBy('sell_type')->orderBy('sort_order')->orderBy('quantity_gram')])->orderBy('sort_order')->get();
 
-        return view('admin.products.edit', compact('product', 'prices'));
+        return view('admin.products.edit', compact('product', 'retailPrices', 'wholesalePrices', 'variants'));
     }
 
     public function update(Request $request, Product $product)
@@ -66,6 +71,8 @@ class ProductController extends Controller
         }
 
         $this->savePriceOverrides($request, $product);
+        $this->saveWholesalePrices($request, $product);
+        $this->saveVariants($request, $product);
 
         return redirect()->route('admin.products.edit', $product)
             ->with('success', 'পণ্য আপডেট হয়েছে।');
@@ -195,6 +202,7 @@ class ProductController extends Controller
         foreach ($request->input('prices') as $priceId => $data) {
             $row = ProductPrice::where('id', $priceId)
                 ->where('product_id', $product->id)
+                ->where('sell_type', 'retail')
                 ->first();
 
             if (! $row) {
@@ -210,6 +218,182 @@ class ProductController extends Controller
             $row->final_price        = $row->is_manual_override ? $manualPrice : $row->auto_price;
             $row->is_active          = ! empty($data['is_active']);
             $row->save();
+        }
+    }
+
+    private function saveVariants(Request $request, Product $product): void
+    {
+        // Update / delete existing variants
+        if ($request->has('variants')) {
+            foreach ($request->input('variants') as $variantId => $data) {
+                $variant = $product->variants()->find((int) $variantId);
+                if (! $variant) {
+                    continue;
+                }
+
+                if (! empty($data['_delete'])) {
+                    $variant->delete();
+                    continue;
+                }
+
+                $name = trim($data['name'] ?? '');
+                if (! $name) {
+                    continue;
+                }
+
+                $variant->update([
+                    'name'       => $name,
+                    'origin'     => ($data['origin'] ?? '') ?: null,
+                    'grade'      => ($data['grade'] ?? '') ?: null,
+                    'size_label' => ($data['size_label'] ?? '') ?: null,
+                    'sort_order' => (int) ($data['sort_order'] ?? 0),
+                    'is_active'  => ! empty($data['is_active']),
+                ]);
+
+                $this->saveVariantPrices($product, $variant, $data);
+            }
+        }
+
+        // Create new variants
+        if ($request->has('new_variants')) {
+            foreach ($request->input('new_variants') as $data) {
+                $name = trim($data['name'] ?? '');
+                if (! $name) {
+                    continue;
+                }
+
+                $variant = $product->variants()->create([
+                    'name'       => $name,
+                    'origin'     => ($data['origin'] ?? '') ?: null,
+                    'grade'      => ($data['grade'] ?? '') ?: null,
+                    'size_label' => ($data['size_label'] ?? '') ?: null,
+                    'sort_order' => (int) ($data['sort_order'] ?? 0),
+                    'is_active'  => ! empty($data['is_active']),
+                ]);
+
+                $this->saveVariantPrices($product, $variant, $data);
+            }
+        }
+    }
+
+    private function saveVariantPrices(Product $product, ProductVariant $variant, array $data): void
+    {
+        foreach (['retail', 'wholesale'] as $sellType) {
+            $key = $sellType . '_prices';
+
+            // Update / delete existing prices under variant
+            if (! empty($data[$key]) && is_array($data[$key])) {
+                foreach ($data[$key] as $priceId => $priceData) {
+                    $price = $variant->prices()->where('sell_type', $sellType)->find((int) $priceId);
+                    if (! $price) {
+                        continue;
+                    }
+
+                    if (! empty($priceData['_delete'])) {
+                        $price->delete();
+                        continue;
+                    }
+
+                    $finalPrice = (float) ($priceData['final_price'] ?? 0);
+                    if ($finalPrice <= 0) {
+                        continue;
+                    }
+
+                    $price->update([
+                        'label'         => ($priceData['label'] ?? '') ?: $price->label,
+                        'final_price'   => $finalPrice,
+                        'auto_price'    => $finalPrice,
+                        'min_order_qty' => (isset($priceData['min_order_qty']) && $priceData['min_order_qty'] !== '') ? (int) $priceData['min_order_qty'] : null,
+                        'is_active'     => ! empty($priceData['is_active']),
+                    ]);
+                }
+            }
+
+            // Create new prices under variant
+            $newKey = 'new_' . $key;
+            if (! empty($data[$newKey]) && is_array($data[$newKey])) {
+                foreach ($data[$newKey] as $priceData) {
+                    $label      = trim($priceData['label'] ?? '');
+                    $gram       = (int) ($priceData['quantity_gram'] ?? 0);
+                    $finalPrice = (float) ($priceData['final_price'] ?? 0);
+
+                    if (! $label || $gram <= 0 || $finalPrice <= 0) {
+                        continue;
+                    }
+
+                    ProductPrice::create([
+                        'product_id'         => $product->id,
+                        'product_variant_id' => $variant->id,
+                        'sell_type'          => $sellType,
+                        'label'              => $label,
+                        'quantity_gram'      => $gram,
+                        'auto_price'         => $finalPrice,
+                        'final_price'        => $finalPrice,
+                        'is_manual_override' => false,
+                        'min_order_qty'      => (isset($priceData['min_order_qty']) && $priceData['min_order_qty'] !== '') ? (int) $priceData['min_order_qty'] : null,
+                        'is_active'          => ! empty($priceData['is_active']),
+                    ]);
+                }
+            }
+        }
+    }
+
+    private function saveWholesalePrices(Request $request, Product $product): void
+    {
+        // Update/delete existing wholesale prices
+        if ($request->has('wholesale_prices')) {
+            foreach ($request->input('wholesale_prices') as $priceId => $data) {
+                $row = ProductPrice::where('id', $priceId)
+                    ->where('product_id', $product->id)
+                    ->where('sell_type', 'wholesale')
+                    ->first();
+
+                if (! $row) {
+                    continue;
+                }
+
+                if (! empty($data['_delete'])) {
+                    $row->delete();
+                    continue;
+                }
+
+                $finalPrice = (float) ($data['final_price'] ?? 0);
+                if ($finalPrice <= 0) {
+                    continue;
+                }
+
+                $row->label         = $data['label'] ?? $row->label;
+                $row->final_price   = $finalPrice;
+                $row->auto_price    = $finalPrice;
+                $row->min_order_qty = (isset($data['min_order_qty']) && $data['min_order_qty'] !== '') ? (int) $data['min_order_qty'] : null;
+                $row->is_active     = ! empty($data['is_active']);
+                $row->save();
+            }
+        }
+
+        // Create new wholesale prices
+        if ($request->has('new_wholesale_prices')) {
+            foreach ($request->input('new_wholesale_prices') as $data) {
+                $label        = trim($data['label'] ?? '');
+                $quantityGram = (int) ($data['quantity_gram'] ?? 0);
+                $finalPrice   = (float) ($data['final_price'] ?? 0);
+
+                if (! $label || $quantityGram <= 0 || $finalPrice <= 0) {
+                    continue;
+                }
+
+                $product->prices()->create([
+                    'sell_type'          => 'wholesale',
+                    'label'              => $label,
+                    'quantity_gram'      => $quantityGram,
+                    'auto_price'         => $finalPrice,
+                    'manual_price'       => null,
+                    'final_price'        => $finalPrice,
+                    'is_manual_override' => false,
+                    'is_active'          => ! empty($data['is_active']),
+                    'min_order_qty'      => (isset($data['min_order_qty']) && $data['min_order_qty'] !== '') ? (int) $data['min_order_qty'] : null,
+                ]);
+            }
         }
     }
 }

@@ -9,13 +9,20 @@ class ProductPrice extends Model
 {
     protected $fillable = [
         'product_id',
+        'product_variant_id',
+        'sell_type',
         'label',
+        'unit_name',
+        'unit_value',
         'quantity_gram',
         'auto_price',
         'manual_price',
         'final_price',
+        'compare_price',
         'is_manual_override',
         'is_active',
+        'min_order_qty',
+        'sort_order',
     ];
 
     protected $casts = [
@@ -23,13 +30,21 @@ class ProductPrice extends Model
         'auto_price'         => 'decimal:2',
         'manual_price'       => 'decimal:2',
         'final_price'        => 'decimal:2',
+        'compare_price'      => 'decimal:2',
         'is_manual_override' => 'boolean',
         'is_active'          => 'boolean',
+        'min_order_qty'      => 'integer',
+        'sort_order'         => 'integer',
     ];
 
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 
     // Scope: only active rows

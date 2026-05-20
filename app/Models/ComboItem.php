@@ -9,7 +9,10 @@ class ComboItem extends Model
 {
     protected $fillable = [
         'combo_id',
+        'sell_type',
         'product_id',
+        'product_variant_id',
+        'product_price_id',
         'quantity_gram',
         'unit_price',
         'line_total',

@@ -11,6 +11,7 @@ class Combo extends Model
     protected $fillable = [
         'name',
         'slug',
+        'sell_type',
         'short_description',
         'badge_text',
         'sell_price',

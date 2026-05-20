@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Product extends Model
 {
@@ -33,13 +34,27 @@ class Product extends Model
         'is_active'           => 'boolean',
     ];
 
+    // All variants of this product (e.g., Iran Jira, Indian Jira)
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class)->orderBy('sort_order');
+    }
+
+    // Active variants only
+    public function activeVariants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class)
+            ->where('is_active', true)
+            ->orderBy('sort_order');
+    }
+
     // All pack sizes for this product
     public function prices(): HasMany
     {
         return $this->hasMany(ProductPrice::class)->orderBy('quantity_gram');
     }
 
-    // Only active pack sizes, ordered by weight
+    // Only active pack sizes (all types), ordered by weight
     public function activePrices(): HasMany
     {
         return $this->hasMany(ProductPrice::class)
@@ -47,10 +62,29 @@ class Product extends Model
             ->orderBy('quantity_gram');
     }
 
-    // Smallest active pack (cheapest entry point)
+    // Only active retail prices
+    public function activeRetailPrices(): HasMany
+    {
+        return $this->hasMany(ProductPrice::class)
+            ->where('sell_type', 'retail')
+            ->where('is_active', true)
+            ->orderBy('quantity_gram');
+    }
+
+    // Only active wholesale prices
+    public function activeWholesalePrices(): HasMany
+    {
+        return $this->hasMany(ProductPrice::class)
+            ->where('sell_type', 'wholesale')
+            ->where('is_active', true)
+            ->orderBy('quantity_gram');
+    }
+
+    // Smallest active retail pack (cheapest entry point)
     public function smallestPack(): HasMany
     {
         return $this->hasMany(ProductPrice::class)
+            ->where('sell_type', 'retail')
             ->where('is_active', true)
             ->orderBy('quantity_gram')
             ->limit(1);
@@ -89,7 +123,7 @@ class Product extends Model
         foreach ($packSizes as $grams) {
             $markup    = $settings->markupFor($grams);
             $autoPrice = round(($this->retail_price_1kg / 1000) * $grams * (1 + $markup / 100), 2);
-            $existing  = $this->prices()->where('quantity_gram', $grams)->first();
+            $existing  = $this->prices()->where('sell_type', 'retail')->where('quantity_gram', $grams)->first();
 
             if ($existing) {
                 $existing->auto_price = $autoPrice;
@@ -99,6 +133,7 @@ class Product extends Model
                 $existing->save();
             } else {
                 $this->prices()->create([
+                    'sell_type'          => 'retail',
                     'label'              => $this->packLabel($grams),
                     'quantity_gram'      => $grams,
                     'auto_price'         => $autoPrice,

@@ -1,5 +1,27 @@
 <div class="px-6 py-5 space-y-5">
 
+    {{-- sell_type --}}
+    <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-2">বিক্রয় ধরন <span class="text-red-500">*</span></label>
+        <div class="flex gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="sell_type" value="retail"
+                       {{ old('sell_type', $combo?->sell_type ?? 'retail') === 'retail' ? 'checked' : '' }}
+                       onchange="onComboSellTypeChange('retail')"
+                       class="w-4 h-4 accent-gray-800">
+                <span class="text-sm font-medium text-gray-700">খুচরা (Retail)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="sell_type" value="wholesale"
+                       {{ old('sell_type', $combo?->sell_type ?? 'retail') === 'wholesale' ? 'checked' : '' }}
+                       onchange="onComboSellTypeChange('wholesale')"
+                       class="w-4 h-4 accent-orange-500">
+                <span class="text-sm font-medium text-orange-700">পাইকারি (Wholesale)</span>
+            </label>
+        </div>
+        @error('sell_type') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+    </div>
+
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1.5">কম্বোর নাম <span class="text-red-500">*</span></label>
@@ -70,7 +92,8 @@
 {{-- Product Items --}}
 <div class="border-t border-gray-100 px-6 py-5">
     <h3 class="text-sm font-semibold text-gray-700 mb-1">কম্বোর পণ্য সমূহ</h3>
-    <p class="text-xs text-gray-400 mb-4">টিক দিন এবং পরিমাণ বেছে নিন। মূল্য স্বয়ংক্রিয়ভাবে product_prices থেকে নেওয়া হবে।</p>
+    <p class="text-xs text-gray-400 mb-1">টিক দিন এবং পরিমাণ বেছে নিন। মূল্য স্বয়ংক্রিয়ভাবে product_prices থেকে নেওয়া হবে।</p>
+    <p id="combo-selltype-note" class="text-xs text-orange-500 mb-4 hidden">পাইকারি মোড: শুধু পাইকারি অপশন দেখাচ্ছে।</p>
 
     @if($products->isEmpty())
         <p class="text-gray-400 text-sm">কোনো সক্রিয় পণ্য নেই।</p>
@@ -84,10 +107,14 @@
                     <th class="pb-2 text-left font-semibold text-gray-500 text-xs uppercase">পরিমাণ ও মূল্য</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-50">
+            <tbody class="divide-y divide-gray-50" id="combo-product-rows">
                 @foreach($products as $product)
-                @php $saved = $currentItems[$product->id] ?? null; @endphp
-                <tr class="hover:bg-gray-50">
+                @php
+                    $saved          = $currentItems[$product->id] ?? null;
+                    $retailPrices   = $product->activePrices->where('sell_type', 'retail');
+                    $wholesalePrices = $product->activePrices->where('sell_type', 'wholesale');
+                @endphp
+                <tr class="hover:bg-gray-50" data-product-row="{{ $product->id }}">
                     <td class="py-2.5 pr-4 w-10">
                         <input type="checkbox" name="items[{{ $product->id }}][include]" value="1"
                                {{ $saved ? 'checked' : '' }}
@@ -98,15 +125,20 @@
                         @if($product->name_en) <div class="text-xs text-gray-400">{{ $product->name_en }}</div> @endif
                     </td>
                     <td class="py-2.5">
-                        @if($product->activePrices->isEmpty())
+                        @php
+                            $hasPrices = $product->activePrices->isNotEmpty();
+                        @endphp
+                        @if(! $hasPrices)
                             <span class="text-gray-400 text-xs">কোনো মূল্য নেই</span>
                         @else
-                        <select name="items[{{ $product->id }}][quantity_gram]"
+                        <select name="items[{{ $product->id }}][price_id]"
+                                data-product-price-select="{{ $product->id }}"
                                 class="border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-400 bg-white">
                             @foreach($product->activePrices as $price)
-                            <option value="{{ $price->quantity_gram }}"
-                                    {{ $saved && (int)$saved->quantity_gram === $price->quantity_gram ? 'selected' : '' }}>
-                                {{ $price->label }} — ৳{{ number_format($price->final_price, 0) }}
+                            <option value="{{ $price->id }}"
+                                    data-sell-type="{{ $price->sell_type }}"
+                                    {{ $saved && (int)$saved->product_price_id === $price->id ? 'selected' : '' }}>
+                                [{{ $price->sell_type === 'retail' ? 'খুচরা' : 'পাইকারি' }}]{{ $price->variant ? ' [' . $price->variant->name . ']' : '' }} {{ $price->label }} — ৳{{ number_format($price->final_price, 0) }}
                             </option>
                             @endforeach
                         </select>
@@ -119,3 +151,38 @@
     </div>
     @endif
 </div>
+
+<script>
+function onComboSellTypeChange(sellType) {
+    const note = document.getElementById('combo-selltype-note');
+    if (note) note.classList.toggle('hidden', sellType !== 'wholesale');
+
+    document.querySelectorAll('[data-product-price-select]').forEach(function(sel) {
+        const opts = Array.from(sel.options);
+        const hasSellType = opts.some(o => o.dataset.sellType === sellType);
+
+        // Show/hide row based on whether product has options for this sell_type
+        const row = sel.closest('tr');
+        if (row) row.style.display = hasSellType ? '' : 'none';
+
+        // Filter visible options and set first matching as selected
+        let firstMatch = null;
+        opts.forEach(function(opt) {
+            const match = opt.dataset.sellType === sellType;
+            opt.disabled = !match;
+            opt.style.display = match ? '' : 'none';
+            if (match && !firstMatch) firstMatch = opt;
+        });
+
+        if (firstMatch && !opts.find(o => o.selected && o.dataset.sellType === sellType)) {
+            sel.value = firstMatch.value;
+        }
+    });
+}
+
+// Init on page load
+(function() {
+    const checked = document.querySelector('input[name="sell_type"]:checked');
+    if (checked) onComboSellTypeChange(checked.value);
+})();
+</script>

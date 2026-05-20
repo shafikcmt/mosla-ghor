@@ -19,7 +19,11 @@ class HomeController extends Controller
     public function __invoke()
     {
         $products = Product::active()
-            ->with(['activePrices'])
+            ->with([
+                'activePrices'              => fn($q) => $q->orderBy('sell_type')->orderBy('quantity_gram'),
+                'activeVariants',
+                'activeVariants.activePrices' => fn($q) => $q->orderBy('sell_type')->orderBy('sort_order')->orderBy('quantity_gram'),
+            ])
             ->get();
 
         $priceSetting    = PriceSetting::current();
@@ -43,10 +47,11 @@ class HomeController extends Controller
             ->get();
 
         $fixedCombosForJs = $fixedCombos->map(fn($c) => [
-            'id'         => $c->id,
-            'name'       => $c->name,
+            'id'        => $c->id,
+            'name'      => $c->name,
+            'sell_type' => $c->sell_type,
             'sell_price' => (float) $c->sell_price,
-            'items'      => $c->items->map(fn($item) => [
+            'items'     => $c->items->map(fn($item) => [
                 'product_name'  => $item->product?->name_bn ?? '',
                 'quantity_gram' => $item->quantity_gram,
                 'label'         => $item->quantity_gram >= 1000

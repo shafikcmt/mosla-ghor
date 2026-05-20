@@ -1,6 +1,22 @@
 @php
 /* Prepare a clean JS-safe product payload — no extra queries, activePrices already eager-loaded */
 $productsForJs = $products->map(function ($p) {
+    $mapPrice = fn($pr) => [
+        'id'                 => $pr->id,
+        'label'              => $pr->label,
+        'quantity_gram'      => (int) $pr->quantity_gram,
+        'final_price'        => (float) $pr->final_price,
+        'is_manual_override' => (bool) $pr->is_manual_override,
+    ];
+    /* Product-level prices (no variant) */
+    $directPrices = $p->activePrices->filter(fn($pr) => is_null($pr->product_variant_id));
+    /* Variant data */
+    $variants = $p->activeVariants->map(fn($v) => [
+        'id'               => $v->id,
+        'name'             => $v->name,
+        'retail_prices'    => $v->activePrices->where('sell_type', 'retail')->map($mapPrice)->values()->all(),
+        'wholesale_prices' => $v->activePrices->where('sell_type', 'wholesale')->map($mapPrice)->values()->all(),
+    ])->values()->all();
     return [
         'id'                => $p->id,
         'name_bn'           => $p->name_bn,
@@ -12,15 +28,9 @@ $productsForJs = $products->map(function ($p) {
         'video_url'         => $p->video_url,
         'video_path'        => ($p->video_path ?? null) ? asset($p->video_path) : null,
         'stock'             => (int) $p->stock,
-        'prices'            => $p->activePrices->map(function ($pr) {
-            return [
-                'id'                 => $pr->id,
-                'label'              => $pr->label,
-                'quantity_gram'      => (int) $pr->quantity_gram,
-                'final_price'        => (float) $pr->final_price,
-                'is_manual_override' => (bool) $pr->is_manual_override,
-            ];
-        })->values()->all(),
+        'retail_prices'     => $directPrices->where('sell_type', 'retail')->map($mapPrice)->values()->all(),
+        'wholesale_prices'  => $directPrices->where('sell_type', 'wholesale')->map($mapPrice)->values()->all(),
+        'variants'          => $variants,
     ];
 })->keyBy('id');
 @endphp
@@ -229,20 +239,34 @@ $productsForJs = $products->map(function ($p) {
                 <p class="text-gray-400 text-sm mt-1">সর্বোচ্চ মানের — সম্পূর্ণ প্রাকৃতিক</p>
             </div>
 
-            {{-- Card / List toggle --}}
-            <div class="flex items-center gap-1 p-1 bg-white border border-gray-200 rounded-xl shadow-sm self-start sm:self-auto">
-                <button id="btn-card" onclick="setView('card')" title="Card view"
-                        class="p-2 rounded-lg bg-[#14532d] text-white transition-colors" aria-pressed="true">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
-                    </svg>
-                </button>
-                <button id="btn-list" onclick="setView('list')" title="List view"
-                        class="p-2 rounded-lg text-gray-400 hover:text-gray-600 transition-colors" aria-pressed="false">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
-                    </svg>
-                </button>
+            <div class="flex items-center gap-3 self-start sm:self-auto flex-wrap">
+                {{-- Retail / Wholesale tab --}}
+                <div class="flex items-center gap-0.5 p-1 bg-white border border-gray-200 rounded-xl shadow-sm">
+                    <button id="tab-retail" onclick="setTab('retail')"
+                            class="px-4 py-1.5 rounded-lg bg-[#14532d] text-white text-xs font-semibold transition-colors">
+                        খুচরা
+                    </button>
+                    <button id="tab-wholesale" onclick="setTab('wholesale')"
+                            class="px-4 py-1.5 rounded-lg text-gray-400 hover:text-gray-600 text-xs font-semibold transition-colors">
+                        পাইকারি
+                    </button>
+                </div>
+
+                {{-- Card / List toggle --}}
+                <div class="flex items-center gap-1 p-1 bg-white border border-gray-200 rounded-xl shadow-sm">
+                    <button id="btn-card" onclick="setView('card')" title="Card view"
+                            class="p-2 rounded-lg bg-[#14532d] text-white transition-colors" aria-pressed="true">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                        </svg>
+                    </button>
+                    <button id="btn-list" onclick="setView('list')" title="List view"
+                            class="p-2 rounded-lg text-gray-400 hover:text-gray-600 transition-colors" aria-pressed="false">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -256,7 +280,13 @@ $productsForJs = $products->map(function ($p) {
         {{-- ══ CARD VIEW ══ --}}
         <div id="card-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             @foreach($products as $product)
-            <article class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col">
+            @php
+                $directRetail = $product->activePrices->filter(fn($pr) => is_null($pr->product_variant_id))->where('sell_type', 'retail');
+                $initRetailPrices = $directRetail->isNotEmpty()
+                    ? $directRetail
+                    : ($product->activeVariants->first()?->activePrices->where('sell_type', 'retail') ?? collect());
+            @endphp
+            <article data-card-product="{{ $product->id }}" class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col">
 
                 {{-- Image slideshow / placeholder --}}
                 @php
@@ -307,29 +337,28 @@ $productsForJs = $products->map(function ($p) {
                         <p class="text-gray-500 text-sm mt-2 leading-relaxed line-clamp-2">{{ $product->short_description }}</p>
                     @endif
 
-                    @if($product->activePrices->isNotEmpty())
-                        <div class="mt-3 flex items-baseline gap-1.5">
-                            <span class="text-[#c9a227] font-serif-bn text-2xl font-bold">
-                                ৳{{ number_format($product->activePrices->first()->final_price, 0) }}
-                            </span>
-                            <span class="text-gray-400 text-xs">থেকে শুরু</span>
-                        </div>
+                    <div id="card-price-wrap-{{ $product->id }}" class="mt-3 flex items-baseline gap-1.5"
+                         style="{{ $initRetailPrices->isEmpty() ? 'display:none;' : '' }}">
+                        <span id="card-from-{{ $product->id }}" class="text-[#c9a227] font-serif-bn text-2xl font-bold">
+                            {{ $initRetailPrices->isNotEmpty() ? '৳' . number_format($initRetailPrices->first()->final_price, 0) : '' }}
+                        </span>
+                        <span class="text-gray-400 text-xs">থেকে শুরু</span>
+                    </div>
 
-                        {{-- Pack price chips --}}
-                        <div class="mt-3 grid grid-cols-3 gap-1.5">
-                            @foreach($product->activePrices as $price)
-                                <div class="p-chip p-1.5 text-center">
-                                    <div class="chip-lbl text-gray-400 text-[10px] leading-tight">{{ $price->label }}</div>
-                                    <div class="chip-val text-[#14532d] text-[13px] font-semibold leading-tight mt-0.5">
-                                        ৳{{ number_format($price->final_price, 0) }}
-                                    </div>
-                                    @if($price->is_manual_override)
-                                        <div class="text-[#c9a227] text-[9px] leading-none mt-0.5">★</div>
-                                    @endif
+                    {{-- Pack price chips --}}
+                    <div id="card-chips-{{ $product->id }}" class="mt-3 grid grid-cols-3 gap-1.5">
+                        @foreach($initRetailPrices as $price)
+                            <div class="p-chip p-1.5 text-center">
+                                <div class="chip-lbl text-gray-400 text-[10px] leading-tight">{{ $price->label }}</div>
+                                <div class="chip-val text-[#14532d] text-[13px] font-semibold leading-tight mt-0.5">
+                                    ৳{{ number_format($price->final_price, 0) }}
                                 </div>
-                            @endforeach
-                        </div>
-                    @endif
+                                @if($price->is_manual_override)
+                                    <div class="text-[#c9a227] text-[9px] leading-none mt-0.5">★</div>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
 
                     <div class="flex-1 min-h-3"></div>
 
@@ -351,6 +380,12 @@ $productsForJs = $products->map(function ($p) {
         {{-- ══ LIST VIEW ══ --}}
         <div id="list-view">
             @foreach($products as $product)
+            @php
+                $directRetail = $product->activePrices->filter(fn($pr) => is_null($pr->product_variant_id))->where('sell_type', 'retail');
+                $initRetailPrices = $directRetail->isNotEmpty()
+                    ? $directRetail
+                    : ($product->activeVariants->first()?->activePrices->where('sell_type', 'retail') ?? collect());
+            @endphp
             <article class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
 
                 {{-- Thumb --}}
@@ -382,23 +417,21 @@ $productsForJs = $products->map(function ($p) {
                             <p class="text-gray-500 text-sm mt-0.5 line-clamp-1">{{ $product->short_description }}</p>
                         @endif
 
-                        @if($product->activePrices->isNotEmpty())
-                            <div class="mt-2 flex flex-wrap gap-1">
-                                @foreach($product->activePrices as $price)
-                                    <span class="text-[11px] bg-green-50 border border-green-100 text-[#14532d] px-2 py-0.5 rounded-full whitespace-nowrap">
-                                        {{ $price->label }} · ৳{{ number_format($price->final_price, 0) }}
-                                    </span>
-                                @endforeach
-                            </div>
-                        @endif
+                        <div id="list-prices-{{ $product->id }}" class="mt-2 flex flex-wrap gap-1">
+                            @foreach($initRetailPrices as $price)
+                                <span class="text-[11px] bg-green-50 border border-green-100 text-[#14532d] px-2 py-0.5 rounded-full whitespace-nowrap">
+                                    {{ $price->label }} · ৳{{ number_format($price->final_price, 0) }}
+                                </span>
+                            @endforeach
+                        </div>
                     </div>
 
                     {{-- Price + buttons --}}
                     <div class="flex sm:flex-col items-center sm:items-end justify-between gap-2 flex-shrink-0">
                         @if($product->activePrices->isNotEmpty())
                             <div class="text-right">
-                                <div class="text-[#c9a227] font-bold text-xl font-serif-bn">
-                                    ৳{{ number_format($product->activePrices->first()->final_price, 0) }}
+                                <div id="list-from-{{ $product->id }}" class="text-[#c9a227] font-bold text-xl font-serif-bn">
+                                    {{ $initRetailPrices->isNotEmpty() ? '৳' . number_format($initRetailPrices->first()->final_price, 0) : '' }}
                                 </div>
                                 <div class="text-gray-400 text-[10px]">থেকে শুরু</div>
                             </div>
@@ -444,7 +477,9 @@ $productsForJs = $products->map(function ($p) {
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             @foreach($fixedCombos as $combo)
-            <div class="bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col transition-shadow hover:shadow-lg">
+            <div data-combo-type="{{ $combo->sell_type }}"
+                 class="bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col transition-shadow hover:shadow-lg"
+                 style="{{ $combo->sell_type === 'wholesale' ? 'display:none;' : '' }}">
 
                 <div class="bg-gradient-to-br from-[#14532d] to-[#1a6b3a] px-5 pt-5 pb-4 relative">
                     @if($combo->badge_text)
@@ -512,9 +547,20 @@ $productsForJs = $products->map(function ($p) {
             <div class="flex-1 min-w-0">
                 <div class="space-y-2.5">
                 @foreach($products as $product)
-                    @if($product->activePrices->isNotEmpty())
+                    @php
+                        $hasVariants = $product->activeVariants->isNotEmpty();
+                        $firstVariant = $product->activeVariants->first();
+                        $pickerRetailPrices = $hasVariants
+                            ? ($firstVariant?->activePrices->where('sell_type', 'retail') ?? collect())
+                            : $product->activePrices->filter(fn($pr) => is_null($pr->product_variant_id))->where('sell_type', 'retail');
+                        $hasAnyRetail = $pickerRetailPrices->isNotEmpty()
+                            || (!$hasVariants && $product->activePrices->filter(fn($pr) => is_null($pr->product_variant_id))->where('sell_type', 'wholesale')->isNotEmpty());
+                        $showRow = $product->activePrices->isNotEmpty() || $hasVariants;
+                    @endphp
+                    @if($showRow)
                     <div id="picker-row-{{ $product->id }}"
-                         class="bg-white border border-green-100 rounded-xl p-3 sm:p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 shadow-sm transition-colors duration-300">
+                         class="bg-white border border-green-100 rounded-xl p-3 sm:p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 shadow-sm transition-colors duration-300"
+                         style="{{ (!$hasVariants && $pickerRetailPrices->isEmpty()) ? 'display:none;' : '' }}">
 
                         {{-- Initial avatar --}}
                         <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#14532d] to-[#1a6b3a] flex items-center justify-center flex-shrink-0 shadow">
@@ -527,11 +573,22 @@ $productsForJs = $products->map(function ($p) {
                             <div class="text-gray-400 text-[11px] uppercase tracking-wider">{{ $product->name_en }}</div>
                         </div>
 
+                        {{-- Variant selector (only for products with variants) --}}
+                        @if($hasVariants)
+                        <select id="picker-variant-{{ $product->id }}"
+                                onchange="pickerVariantChange({{ $product->id }})"
+                                class="border border-purple-200 bg-white rounded-xl px-3 py-2 text-sm text-purple-800 font-medium focus:outline-none focus:ring-2 focus:ring-purple-400 w-full sm:w-auto flex-shrink-0">
+                            @foreach($product->activeVariants as $variant)
+                            <option value="{{ $variant->id }}">{{ $variant->name }}</option>
+                            @endforeach
+                        </select>
+                        @endif
+
                         {{-- Qty select --}}
                         <select id="picker-qty-{{ $product->id }}"
                                 onchange="pickerPriceUpdate({{ $product->id }})"
                                 class="border border-green-200 bg-white rounded-xl px-3 py-2 text-sm text-[#14532d] font-medium focus:outline-none focus:ring-2 focus:ring-[#14532d] w-full sm:w-auto flex-shrink-0">
-                            @foreach($product->activePrices as $price)
+                            @foreach($pickerRetailPrices as $price)
                                 <option value="{{ $price->id }}" data-price="{{ $price->final_price }}">{{ $price->label }}</option>
                             @endforeach
                         </select>
@@ -539,7 +596,7 @@ $productsForJs = $products->map(function ($p) {
                         {{-- Price display --}}
                         <div id="picker-price-{{ $product->id }}"
                              class="text-[#c9a227] font-bold font-serif-bn text-base sm:text-lg min-w-[72px] text-right flex-shrink-0">
-                            ৳{{ number_format($product->activePrices->first()->final_price, 0) }}
+                            {{ $pickerRetailPrices->isNotEmpty() ? '৳' . number_format($pickerRetailPrices->first()->final_price, 0) : '' }}
                         </div>
 
                         {{-- Add button --}}
@@ -892,6 +949,17 @@ $productsForJs = $products->map(function ($p) {
                     </button>
                     <p id="modal-desc" class="text-gray-500 text-sm leading-relaxed mt-2 pl-3 border-l-2 border-green-200"
                        style="display:none;"></p>
+                </div>
+
+                {{-- Variant selector (shown only for products with variants, populated by JS) --}}
+                <div id="modal-variant-wrap" style="display:none;" class="mt-4">
+                    <h4 class="text-[#14532d] text-sm font-semibold mb-2 flex items-center gap-2">
+                        ভ্যারিয়েন্ট বেছে নিন
+                        <span class="flex-1 h-px bg-green-100 inline-block"></span>
+                    </h4>
+                    <select id="modal-variant-sel" onchange="onModalVariantChange(this.value)"
+                            class="w-full border border-purple-200 bg-white rounded-xl px-4 py-2.5 text-sm text-purple-800 font-medium focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    </select>
                 </div>
 
                 {{-- Prices grid --}}
@@ -1327,10 +1395,168 @@ const BD_DIVISIONS   = @json($bdDivisions);
 const BD_DISTRICTS   = @json($bdDistricts);
 const BD_UPAZILAS    = @json($bdUpazilas);
 
-let currentId    = null;
+let currentId      = null;
 let fixedComboData = null;
-let modalSlides  = [];
-let modalCurSlide = 0;
+let modalSlides    = [];
+let modalCurSlide        = 0;
+let activeTab            = 'retail'; // 'retail' | 'wholesale'
+let modalCurrentVariantId = null;
+
+// ── Tab helpers ───────────────────────────────────────────────────────────
+function activeTabPrices(p) {
+    const direct = activeTab === 'retail' ? (p.retail_prices || []) : (p.wholesale_prices || []);
+    if (direct.length > 0) return direct;
+    // Fall back to first variant's prices for display purposes
+    if (p.variants && p.variants.length > 0) {
+        const v = p.variants[0];
+        return activeTab === 'retail' ? (v.retail_prices || []) : (v.wholesale_prices || []);
+    }
+    return [];
+}
+
+function getVariantPrices(p, variantId) {
+    const v = (p.variants || []).find(x => x.id === variantId);
+    if (!v) return activeTabPrices(p);
+    return activeTab === 'retail' ? (v.retail_prices || []) : (v.wholesale_prices || []);
+}
+
+function pickerVariantChange(productId) {
+    const p = PRODUCTS[productId];
+    if (!p || !p.variants || p.variants.length === 0) return;
+    const varSel = document.getElementById('picker-variant-' + productId);
+    if (!varSel) return;
+    const variantId = parseInt(varSel.value, 10);
+    const prices = getVariantPrices(p, variantId);
+    const sel = document.getElementById('picker-qty-' + productId);
+    if (sel) {
+        sel.innerHTML = prices.map(pr =>
+            '<option value="' + pr.id + '" data-price="' + pr.final_price + '">' + pr.label + '</option>'
+        ).join('');
+        pickerPriceUpdate(productId);
+    }
+}
+
+function onModalVariantChange(variantIdStr) {
+    modalCurrentVariantId = parseInt(variantIdStr, 10);
+    const p = PRODUCTS[currentId];
+    if (!p) return;
+    rebuildModalPrices(getVariantPrices(p, modalCurrentVariantId));
+}
+
+function rebuildModalPrices(prices) {
+    const grid = document.getElementById('modal-prices-grid');
+    if (grid) {
+        grid.innerHTML = prices.map(pr =>
+            '<div id="mchip-' + pr.id + '" class="p-chip p-2 text-center" onclick="selectChip(' + pr.id + ')">' +
+            '<div class="chip-lbl text-gray-400 text-[10px] leading-tight">' + pr.label + '</div>' +
+            '<div class="chip-val text-[#14532d] text-sm font-bold leading-tight mt-0.5">৳' + fmt(pr.final_price) + '</div>' +
+            (pr.is_manual_override ? '<div style="color:#c9a227;font-size:9px;">★</div>' : '') +
+            '</div>'
+        ).join('');
+    }
+    const sel = document.getElementById('modal-qty-sel');
+    if (sel) {
+        sel.innerHTML = '<option value="">— পরিমাণ বেছে নিন —</option>'
+            + prices.map(pr =>
+                '<option value="' + pr.id + '">৳' + fmt(pr.final_price) + ' — ' + pr.label + '</option>'
+            ).join('');
+    }
+    const sp = document.getElementById('modal-sel-price');
+    if (sp) sp.textContent = '——';
+}
+
+const TAB_ON      = 'px-4 py-1.5 rounded-lg bg-[#14532d] text-white text-xs font-semibold transition-colors';
+const TAB_WS_ON   = 'px-4 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold transition-colors';
+const TAB_OFF     = 'px-4 py-1.5 rounded-lg text-gray-400 hover:text-gray-600 text-xs font-semibold transition-colors';
+
+function setTab(tab) {
+    activeTab = tab;
+    const rb = document.getElementById('tab-retail');
+    const wb = document.getElementById('tab-wholesale');
+    if (rb) rb.className = tab === 'retail' ? TAB_ON  : TAB_OFF;
+    if (wb) wb.className = tab === 'wholesale' ? TAB_WS_ON : TAB_OFF;
+    // Clear combo when switching tab
+    comboItems = [];
+    renderCombo();
+    refreshCardsForTab();
+    refreshListViewForTab();
+    refreshPickerForTab();
+    refreshCombosForTab();
+    try { localStorage.setItem('mstab', tab); } catch(e) {}
+}
+
+function refreshCardsForTab() {
+    Object.values(PRODUCTS).forEach(function(p) {
+        const prices = activeTabPrices(p);
+        const fp   = document.getElementById('card-from-' + p.id);
+        const wrap = document.getElementById('card-price-wrap-' + p.id);
+        const cc   = document.getElementById('card-chips-' + p.id);
+        if (wrap) wrap.style.display = prices.length ? '' : 'none';
+        if (fp)   fp.textContent = prices.length ? '৳' + fmt(prices[0].final_price) : '';
+        if (cc)   cc.innerHTML = prices.map(function(pr) {
+            return '<div class="p-chip p-1.5 text-center">' +
+                '<div class="chip-lbl text-gray-400 text-[10px] leading-tight">' + pr.label + '</div>' +
+                '<div class="chip-val text-[#14532d] text-[13px] font-semibold leading-tight mt-0.5">৳' + fmt(pr.final_price) + '</div>' +
+                (pr.is_manual_override ? '<div style="color:#c9a227;font-size:9px;">★</div>' : '') +
+                '</div>';
+        }).join('');
+    });
+}
+
+function refreshListViewForTab() {
+    Object.values(PRODUCTS).forEach(function(p) {
+        const prices = activeTabPrices(p);
+        const pc = document.getElementById('list-prices-' + p.id);
+        const lf = document.getElementById('list-from-' + p.id);
+        if (pc) pc.innerHTML = prices.map(function(pr) {
+            return '<span class="text-[11px] bg-green-50 border border-green-100 text-[#14532d] px-2 py-0.5 rounded-full whitespace-nowrap">' + pr.label + ' · ৳' + fmt(pr.final_price) + '</span>';
+        }).join('');
+        if (lf) lf.textContent = prices.length ? '৳' + fmt(prices[0].final_price) : '';
+    });
+}
+
+function refreshPickerForTab() {
+    Object.values(PRODUCTS).forEach(function(p) {
+        const row = document.getElementById('picker-row-' + p.id);
+        if (!row) return;
+
+        if (p.variants && p.variants.length > 0) {
+            // Variant product: show if any variant has prices for this tab
+            const anyPrices = p.variants.some(function(v) {
+                return (activeTab === 'retail' ? v.retail_prices : v.wholesale_prices).length > 0;
+            });
+            if (!anyPrices) { row.style.display = 'none'; return; }
+            row.style.display = '';
+            pickerVariantChange(p.id);
+        } else {
+            const prices = activeTabPrices(p);
+            if (prices.length === 0) { row.style.display = 'none'; return; }
+            row.style.display = '';
+            const sel = document.getElementById('picker-qty-' + p.id);
+            if (sel) {
+                sel.innerHTML = prices.map(function(pr) {
+                    return '<option value="' + pr.id + '" data-price="' + pr.final_price + '">' + pr.label + '</option>';
+                }).join('');
+                pickerPriceUpdate(p.id);
+            }
+        }
+    });
+}
+
+function refreshCombosForTab() {
+    const cards = document.querySelectorAll('[data-combo-type]');
+    cards.forEach(function(card) {
+        card.style.display = card.dataset.comboType === activeTab ? '' : 'none';
+    });
+    const section = document.getElementById('fixed-combos');
+    if (section) {
+        const anyVisible = Array.from(cards).some(function(c) { return c.dataset.comboType === activeTab; });
+        section.style.display = anyVisible ? '' : 'none';
+    }
+}
+
+// Restore saved tab
+try { const saved = localStorage.getItem('mstab'); if (saved === 'wholesale') setTab('wholesale'); } catch(e) {}
 
 // ── Modal open/close ──────────────────────────────────────────────────────
 function openModal(id) {
@@ -1435,24 +1661,23 @@ function fillModal(p) {
         dw.style.display = 'none';
     }
 
-    // Prices grid
-    const grid = document.getElementById('modal-prices-grid');
-    grid.innerHTML = p.prices.map(pr => `
-        <div id="mchip-${pr.id}" class="p-chip p-2 text-center"
-             onclick="selectChip(${pr.id})">
-            <div class="chip-lbl text-gray-400 text-[10px] leading-tight">${pr.label}</div>
-            <div class="chip-val text-[#14532d] text-sm font-bold leading-tight mt-0.5">৳${fmt(pr.final_price)}</div>
-            ${pr.is_manual_override ? '<div style="color:#c9a227;font-size:9px;">★</div>' : ''}
-        </div>
-    `).join('');
+    // Variant selector
+    const variantWrap = document.getElementById('modal-variant-wrap');
+    const variantSel  = document.getElementById('modal-variant-sel');
+    if (p.variants && p.variants.length > 0) {
+        if (variantWrap) variantWrap.style.display = 'block';
+        if (variantSel) {
+            variantSel.innerHTML = p.variants.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+            modalCurrentVariantId = p.variants[0].id;
+        }
+    } else {
+        if (variantWrap) variantWrap.style.display = 'none';
+        modalCurrentVariantId = null;
+    }
 
-    // Quantity dropdown
-    const sel = document.getElementById('modal-qty-sel');
-    sel.innerHTML = '<option value="">— পরিমাণ বেছে নিন —</option>'
-        + p.prices.map(pr =>
-            `<option value="${pr.id}">৳${fmt(pr.final_price)} — ${pr.label}</option>`
-        ).join('');
-    document.getElementById('modal-sel-price').textContent = '——';
+    // Prices grid
+    const prices = modalCurrentVariantId ? getVariantPrices(p, modalCurrentVariantId) : activeTabPrices(p);
+    rebuildModalPrices(prices);
 }
 
 // ── Modal slideshow controls ───────────────────────────────────────────────
@@ -1485,11 +1710,12 @@ function modalSlide(dir) {
 function selectChip(priceId) {
     const p = PRODUCTS[currentId];
     if (!p) return;
-    const price = p.prices.find(x => x.id === priceId);
+    const prices = modalCurrentVariantId ? getVariantPrices(p, modalCurrentVariantId) : activeTabPrices(p);
+    const price = prices.find(x => x.id === priceId);
     if (!price) return;
 
     // Reset all chips
-    p.prices.forEach(x => {
+    prices.forEach(x => {
         const el = document.getElementById('mchip-' + x.id);
         if (!el) return;
         el.classList.remove('active');
@@ -1622,15 +1848,26 @@ function addToCombo(productId) {
     const sel = document.getElementById('picker-qty-' + productId);
     if (!sel) return;
     const priceId = parseInt(sel.value, 10);
-    const price   = p.prices.find(x => x.id === priceId);
+
+    let price, variantId = null, variantName = null;
+    if (p.variants && p.variants.length > 0) {
+        const varSel = document.getElementById('picker-variant-' + productId);
+        if (varSel) {
+            variantId = parseInt(varSel.value, 10);
+            const v = p.variants.find(x => x.id === variantId);
+            if (v) { variantName = v.name; price = getVariantPrices(p, variantId).find(x => x.id === priceId); }
+        }
+    } else {
+        price = activeTabPrices(p).find(x => x.id === priceId);
+    }
     if (!price) return;
 
     // Duplicate → flash existing item in summary
-    const dup = comboItems.find(x => x.productId === productId && x.priceId === priceId);
+    const dup = comboItems.find(x => x.productId === productId && x.priceId === priceId && x.variantId === variantId);
     if (dup) { flashComboItem(dup.uid); return; }
 
     comboUid++;
-    comboItems.push({ uid: comboUid, productId, priceId, quantity_gram: price.quantity_gram, nameBn: p.name_bn, label: price.label, price: price.final_price });
+    comboItems.push({ uid: comboUid, productId, priceId, variantId, variantName, sellType: activeTab, quantity_gram: price.quantity_gram, nameBn: p.name_bn, label: price.label, price: price.final_price });
 
     // Confirm flash on add button
     const btn = document.getElementById('picker-btn-' + productId);
@@ -1652,8 +1889,14 @@ function removeFromCombo(uid) {
 function changeComboItem(uid, newPriceIdStr) {
     const item = comboItems.find(x => x.uid === uid);
     if (!item) return;
-    const p     = PRODUCTS[item.productId];
-    const price = p && p.prices.find(x => x.id === parseInt(newPriceIdStr, 10));
+    const p = PRODUCTS[item.productId];
+    let itemPrices;
+    if (item.variantId && p && p.variants) {
+        const v = p.variants.find(x => x.id === item.variantId);
+        if (v) itemPrices = item.sellType === 'retail' ? (v.retail_prices || []) : (v.wholesale_prices || []);
+    }
+    if (!itemPrices) itemPrices = p ? (item.sellType === 'retail' ? (p.retail_prices || []) : (p.wholesale_prices || [])) : [];
+    const price = itemPrices.find(x => x.id === parseInt(newPriceIdStr, 10));
     if (!price) return;
     item.priceId       = price.id;
     item.quantity_gram = price.quantity_gram;
@@ -1689,14 +1932,22 @@ function renderCombo() {
 
     // Build item rows
     listEl.innerHTML = comboItems.map(item => {
-        const p    = PRODUCTS[item.productId];
-        const opts = p.prices.map(pr =>
+        const p = PRODUCTS[item.productId];
+        let itemPrices;
+        if (item.variantId && p && p.variants) {
+            const v = p.variants.find(x => x.id === item.variantId);
+            if (v) itemPrices = item.sellType === 'retail' ? (v.retail_prices || []) : (v.wholesale_prices || []);
+        }
+        if (!itemPrices) itemPrices = p ? (item.sellType === 'retail' ? (p.retail_prices || []) : (p.wholesale_prices || [])) : [];
+        const opts = itemPrices.map(pr =>
             `<option value="${pr.id}"${pr.id === item.priceId ? ' selected' : ''}>${pr.label} · ৳${fmt(pr.final_price)}</option>`
         ).join('');
+        const variantLine = item.variantName ? `<div class="text-green-400 text-[10px] leading-none mt-0.5">${item.variantName}</div>` : '';
         return `
         <div id="citem-${item.uid}" class="flex items-center gap-2 py-2.5 border-b border-green-700/30 last:border-0 transition-colors">
             <div class="flex-1 min-w-0">
                 <div class="text-[#fef9ee] font-serif-bn text-sm font-semibold leading-tight truncate">${item.nameBn}</div>
+                ${variantLine}
                 <select onchange="changeComboItem(${item.uid},this.value)"
                         class="mt-1 text-[11px] border border-green-600 rounded-lg px-2 py-1 bg-[#1a6b3a] text-green-200 w-full focus:outline-none focus:ring-1 focus:ring-[#c9a227]">
                     ${opts}
@@ -1763,11 +2014,19 @@ function orderSingleProduct() {
         if (sel) { sel.style.borderColor = '#ef4444'; setTimeout(() => { sel.style.borderColor = ''; }, 1500); }
         return;
     }
-    const price = p.prices.find(x => x.id === priceId);
+
+    let price, variantId = null, variantName = null;
+    if (p.variants && p.variants.length > 0 && modalCurrentVariantId) {
+        variantId = modalCurrentVariantId;
+        const v = p.variants.find(x => x.id === variantId);
+        if (v) { variantName = v.name; price = getVariantPrices(p, variantId).find(x => x.id === priceId); }
+    } else {
+        price = activeTabPrices(p).find(x => x.id === priceId);
+    }
     if (!price) return;
 
     comboUid++;
-    comboItems = [{ uid: comboUid, productId: currentId, priceId, quantity_gram: price.quantity_gram, nameBn: p.name_bn, label: price.label, price: price.final_price }];
+    comboItems = [{ uid: comboUid, productId: currentId, priceId, variantId, variantName, sellType: activeTab, quantity_gram: price.quantity_gram, nameBn: p.name_bn, label: price.label, price: price.final_price }];
 
     renderCombo();
     closeModal();
@@ -1784,14 +2043,22 @@ function addToComboFromModal() {
         if (sel) { sel.style.borderColor = '#ef4444'; setTimeout(() => { sel.style.borderColor = ''; }, 1500); }
         return;
     }
-    const price = p.prices.find(x => x.id === priceId);
+
+    let price, variantId = null, variantName = null;
+    if (p.variants && p.variants.length > 0 && modalCurrentVariantId) {
+        variantId = modalCurrentVariantId;
+        const v = p.variants.find(x => x.id === variantId);
+        if (v) { variantName = v.name; price = getVariantPrices(p, variantId).find(x => x.id === priceId); }
+    } else {
+        price = activeTabPrices(p).find(x => x.id === priceId);
+    }
     if (!price) return;
 
-    const dup = comboItems.find(x => x.productId === currentId && x.priceId === priceId);
+    const dup = comboItems.find(x => x.productId === currentId && x.priceId === priceId && x.variantId === variantId);
     if (dup) { closeModal(); flashComboItem(dup.uid); return; }
 
     comboUid++;
-    comboItems.push({ uid: comboUid, productId: currentId, priceId, quantity_gram: price.quantity_gram, nameBn: p.name_bn, label: price.label, price: price.final_price });
+    comboItems.push({ uid: comboUid, productId: currentId, priceId, variantId, variantName, sellType: activeTab, quantity_gram: price.quantity_gram, nameBn: p.name_bn, label: price.label, price: price.final_price });
     renderCombo();
     closeModal();
 
@@ -2384,8 +2651,7 @@ function populateOrderItems() {
     const container = document.getElementById('order-items-hidden');
     if (!container) return;
     container.innerHTML = comboItems.map((item, i) =>
-        `<input type="hidden" name="items[${i}][product_id]" value="${item.productId}">
-         <input type="hidden" name="items[${i}][quantity_gram]" value="${item.quantity_gram}">`
+        `<input type="hidden" name="items[${i}][price_id]" value="${item.priceId}">`
     ).join('');
 }
 

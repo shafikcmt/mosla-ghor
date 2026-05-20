@@ -55,9 +55,8 @@ class OrderController extends Controller
             'transaction_id'           => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:100'],
             'paid_amount'              => [$isManualPayment ? 'required' : 'nullable', 'numeric', 'min:0'],
             'payment_screenshot'       => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'items'                    => [$isComboOrder ? 'nullable' : 'required', 'array', 'min:1', 'max:20'],
-            'items.*.product_id'       => ['required_with:items', 'integer', 'exists:products,id'],
-            'items.*.quantity_gram'    => ['required_with:items', 'integer', 'in:25,50,100,250,500,1000'],
+            'items'            => [$isComboOrder ? 'nullable' : 'required', 'array', 'min:1', 'max:20'],
+            'items.*.price_id' => ['required_with:items', 'integer', 'exists:product_prices,id'],
         ], [
             'mobile_number.regex'          => 'সঠিক মোবাইল নম্বর দিন। যেমন: 01700000000',
             'alternative_number.regex'     => 'সঠিক বিকল্প নম্বর দিন। যেমন: 01700000000',
@@ -133,6 +132,8 @@ class OrderController extends Controller
 
             foreach ($combo->items as $item) {
                 $processedItems[] = [
+                    'sell_type'     => $item->sell_type ?? 'retail',
+                    'price_id'      => $item->product_price_id,
                     'product_id'    => $item->product_id,
                     'product_name'  => $item->product?->name_bn ?? '',
                     'quantity_gram' => $item->quantity_gram,
@@ -143,9 +144,8 @@ class OrderController extends Controller
         } else {
             // Custom / single product branch
             foreach ($validated['items'] as $item) {
-                $productPrice = ProductPrice::with('product')
-                    ->where('product_id', (int) $item['product_id'])
-                    ->where('quantity_gram', (int) $item['quantity_gram'])
+                $productPrice = ProductPrice::with(['product', 'variant'])
+                    ->where('id', (int) $item['price_id'])
                     ->where('is_active', true)
                     ->first();
 
@@ -160,9 +160,12 @@ class OrderController extends Controller
                 $subtotal += $lineTotal;
 
                 $processedItems[] = [
+                    'sell_type'     => $productPrice->sell_type,
+                    'price_id'      => $productPrice->id,
                     'product_id'    => $productPrice->product->id,
                     'product_name'  => $productPrice->product->name_bn,
-                    'quantity_gram' => (int) $item['quantity_gram'],
+                    'variant_name'  => $productPrice->variant?->name,
+                    'quantity_gram' => (int) $productPrice->quantity_gram,
                     'unit_price'    => $lineTotal,
                     'line_total'    => $lineTotal,
                 ];
