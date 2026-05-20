@@ -23,8 +23,8 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 
-// Route::get('/', HomeController::class);
-Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/', HomeController::class);
+// Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/address/unions/{upazila}', [AddressController::class, 'unions'])->name('address.unions');
 
