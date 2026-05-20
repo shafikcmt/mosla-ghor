@@ -14,6 +14,7 @@ class Product extends Model
         'main_image',
         'gallery_images',
         'video_url',
+        'video_path',
         'short_description',
         'description',
         'retail_price_1kg',

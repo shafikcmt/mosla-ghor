@@ -8,7 +8,9 @@ $productsForJs = $products->map(function ($p) {
         'short_description' => $p->short_description,
         'description'       => $p->description,
         'main_image'        => $p->main_image ? asset($p->main_image) : null,
+        'gallery_images'    => collect($p->gallery_images ?? [])->map(fn($img) => asset($img))->values()->all(),
         'video_url'         => $p->video_url,
+        'video_path'        => ($p->video_path ?? null) ? asset($p->video_path) : null,
         'stock'             => (int) $p->stock,
         'prices'            => $p->activePrices->map(function ($pr) {
             return [
@@ -256,11 +258,27 @@ $productsForJs = $products->map(function ($p) {
             @foreach($products as $product)
             <article class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col">
 
-                {{-- Image / placeholder --}}
-                <div class="relative h-52 overflow-hidden flex-shrink-0">
-                    @if($product->main_image)
-                        <img src="{{ asset($product->main_image) }}" alt="{{ $product->name_bn }}"
-                             class="w-full h-full object-cover">
+                {{-- Image slideshow / placeholder --}}
+                @php
+                    $cardSlides = collect([$product->main_image])
+                        ->merge($product->gallery_images ?? [])
+                        ->filter()->values();
+                @endphp
+                <div class="relative h-52 overflow-hidden flex-shrink-0" data-slideshow="{{ $product->id }}">
+                    @if($cardSlides->isNotEmpty())
+                        @foreach($cardSlides as $si => $slide)
+                        <img src="{{ asset($slide) }}" alt="{{ $product->name_bn }}"
+                             class="card-slide absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
+                             style="{{ $si > 0 ? 'opacity:0;' : '' }}">
+                        @endforeach
+                        @if($cardSlides->count() > 1)
+                        <div class="absolute bottom-2 left-0 right-0 flex justify-center gap-1 z-10 pointer-events-none">
+                            @foreach($cardSlides as $si => $slide)
+                            <span class="card-dot w-1.5 h-1.5 rounded-full bg-white transition-opacity"
+                                  style="{{ $si === 0 ? 'opacity:.9;' : 'opacity:.4;' }}"></span>
+                            @endforeach
+                        </div>
+                        @endif
                     @else
                         <div class="w-full h-full bg-gradient-to-br from-[#14532d] to-[#1a6b3a] flex items-center justify-center relative">
                             <div class="absolute inset-0 pointer-events-none opacity-20">
@@ -804,9 +822,13 @@ $productsForJs = $products->map(function ($p) {
             <div id="modal-media" class="relative w-full overflow-hidden bg-gradient-to-br from-[#14532d] to-[#1a6b3a]"
                  style="height:260px;">
 
-                {{-- Real image --}}
+                {{-- Image slide --}}
                 <img id="modal-img" src="" alt=""
                      class="absolute inset-0 w-full h-full object-cover" style="display:none;">
+
+                {{-- Uploaded local video --}}
+                <video id="modal-local-video" class="absolute inset-0 w-full h-full object-cover"
+                       controls style="display:none;"></video>
 
                 {{-- YouTube iframe --}}
                 <iframe id="modal-video" src="" frameborder="0"
@@ -826,6 +848,18 @@ $productsForJs = $products->map(function ($p) {
                         <div id="modal-ph-en" class="text-green-300 text-sm mt-1 tracking-widest uppercase"></div>
                     </div>
                 </div>
+
+                {{-- Slideshow prev/next (shown when multiple slides) --}}
+                <button id="modal-prev" onclick="modalSlide(-1)"
+                        class="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center text-lg transition-colors"
+                        style="display:none;">&#8249;</button>
+                <button id="modal-next" onclick="modalSlide(1)"
+                        class="absolute right-12 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center text-lg transition-colors"
+                        style="display:none;">&#8250;</button>
+
+                {{-- Slide indicator dots --}}
+                <div id="modal-dots" class="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none"
+                     style="display:none;"></div>
 
                 {{-- Close button (top-right, always on top of media) --}}
                 <button id="modal-close" onclick="closeModal()"
@@ -1268,6 +1302,8 @@ const BD_UPAZILAS    = @json($bdUpazilas);
 
 let currentId    = null;
 let fixedComboData = null;
+let modalSlides  = [];
+let modalCurSlide = 0;
 
 // ── Modal open/close ──────────────────────────────────────────────────────
 function openModal(id) {
@@ -1283,9 +1319,12 @@ function openModal(id) {
 function closeModal() {
     document.getElementById('modal-overlay').style.display = 'none';
     document.getElementById('modal-wrapper').style.display = 'none';
-    document.getElementById('modal-video').src = '';       // stop video
+    document.getElementById('modal-video').src = '';
+    const lv = document.getElementById('modal-local-video');
+    if (lv) { lv.pause(); lv.src = ''; }
     document.body.style.overflow = '';
     currentId = null;
+    modalSlides = [];
 }
 
 // ── Populate modal ────────────────────────────────────────────────────────
@@ -1296,22 +1335,52 @@ function fillModal(p) {
     document.getElementById('modal-ph-bn').textContent   = p.name_bn;
     document.getElementById('modal-ph-en').textContent   = p.name_en;
 
-    // Media
-    const imgEl = document.getElementById('modal-img');
-    const vidEl = document.getElementById('modal-video');
-    const phEl  = document.getElementById('modal-ph');
-    [imgEl, vidEl, phEl].forEach(el => el.style.display = 'none');
+    // Media elements
+    const imgEl      = document.getElementById('modal-img');
+    const localVidEl = document.getElementById('modal-local-video');
+    const ytEl       = document.getElementById('modal-video');
+    const phEl       = document.getElementById('modal-ph');
+    const prevBtn    = document.getElementById('modal-prev');
+    const nextBtn    = document.getElementById('modal-next');
+    const dotsEl     = document.getElementById('modal-dots');
+
+    [imgEl, localVidEl, ytEl, phEl].forEach(el => { if (el) el.style.display = 'none'; });
+    if (prevBtn) prevBtn.style.display = 'none';
+    if (nextBtn) nextBtn.style.display = 'none';
+    if (dotsEl)  dotsEl.style.display  = 'none';
+    if (localVidEl) { localVidEl.pause(); localVidEl.src = ''; }
+    ytEl.src = '';
 
     const ytId = ytExtract(p.video_url);
     if (ytId) {
-        vidEl.src = 'https://www.youtube.com/embed/' + ytId + '?rel=0';
-        vidEl.style.display = 'block';
-    } else if (p.main_image) {
-        imgEl.src = p.main_image;
-        imgEl.alt = p.name_bn;
-        imgEl.style.display = 'block';
+        // YouTube takes priority — show iframe, no slideshow
+        ytEl.src = 'https://www.youtube.com/embed/' + ytId + '?rel=0';
+        ytEl.style.display = 'block';
+        modalSlides = [];
     } else {
-        phEl.style.display = 'flex';
+        // Build slides: images first, then local video if any
+        modalSlides = [];
+        if (p.main_image) modalSlides.push({ type: 'image', src: p.main_image });
+        (p.gallery_images || []).forEach(img => modalSlides.push({ type: 'image', src: img }));
+        if (p.video_path)  modalSlides.push({ type: 'video', src: p.video_path });
+
+        if (modalSlides.length === 0) {
+            phEl.style.display = 'flex';
+        } else {
+            modalCurSlide = 0;
+            modalShowSlide(0);
+
+            if (modalSlides.length > 1) {
+                if (prevBtn) prevBtn.style.display = 'flex';
+                if (nextBtn) nextBtn.style.display = 'flex';
+                if (dotsEl) {
+                    dotsEl.style.display = 'flex';
+                    dotsEl.innerHTML = modalSlides.map((_, i) =>
+                        `<span class="modal-dot w-2 h-2 rounded-full bg-white transition-opacity" style="opacity:${i === 0 ? '.9' : '.4'};"></span>`
+                    ).join('');
+                }
+            }
+        }
     }
 
     // Stock badge
@@ -1356,6 +1425,32 @@ function fillModal(p) {
             `<option value="${pr.id}">৳${fmt(pr.final_price)} — ${pr.label}</option>`
         ).join('');
     document.getElementById('modal-sel-price').textContent = '——';
+}
+
+// ── Modal slideshow controls ───────────────────────────────────────────────
+function modalShowSlide(index) {
+    if (!modalSlides.length) return;
+    modalCurSlide = ((index % modalSlides.length) + modalSlides.length) % modalSlides.length;
+    const slide      = modalSlides[modalCurSlide];
+    const imgEl      = document.getElementById('modal-img');
+    const localVidEl = document.getElementById('modal-local-video');
+
+    if (imgEl) imgEl.style.display = 'none';
+    if (localVidEl) { localVidEl.style.display = 'none'; localVidEl.pause(); }
+
+    if (slide.type === 'image') {
+        if (imgEl) { imgEl.src = slide.src; imgEl.style.display = 'block'; }
+    } else if (slide.type === 'video') {
+        if (localVidEl) { localVidEl.src = slide.src; localVidEl.style.display = 'block'; }
+    }
+
+    document.querySelectorAll('.modal-dot').forEach((dot, i) => {
+        dot.style.opacity = (i === modalCurSlide) ? '.9' : '.4';
+    });
+}
+
+function modalSlide(dir) {
+    modalShowSlide(modalCurSlide + dir);
 }
 
 // ── Price chip selection ──────────────────────────────────────────────────
@@ -2372,6 +2467,23 @@ function toggleFaq(i) {
     body.classList.toggle('hidden', open);
     if (icon) icon.style.transform = open ? '' : 'rotate(180deg)';
 }
+
+// ── Card slideshow auto-cycle ─────────────────────────────────────────────
+(function () {
+    document.querySelectorAll('[data-slideshow]').forEach(function (el) {
+        const imgs = Array.from(el.querySelectorAll('.card-slide'));
+        const dots = Array.from(el.querySelectorAll('.card-dot'));
+        if (imgs.length <= 1) return;
+        let cur = 0;
+        setInterval(function () {
+            imgs[cur].style.opacity = '0';
+            if (dots[cur]) dots[cur].style.opacity = '.4';
+            cur = (cur + 1) % imgs.length;
+            imgs[cur].style.opacity = '1';
+            if (dots[cur]) dots[cur].style.opacity = '.9';
+        }, 3000);
+    });
+})();
 </script>
 
 </body>

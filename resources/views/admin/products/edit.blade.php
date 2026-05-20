@@ -13,7 +13,7 @@
     @endif
 </div>
 
-<form action="{{ route('admin.products.update', $product) }}" method="POST">
+<form action="{{ route('admin.products.update', $product) }}" method="POST" enctype="multipart/form-data">
     @csrf
     @method('PUT')
 
@@ -96,18 +96,19 @@
                 বাতিল
             </a>
         </div>
-
-        <form action="{{ route('admin.products.destroy', $product) }}" method="POST"
-              onsubmit="return confirm('\"{{ $product->name_bn }}\" এবং এর সব প্যাক সম্পূর্ণভাবে মুছে ফেলবেন?')">
-            @csrf
-            @method('DELETE')
-            <button type="submit"
-                    class="text-red-500 hover:text-red-700 text-sm underline underline-offset-2">
-                পণ্য মুছুন
-            </button>
-        </form>
     </div>
 
+</form>
+
+{{-- Delete form is intentionally outside the update form --}}
+<form action="{{ route('admin.products.destroy', $product) }}" method="POST" class="mt-4"
+      onsubmit="return confirm('\"{{ $product->name_bn }}\" এবং এর সব প্যাক সম্পূর্ণভাবে মুছে ফেলবেন?')">
+    @csrf
+    @method('DELETE')
+    <button type="submit"
+            class="text-red-500 hover:text-red-700 text-sm underline underline-offset-2">
+        পণ্য মুছুন
+    </button>
 </form>
 
 @endsection

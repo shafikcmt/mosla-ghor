@@ -10,7 +10,7 @@
     <h1 class="text-xl font-bold text-gray-800">নতুন পণ্য যোগ করুন</h1>
 </div>
 
-<form action="{{ route('admin.products.store') }}" method="POST">
+<form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
     @csrf
 
     <div class="bg-white shadow rounded p-6">

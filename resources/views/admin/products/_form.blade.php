@@ -99,27 +99,107 @@
         </label>
     </div>
 
-    {{-- main_image --}}
+    {{-- main_image URL (manual / legacy) --}}
     <div class="md:col-span-2">
-        <label class="block text-sm font-medium text-gray-700 mb-1">মূল ছবির Path / URL</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">মূল ছবির URL (বাহ্যিক লিংক)</label>
         <input type="text" name="main_image"
-               value="{{ old('main_image', $product?->main_image) }}"
-               placeholder="/images/products/holud.jpg"
+               value="{{ old('main_image', $product?->main_image && str_starts_with($product->main_image, 'http') ? $product->main_image : '') }}"
+               placeholder="https://example.com/holud.jpg"
                class="w-full border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-400">
-        <p class="text-xs text-gray-400 mt-1">ফাইল আপলোড Phase 2-এ যোগ হবে।</p>
+        <p class="text-xs text-gray-400 mt-1">শুধু বাহ্যিক URL-এর জন্য। নিচে ফাইল আপলোড করলে সেটি অগ্রাধিকার পাবে।</p>
         @error('main_image')
             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
         @enderror
     </div>
 
-    {{-- video_url --}}
+    {{-- main_image_file upload --}}
     <div class="md:col-span-2">
-        <label class="block text-sm font-medium text-gray-700 mb-1">ভিডিও URL</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">মূল ছবি আপলোড</label>
+        @php
+            $hasLocalMainImage = $product?->main_image && str_starts_with($product->main_image, 'storage/');
+        @endphp
+        @if($hasLocalMainImage)
+        <div class="mb-3 flex items-start gap-3 p-3 bg-gray-50 border rounded">
+            <img src="{{ asset($product->main_image) }}" alt="" class="w-24 h-20 object-cover rounded border flex-shrink-0">
+            <div>
+                <p class="text-xs text-gray-500 mb-1 break-all">{{ $product->main_image }}</p>
+                <label class="flex items-center gap-2 text-sm text-red-600 cursor-pointer">
+                    <input type="checkbox" name="remove_main_image" value="1" class="rounded">
+                    বর্তমান ছবি মুছুন
+                </label>
+            </div>
+        </div>
+        @endif
+        <input type="file" name="main_image_file" accept="image/jpeg,image/png,image/webp"
+               class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white">
+        <p class="text-xs text-gray-400 mt-1">JPG, PNG, WebP — সর্বোচ্চ ৫ MB</p>
+        @error('main_image_file')
+            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+        @enderror
+    </div>
+
+    {{-- gallery_images upload --}}
+    <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">গ্যালারি ছবি আপলোড (একাধিক)</label>
+        @php
+            $galleryImages = $product?->gallery_images ?? [];
+        @endphp
+        @if(count($galleryImages))
+        <div class="mb-3 flex flex-wrap gap-2 p-3 bg-gray-50 border rounded">
+            @foreach($galleryImages as $gi)
+            <div class="flex flex-col items-center gap-1">
+                @if(str_starts_with($gi, 'storage/') || str_starts_with($gi, 'http'))
+                <img src="{{ str_starts_with($gi, 'http') ? $gi : asset($gi) }}" alt=""
+                     class="w-20 h-16 object-cover rounded border">
+                @endif
+                <label class="flex items-center gap-1 text-xs text-red-600 cursor-pointer">
+                    <input type="checkbox" name="remove_gallery[]" value="{{ $gi }}" class="rounded">
+                    মুছুন
+                </label>
+            </div>
+            @endforeach
+        </div>
+        @endif
+        <input type="file" name="gallery_images[]" accept="image/jpeg,image/png,image/webp" multiple
+               class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white">
+        <p class="text-xs text-gray-400 mt-1">একাধিক ছবি একসাথে বেছে নিন — JPG, PNG, WebP — প্রতিটি সর্বোচ্চ ৫ MB</p>
+        @error('gallery_images.*')
+            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+        @enderror
+    </div>
+
+    {{-- video_url (YouTube / external) --}}
+    <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">ভিডিও URL (YouTube / বাহ্যিক)</label>
         <input type="text" name="video_url"
                value="{{ old('video_url', $product?->video_url) }}"
                placeholder="https://www.youtube.com/watch?v=..."
                class="w-full border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-400">
         @error('video_url')
+            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+        @enderror
+    </div>
+
+    {{-- video_file upload --}}
+    <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">ভিডিও আপলোড (লোকাল)</label>
+        @php
+            $hasLocalVideo = ($product?->video_path ?? null) && str_starts_with($product->video_path, 'storage/');
+        @endphp
+        @if($hasLocalVideo)
+        <div class="mb-3 p-3 bg-gray-50 border rounded">
+            <video src="{{ asset($product->video_path) }}" class="w-full max-w-xs h-28 rounded border bg-black" controls></video>
+            <p class="text-xs text-gray-500 mt-1 break-all">{{ $product->video_path }}</p>
+            <label class="flex items-center gap-2 text-sm text-red-600 cursor-pointer mt-1">
+                <input type="checkbox" name="remove_video" value="1" class="rounded">
+                বর্তমান ভিডিও মুছুন
+            </label>
+        </div>
+        @endif
+        <input type="file" name="video_file" accept="video/mp4,video/webm,video/quicktime"
+               class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white">
+        <p class="text-xs text-gray-400 mt-1">MP4, WebM, MOV — সর্বোচ্চ ৫০ MB। YouTube URL থাকলে সেটি অগ্রাধিকার পাবে।</p>
+        @error('video_file')
             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
         @enderror
     </div>

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductPrice;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
@@ -26,6 +27,12 @@ class ProductController extends Controller
     {
         $data    = $this->productData($request);
         $product = Product::create($data);
+
+        $fileUpdates = $this->processFileUploads($request, $product);
+        if (!empty($fileUpdates)) {
+            $product->update($fileUpdates);
+        }
+
         $product->syncPrices();
 
         return redirect()->route('admin.products.edit', $product)
@@ -49,6 +56,9 @@ class ProductController extends Controller
         $data         = $this->productData($request, $product->id);
         $priceChanged = (float) $product->retail_price_1kg !== (float) $data['retail_price_1kg'];
 
+        $fileUpdates = $this->processFileUploads($request, $product);
+        $data        = array_merge($data, $fileUpdates);
+
         $product->update($data);
 
         if ($priceChanged) {
@@ -63,6 +73,7 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
+        $this->deleteProductFiles($product);
         $product->delete();
 
         return redirect()->route('admin.products.index')
@@ -83,6 +94,9 @@ class ProductController extends Controller
             'retail_price_1kg'    => 'required|numeric|min:0.01',
             'wholesale_price_1kg' => 'nullable|numeric|min:0',
             'stock'               => 'required|integer|min:0',
+            'main_image_file'     => 'nullable|file|mimes:jpg,jpeg,png,webp|max:5120',
+            'gallery_images.*'    => 'nullable|file|mimes:jpg,jpeg,png,webp|max:5120',
+            'video_file'          => 'nullable|file|mimes:mp4,webm,mov|max:51200',
         ]);
 
         return [
@@ -98,6 +112,78 @@ class ProductController extends Controller
             'stock'               => $request->stock,
             'is_active'           => $request->boolean('is_active'),
         ];
+    }
+
+    private function processFileUploads(Request $request, Product $product): array
+    {
+        $updates = [];
+
+        // Main image
+        if ($request->hasFile('main_image_file')) {
+            $this->deleteLocalFile($product->main_image);
+            $path = $request->file('main_image_file')->store('products/images', 'public');
+            $updates['main_image'] = 'storage/' . $path;
+        } elseif ($request->boolean('remove_main_image')) {
+            $this->deleteLocalFile($product->main_image);
+            $updates['main_image'] = null;
+        }
+
+        // Gallery images
+        $currentGallery = $product->gallery_images ?? [];
+        $galleryChanged = false;
+
+        if ($request->has('remove_gallery')) {
+            foreach ((array) $request->input('remove_gallery') as $imgPath) {
+                $this->deleteLocalFile($imgPath);
+                $currentGallery = array_values(
+                    array_filter($currentGallery, fn($img) => $img !== $imgPath)
+                );
+            }
+            $galleryChanged = true;
+        }
+
+        if ($request->hasFile('gallery_images')) {
+            foreach ($request->file('gallery_images') as $file) {
+                $path = $file->store('products/images', 'public');
+                $currentGallery[] = 'storage/' . $path;
+            }
+            $galleryChanged = true;
+        }
+
+        if ($galleryChanged) {
+            $updates['gallery_images'] = !empty($currentGallery) ? array_values($currentGallery) : null;
+        }
+
+        // Video
+        if ($request->hasFile('video_file')) {
+            $this->deleteLocalFile($product->video_path ?? null);
+            $path = $request->file('video_file')->store('products/videos', 'public');
+            $updates['video_path'] = 'storage/' . $path;
+        } elseif ($request->boolean('remove_video')) {
+            $this->deleteLocalFile($product->video_path ?? null);
+            $updates['video_path'] = null;
+        }
+
+        return $updates;
+    }
+
+    // Only deletes files uploaded through our system (paths starting with storage/)
+    private function deleteLocalFile(?string $path): void
+    {
+        if (!$path || str_starts_with($path, 'http') || !str_starts_with($path, 'storage/')) {
+            return;
+        }
+        $diskPath = preg_replace('#^storage/#', '', $path);
+        Storage::disk('public')->delete($diskPath);
+    }
+
+    private function deleteProductFiles(Product $product): void
+    {
+        $this->deleteLocalFile($product->main_image);
+        $this->deleteLocalFile($product->video_path ?? null);
+        foreach ($product->gallery_images ?? [] as $img) {
+            $this->deleteLocalFile($img);
+        }
     }
 
     private function savePriceOverrides(Request $request, Product $product): void
