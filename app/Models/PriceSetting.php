@@ -31,9 +31,20 @@ class PriceSetting extends Model
     ];
 
     // Always load the single settings row via this method
-    public static function current(): static
+   public static function current(): static
     {
-        return static::firstOrFail();
+        return static::firstOrNew([], [
+            'markup_25g' => 0,
+            'markup_50g' => 0,
+            'markup_100g' => 0,
+            'markup_250g' => 0,
+            'markup_500g' => 0,
+            'markup_1000g' => 0,
+            'default_packaging_cost' => 0,
+            'minimum_order_amount' => 0,
+            'rounding_type' => 'none',
+            'currency_symbol' => '৳',
+        ]);
     }
 
     // Return the markup % for a given pack weight in grams

@@ -24,9 +24,17 @@ class PaymentSetting extends Model
         'nagad_enabled'            => 'boolean',
     ];
 
-    public static function current(): static
+   public static function current(): static
     {
-        return static::firstOrCreate([], ['cash_on_delivery_enabled' => true]);
+        return static::firstOrNew([], [
+            'bkash_number' => '',
+            'bkash_type' => '',
+            'rocket_number' => '',
+            'rocket_type' => '',
+            'nagad_number' => '',
+            'nagad_type' => '',
+            'is_cash_on_delivery_active' => true,
+        ]);
     }
 
     public function enabledMethods(): array
