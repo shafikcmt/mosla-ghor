@@ -824,7 +824,8 @@ $productsForJs = $products->map(function ($p) {
 
                 {{-- Image slide --}}
                 <img id="modal-img" src="" alt=""
-                     class="absolute inset-0 w-full h-full object-cover" style="display:none;">
+                     class="absolute inset-0 w-full h-full object-cover cursor-zoom-in" style="display:none;"
+                     onclick="openZoom(modalCurSlide)">
 
                 {{-- Uploaded local video --}}
                 <video id="modal-local-video" class="absolute inset-0 w-full h-full object-cover"
@@ -1265,6 +1266,32 @@ $productsForJs = $products->map(function ($p) {
     </div>
 </div>
 
+{{-- ━━━━━━━━━━━━━━━━  IMAGE ZOOM LIGHTBOX  ━━━━━━━━━━━━━━━━ --}}
+<div id="zoom-overlay" onclick="closeZoom()"
+     class="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center"
+     style="display:none;">
+
+    <button id="zoom-close" onclick="event.stopPropagation(); closeZoom()"
+            class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center text-2xl leading-none transition-colors"
+            aria-label="close">&times;</button>
+
+    <div id="zoom-counter"
+         class="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-black/40 text-white/90 text-sm font-medium px-3 py-1 rounded-full select-none"
+         style="display:none;"></div>
+
+    <button id="zoom-prev" onclick="event.stopPropagation(); zoomNav(-1)"
+            class="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center text-3xl leading-none transition-colors"
+            style="display:none;">&#8249;</button>
+
+    <button id="zoom-next" onclick="event.stopPropagation(); zoomNav(1)"
+            class="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center text-3xl leading-none transition-colors"
+            style="display:none;">&#8250;</button>
+
+    <img id="zoom-img" src="" alt="" onclick="event.stopPropagation()"
+         class="object-contain select-none"
+         style="max-height:90vh; max-width:90vw;">
+</div>
+
 {{-- ━━━━━━━━━━━━━━━━  MOBILE COMBO BAR  ━━━━━━━━━━━━━━━━ --}}
 <div id="combo-bar" class="fixed bottom-0 inset-x-0 z-50 lg:hidden" style="display:none;">
     <div class="bg-[#14532d] border-t-2 border-[#c9a227] px-4 py-3 shadow-2xl">
@@ -1317,6 +1344,7 @@ function openModal(id) {
 }
 
 function closeModal() {
+    closeZoom();
     document.getElementById('modal-overlay').style.display = 'none';
     document.getElementById('modal-wrapper').style.display = 'none';
     document.getElementById('modal-video').src = '';
@@ -1537,7 +1565,16 @@ function ytExtract(url) {
 // ── Event listeners ───────────────────────────────────────────────────────
 document.getElementById('modal-close').addEventListener('click', closeModal);
 document.getElementById('modal-overlay').addEventListener('click', closeModal);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeOrderForm(); } });
+document.addEventListener('keydown', e => {
+    const zoomOpen = document.getElementById('zoom-overlay')?.style.display !== 'none';
+    if (zoomOpen) {
+        if (e.key === 'Escape')     { closeZoom(); return; }
+        if (e.key === 'ArrowLeft')  { zoomNav(-1); return; }
+        if (e.key === 'ArrowRight') { zoomNav(1);  return; }
+        return;
+    }
+    if (e.key === 'Escape') { closeModal(); closeOrderForm(); }
+});
 
 // Mobile nav
 (function () {
@@ -2466,6 +2503,56 @@ function toggleFaq(i) {
     const open = !body.classList.contains('hidden');
     body.classList.toggle('hidden', open);
     if (icon) icon.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+// ── Image Zoom Lightbox ───────────────────────────────────────────────────
+let zoomImages = [];
+let zoomCurIdx = 0;
+
+function openZoom(modalSlideIndex) {
+    zoomImages = modalSlides.filter(s => s.type === 'image').map(s => s.src);
+    if (!zoomImages.length) return;
+    if (modalSlides[modalSlideIndex]?.type !== 'image') return;
+
+    let imgIdx = 0;
+    for (let i = 0; i < modalSlideIndex; i++) {
+        if (modalSlides[i].type === 'image') imgIdx++;
+    }
+    zoomCurIdx = imgIdx;
+    zoomShowImage();
+    document.getElementById('zoom-overlay').style.display = 'flex';
+}
+
+function zoomShowImage() {
+    const img     = document.getElementById('zoom-img');
+    const counter = document.getElementById('zoom-counter');
+    const prevBtn = document.getElementById('zoom-prev');
+    const nextBtn = document.getElementById('zoom-next');
+
+    if (img) img.src = zoomImages[zoomCurIdx] || '';
+
+    if (zoomImages.length > 1) {
+        if (counter) { counter.textContent = (zoomCurIdx + 1) + ' / ' + zoomImages.length; counter.style.display = 'block'; }
+        if (prevBtn) prevBtn.style.display = 'flex';
+        if (nextBtn) nextBtn.style.display = 'flex';
+    } else {
+        if (counter) counter.style.display = 'none';
+        if (prevBtn) prevBtn.style.display = 'none';
+        if (nextBtn) nextBtn.style.display = 'none';
+    }
+}
+
+function closeZoom() {
+    const ol = document.getElementById('zoom-overlay');
+    if (!ol || ol.style.display === 'none') return;
+    ol.style.display = 'none';
+    zoomImages = [];
+}
+
+function zoomNav(dir) {
+    if (!zoomImages.length) return;
+    zoomCurIdx = ((zoomCurIdx + dir) % zoomImages.length + zoomImages.length) % zoomImages.length;
+    zoomShowImage();
 }
 
 // ── Card slideshow auto-cycle ─────────────────────────────────────────────

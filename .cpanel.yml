@@ -1,4 +1,33 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/heavwzih/moslamart.com/
+
+    # Copy latest code to live site
     - /bin/cp -R * $DEPLOYPATH
+
+    # Go to live project folder
+    - cd $DEPLOYPATH
+
+    # Install/update PHP dependencies
+    - composer install --no-dev --optimize-autoloader --no-interaction
+
+    # Run only new pending migrations
+    - php artisan migrate --force
+
+    # Run production seeder only if Database\Seeders\ProductionSeeder exists
+    # Important: ProductionSeeder must use updateOrCreate/firstOrCreate to avoid duplicate data
+    - if php -r "require 'vendor/autoload.php'; exit(class_exists('Database\\Seeders\\ProductionSeeder') ? 0 : 1);"; then php artisan db:seed --class=ProductionSeeder --force; fi
+
+    # Create storage symlink for uploaded images/videos
+    - php artisan storage:link || true
+
+    # Fix writable folders
+    - chmod -R 775 storage bootstrap/cache || true
+
+    # Clear old Laravel cache
+    - php artisan optimize:clear
+
+    # Rebuild production cache
+    - php artisan config:cache
+    - php artisan view:cache
+    - php artisan route:cache || true

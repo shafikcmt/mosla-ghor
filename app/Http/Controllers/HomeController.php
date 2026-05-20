@@ -16,10 +16,6 @@ use App\Models\Product;
 
 class HomeController extends Controller
 {
-    public function index()
-    {
-        return view('welcome'); // অথবা আপনার হোমপেজের ব্লেড ফাইল
-    }
     public function __invoke()
     {
         $products = Product::active()
