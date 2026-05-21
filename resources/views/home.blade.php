@@ -189,23 +189,35 @@ $productsForJs = $products->map(function ($p) {
                     </button>
                 </form>
             @else
-                {{-- Guest --}}
-                <a href="{{ route('vendor.register') }}"
-                   class="text-xs text-indigo-300 hover:text-indigo-200 px-3 py-1.5 rounded border border-indigo-700 hover:border-indigo-500 transition-colors whitespace-nowrap">
-                    মার্চেন্ট হন
-                </a>
-                <a href="{{ route('vendor.login') }}"
-                   class="text-xs text-indigo-300 hover:text-indigo-200 px-3 py-1.5 rounded border border-indigo-700 hover:border-indigo-500 transition-colors whitespace-nowrap">
-                    মার্চেন্ট লগইন
-                </a>
-                <a href="{{ route('customer.login') }}"
-                   class="text-xs text-green-200 hover:text-[#c9a227] px-3 py-1.5 rounded border border-green-700 hover:border-[#c9a227] transition-colors">
-                    লগইন
-                </a>
-                <a href="{{ route('customer.register') }}"
-                   class="text-xs bg-[#c9a227] hover:bg-[#e2bb45] text-[#0f3d22] font-semibold px-3 py-1.5 rounded transition-colors whitespace-nowrap">
-                    রেজিস্ট্রেশন
-                </a>
+                {{-- Guest — show links based on admin settings --}}
+                @if(($ws['show_vendor_links_in_header'] ?? '0') === '1')
+                    @if(($ws['vendor_registration_enabled'] ?? '0') === '1')
+                    <a href="{{ route('vendor.register') }}"
+                       class="text-xs text-indigo-300 hover:text-indigo-200 px-3 py-1.5 rounded border border-indigo-700 hover:border-indigo-500 transition-colors whitespace-nowrap">
+                        মার্চেন্ট হন
+                    </a>
+                    @endif
+                    @if(($ws['vendor_login_enabled'] ?? '1') === '1')
+                    <a href="{{ route('vendor.login') }}"
+                       class="text-xs text-indigo-300 hover:text-indigo-200 px-3 py-1.5 rounded border border-indigo-700 hover:border-indigo-500 transition-colors whitespace-nowrap">
+                        মার্চেন্ট লগইন
+                    </a>
+                    @endif
+                @endif
+                @if(($ws['show_customer_links_in_header'] ?? '1') === '1')
+                    @if(($ws['customer_login_enabled'] ?? '1') === '1')
+                    <a href="{{ route('customer.login') }}"
+                       class="text-xs text-green-200 hover:text-[#c9a227] px-3 py-1.5 rounded border border-green-700 hover:border-[#c9a227] transition-colors">
+                        লগইন
+                    </a>
+                    @endif
+                    @if(($ws['customer_registration_enabled'] ?? '1') === '1')
+                    <a href="{{ route('customer.register') }}"
+                       class="text-xs bg-[#c9a227] hover:bg-[#e2bb45] text-[#0f3d22] font-semibold px-3 py-1.5 rounded transition-colors whitespace-nowrap">
+                        রেজিস্ট্রেশন
+                    </a>
+                    @endif
+                @endif
             @endif
         </div>
 
@@ -248,24 +260,39 @@ $productsForJs = $products->map(function ($p) {
                     </button>
                 </form>
             @else
-                <a href="{{ route('customer.login') }}"
-                   class="text-sm text-center text-green-200 border border-green-700 rounded-lg px-4 py-2 hover:border-[#c9a227] hover:text-[#c9a227] transition-colors">
-                    লগইন
-                </a>
-                <a href="{{ route('customer.register') }}"
-                   class="text-sm text-center bg-[#c9a227] text-[#0f3d22] font-semibold rounded-lg px-4 py-2 hover:bg-[#e2bb45] transition-colors">
-                    রেজিস্ট্রেশন
-                </a>
-                <div class="border-t border-green-900 pt-2 flex flex-col gap-2">
-                    <a href="{{ route('vendor.register') }}"
-                       class="text-sm text-center text-indigo-300 border border-indigo-800 rounded-lg px-4 py-2 hover:border-indigo-500 transition-colors">
-                        মার্চেন্ট হন
+                @if(($ws['show_customer_links_in_header'] ?? '1') === '1')
+                    @if(($ws['customer_login_enabled'] ?? '1') === '1')
+                    <a href="{{ route('customer.login') }}"
+                       class="text-sm text-center text-green-200 border border-green-700 rounded-lg px-4 py-2 hover:border-[#c9a227] hover:text-[#c9a227] transition-colors">
+                        লগইন
                     </a>
-                    <a href="{{ route('vendor.login') }}"
-                       class="text-sm text-center text-indigo-300 border border-indigo-800 rounded-lg px-4 py-2 hover:border-indigo-500 transition-colors">
-                        মার্চেন্ট লগইন
+                    @endif
+                    @if(($ws['customer_registration_enabled'] ?? '1') === '1')
+                    <a href="{{ route('customer.register') }}"
+                       class="text-sm text-center bg-[#c9a227] text-[#0f3d22] font-semibold rounded-lg px-4 py-2 hover:bg-[#e2bb45] transition-colors">
+                        রেজিস্ট্রেশন
                     </a>
-                </div>
+                    @endif
+                @endif
+                @if(($ws['show_vendor_links_in_header'] ?? '0') === '1')
+                    @php $anyVendorMobile = ($ws['vendor_registration_enabled'] ?? '0') === '1' || ($ws['vendor_login_enabled'] ?? '1') === '1'; @endphp
+                    @if($anyVendorMobile)
+                    <div class="border-t border-green-900 pt-2 flex flex-col gap-2">
+                        @if(($ws['vendor_registration_enabled'] ?? '0') === '1')
+                        <a href="{{ route('vendor.register') }}"
+                           class="text-sm text-center text-indigo-300 border border-indigo-800 rounded-lg px-4 py-2 hover:border-indigo-500 transition-colors">
+                            মার্চেন্ট হন
+                        </a>
+                        @endif
+                        @if(($ws['vendor_login_enabled'] ?? '1') === '1')
+                        <a href="{{ route('vendor.login') }}"
+                           class="text-sm text-center text-indigo-300 border border-indigo-800 rounded-lg px-4 py-2 hover:border-indigo-500 transition-colors">
+                            মার্চেন্ট লগইন
+                        </a>
+                        @endif
+                    </div>
+                    @endif
+                @endif
             @endif
         </div>
     </div>
@@ -956,10 +983,32 @@ $productsForJs = $products->map(function ($p) {
                 <h3 class="font-serif-bn text-[#c9a227] text-xl font-bold">{{ $ws['site_name'] ?? 'মসলা ঘর' }}</h3>
                 <p class="text-green-500 text-xs mt-1">খাঁটি মশলার আস্থার দোকান</p>
             </div>
-            <div class="flex gap-6 text-green-500 text-xs">
+            <div class="flex flex-wrap gap-6 text-green-500 text-xs justify-center">
                 <a href="#products" class="hover:text-[#c9a227] transition-colors">পণ্যসমূহ</a>
                 <a href="#why-us"   class="hover:text-[#c9a227] transition-colors">আমাদের সম্পর্কে</a>
                 <a href="#contact"  class="hover:text-[#c9a227] transition-colors">যোগাযোগ</a>
+                @if(($ws['show_vendor_links_in_footer'] ?? '1') === '1')
+                    @if(($ws['vendor_login_enabled'] ?? '1') === '1' || ($ws['vendor_registration_enabled'] ?? '0') === '1')
+                    <span class="text-green-800">|</span>
+                    @if(($ws['vendor_registration_enabled'] ?? '0') === '1')
+                    <a href="{{ route('vendor.register') }}" class="hover:text-indigo-400 transition-colors">মার্চেন্ট রেজিস্ট্রেশন</a>
+                    @endif
+                    @if(($ws['vendor_login_enabled'] ?? '1') === '1')
+                    <a href="{{ route('vendor.login') }}" class="hover:text-indigo-400 transition-colors">মার্চেন্ট লগইন</a>
+                    @endif
+                    @endif
+                @endif
+                @if(($ws['show_customer_links_in_footer'] ?? '0') === '1')
+                    @if(($ws['customer_login_enabled'] ?? '1') === '1' || ($ws['customer_registration_enabled'] ?? '1') === '1')
+                    <span class="text-green-800">|</span>
+                    @if(($ws['customer_login_enabled'] ?? '1') === '1')
+                    <a href="{{ route('customer.login') }}" class="hover:text-[#c9a227] transition-colors">লগইন</a>
+                    @endif
+                    @if(($ws['customer_registration_enabled'] ?? '1') === '1')
+                    <a href="{{ route('customer.register') }}" class="hover:text-[#c9a227] transition-colors">রেজিস্ট্রেশন</a>
+                    @endif
+                    @endif
+                @endif
             </div>
         </div>
         <div class="gold-rule mt-8 mb-6 opacity-20"></div>

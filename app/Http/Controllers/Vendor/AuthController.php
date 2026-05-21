@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Vendor;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Models\WebsiteSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -16,6 +17,17 @@ class AuthController extends Controller
     {
         if (Auth::check() && Auth::user()->isVendor()) {
             return redirect()->route('vendor.dashboard');
+        }
+
+        if (WebsiteSetting::get('vendor_registration_enabled', '0') !== '1') {
+            return view('auth.unavailable', [
+                'title'      => 'মার্চেন্ট রেজিস্ট্রেশন বন্ধ',
+                'message'    => WebsiteSetting::get(
+                    'vendor_registration_message',
+                    'বর্তমানে মার্চেন্ট রেজিস্ট্রেশন চালু নেই। মার্চেন্ট হতে চাইলে অ্যাডমিনের সাথে যোগাযোগ করুন।'
+                ),
+                'contactUrl' => url('/#contact'),
+            ]);
         }
 
         return view('vendor.auth.register');
@@ -100,6 +112,13 @@ class AuthController extends Controller
     {
         if (Auth::check() && Auth::user()->isVendor()) {
             return redirect()->route('vendor.dashboard');
+        }
+
+        if (WebsiteSetting::get('vendor_login_enabled', '1') !== '1') {
+            return view('auth.unavailable', [
+                'title'   => 'মার্চেন্ট লগইন বন্ধ',
+                'message' => 'মার্চেন্ট লগইন বর্তমানে বন্ধ আছে। বিস্তারিত জানতে অ্যাডমিনের সাথে যোগাযোগ করুন।',
+            ]);
         }
 
         return view('vendor.auth.login');

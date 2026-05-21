@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\WebsiteSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -18,6 +19,13 @@ class CustomerAuthController extends Controller
     {
         if ($this->guard()->check()) {
             return redirect()->route('customer.account');
+        }
+
+        if (WebsiteSetting::get('customer_registration_enabled', '1') !== '1') {
+            return view('auth.unavailable', [
+                'title'   => 'রেজিস্ট্রেশন বন্ধ',
+                'message' => 'বর্তমানে নতুন রেজিস্ট্রেশন চালু নেই।',
+            ]);
         }
 
         return view('customer.auth.register');
@@ -67,6 +75,13 @@ class CustomerAuthController extends Controller
     {
         if ($this->guard()->check()) {
             return redirect()->route('customer.account');
+        }
+
+        if (WebsiteSetting::get('customer_login_enabled', '1') !== '1') {
+            return view('auth.unavailable', [
+                'title'   => 'লগইন বন্ধ',
+                'message' => 'বর্তমানে কাস্টমার লগইন চালু নেই।',
+            ]);
         }
 
         return view('customer.auth.login');

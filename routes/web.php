@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\DeliveryRateController as AdminDeliveryRateContro
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\FaqController as AdminFaqController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
+use App\Http\Controllers\Admin\AuthSettingController as AdminAuthSettingController;
 use App\Http\Controllers\Admin\WebsiteSettingController as AdminWebsiteSettingController;
 use App\Http\Controllers\Admin\DeliveryLocationController as AdminDeliveryLocationController;
 use App\Http\Controllers\Admin\DeliverySettingController as AdminDeliverySettingController;
@@ -117,6 +118,9 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
 
     Route::get('general-settings', [AdminGeneralSettingController::class, 'index'])->name('general-settings.index');
     Route::post('general-settings', [AdminGeneralSettingController::class, 'update'])->name('general-settings.update');
+
+    Route::get('auth-settings',  [AdminAuthSettingController::class, 'index'])->name('auth-settings.index');
+    Route::post('auth-settings', [AdminAuthSettingController::class, 'update'])->name('auth-settings.update');
 
     Route::get('payment-settings', [AdminPaymentSettingController::class, 'index'])->name('payment-settings.index');
     Route::post('payment-settings', [AdminPaymentSettingController::class, 'update'])->name('payment-settings.update');
