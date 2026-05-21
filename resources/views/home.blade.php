@@ -142,29 +142,132 @@ $productsForJs = $products->map(function ($p) {
 </div>
 
 {{-- ━━━━━━━━━━━━━━━━  NAVBAR  ━━━━━━━━━━━━━━━━ --}}
+@php
+    $navVendor   = (Auth::check() && Auth::user()->isVendor()) ? Auth::user()->vendor : null;
+    $navCustomer = Auth::guard('customer')->user();
+@endphp
 <nav class="nav-blur sticky top-0 z-50 border-b border-green-900 shadow-lg">
-    <div class="max-w-7xl mx-auto px-5 py-4 flex justify-between items-center">
-        <a href="/" class="group flex flex-col leading-none">
+    <div class="max-w-7xl mx-auto px-5 py-4 flex justify-between items-center gap-4">
+        <a href="/" class="group flex flex-col leading-none shrink-0">
             <span class="text-[#c9a227] text-2xl font-bold font-serif-bn group-hover:text-[#e2bb45] transition-colors">মসলা ঘর</span>
             <span class="text-green-400 text-[10px] tracking-[.2em] uppercase mt-0.5">Authentic Spice Store</span>
         </a>
 
-        <div class="hidden md:flex items-center gap-7">
+        {{-- Desktop nav links --}}
+        <div class="hidden md:flex items-center gap-6">
             <a href="#products" class="text-green-200 hover:text-[#c9a227] text-sm transition-colors">পণ্যসমূহ</a>
             <a href="#why-us"   class="text-green-200 hover:text-[#c9a227] text-sm transition-colors">আমাদের সম্পর্কে</a>
             <a href="#contact"  class="text-green-200 hover:text-[#c9a227] text-sm transition-colors">যোগাযোগ</a>
         </div>
 
-        <button id="nav-toggle" class="md:hidden text-green-300 hover:text-[#c9a227] p-1" aria-label="menu">
+        {{-- Desktop auth buttons --}}
+        <div class="hidden md:flex items-center gap-2">
+            @if($navVendor)
+                {{-- Vendor logged in --}}
+                <a href="{{ route('vendor.dashboard') }}"
+                   class="text-xs text-green-200 hover:text-[#c9a227] px-3 py-1.5 rounded border border-green-700 hover:border-[#c9a227] transition-colors">
+                    ড্যাশবোর্ড
+                </a>
+                <form method="POST" action="{{ route('vendor.logout') }}" class="inline">
+                    @csrf
+                    <button type="submit"
+                            class="text-xs text-red-300 hover:text-red-200 px-3 py-1.5 rounded border border-red-800 hover:border-red-600 transition-colors">
+                        লগআউট
+                    </button>
+                </form>
+            @elseif($navCustomer)
+                {{-- Customer logged in --}}
+                <a href="{{ route('customer.account') }}"
+                   class="text-xs text-green-200 hover:text-[#c9a227] px-3 py-1.5 rounded border border-green-700 hover:border-[#c9a227] transition-colors">
+                    আমার অ্যাকাউন্ট
+                </a>
+                <form method="POST" action="{{ route('customer.logout') }}" class="inline">
+                    @csrf
+                    <button type="submit"
+                            class="text-xs text-red-300 hover:text-red-200 px-3 py-1.5 rounded border border-red-800 hover:border-red-600 transition-colors">
+                        লগআউট
+                    </button>
+                </form>
+            @else
+                {{-- Guest --}}
+                <a href="{{ route('vendor.register') }}"
+                   class="text-xs text-indigo-300 hover:text-indigo-200 px-3 py-1.5 rounded border border-indigo-700 hover:border-indigo-500 transition-colors whitespace-nowrap">
+                    মার্চেন্ট হন
+                </a>
+                <a href="{{ route('vendor.login') }}"
+                   class="text-xs text-indigo-300 hover:text-indigo-200 px-3 py-1.5 rounded border border-indigo-700 hover:border-indigo-500 transition-colors whitespace-nowrap">
+                    মার্চেন্ট লগইন
+                </a>
+                <a href="{{ route('customer.login') }}"
+                   class="text-xs text-green-200 hover:text-[#c9a227] px-3 py-1.5 rounded border border-green-700 hover:border-[#c9a227] transition-colors">
+                    লগইন
+                </a>
+                <a href="{{ route('customer.register') }}"
+                   class="text-xs bg-[#c9a227] hover:bg-[#e2bb45] text-[#0f3d22] font-semibold px-3 py-1.5 rounded transition-colors whitespace-nowrap">
+                    রেজিস্ট্রেশন
+                </a>
+            @endif
+        </div>
+
+        <button id="nav-toggle" class="md:hidden text-green-300 hover:text-[#c9a227] p-1 shrink-0" aria-label="menu">
             <svg id="ico-open"  class="w-6 h-6"        fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
             <svg id="ico-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
     </div>
 
-    <div id="mobile-menu" class="hidden md:hidden border-t border-green-900 px-5 py-4 flex-col gap-4">
+    {{-- Mobile menu --}}
+    <div id="mobile-menu" class="hidden md:hidden border-t border-green-900 px-5 py-4 flex-col gap-3">
         <a href="#products" class="text-green-200 hover:text-[#c9a227] text-sm">পণ্যসমূহ</a>
         <a href="#why-us"   class="text-green-200 hover:text-[#c9a227] text-sm">আমাদের সম্পর্কে</a>
         <a href="#contact"  class="text-green-200 hover:text-[#c9a227] text-sm">যোগাযোগ</a>
+
+        <div class="border-t border-green-900 pt-3 flex flex-col gap-2">
+            @if($navVendor)
+                <a href="{{ route('vendor.dashboard') }}"
+                   class="text-sm text-center text-green-200 border border-green-700 rounded-lg px-4 py-2 hover:border-[#c9a227] hover:text-[#c9a227] transition-colors">
+                    ড্যাশবোর্ড
+                </a>
+                <form method="POST" action="{{ route('vendor.logout') }}">
+                    @csrf
+                    <button type="submit"
+                            class="w-full text-sm text-center text-red-300 border border-red-800 rounded-lg px-4 py-2 hover:border-red-600 transition-colors">
+                        লগআউট
+                    </button>
+                </form>
+            @elseif($navCustomer)
+                <span class="text-xs text-green-400 text-center">{{ $navCustomer->name }}</span>
+                <a href="{{ route('customer.account') }}"
+                   class="text-sm text-center text-green-200 border border-green-700 rounded-lg px-4 py-2 hover:border-[#c9a227] hover:text-[#c9a227] transition-colors">
+                    আমার অ্যাকাউন্ট
+                </a>
+                <form method="POST" action="{{ route('customer.logout') }}">
+                    @csrf
+                    <button type="submit"
+                            class="w-full text-sm text-center text-red-300 border border-red-800 rounded-lg px-4 py-2 hover:border-red-600 transition-colors">
+                        লগআউট
+                    </button>
+                </form>
+            @else
+                <a href="{{ route('customer.login') }}"
+                   class="text-sm text-center text-green-200 border border-green-700 rounded-lg px-4 py-2 hover:border-[#c9a227] hover:text-[#c9a227] transition-colors">
+                    লগইন
+                </a>
+                <a href="{{ route('customer.register') }}"
+                   class="text-sm text-center bg-[#c9a227] text-[#0f3d22] font-semibold rounded-lg px-4 py-2 hover:bg-[#e2bb45] transition-colors">
+                    রেজিস্ট্রেশন
+                </a>
+                <div class="border-t border-green-900 pt-2 flex flex-col gap-2">
+                    <a href="{{ route('vendor.register') }}"
+                       class="text-sm text-center text-indigo-300 border border-indigo-800 rounded-lg px-4 py-2 hover:border-indigo-500 transition-colors">
+                        মার্চেন্ট হন
+                    </a>
+                    <a href="{{ route('vendor.login') }}"
+                       class="text-sm text-center text-indigo-300 border border-indigo-800 rounded-lg px-4 py-2 hover:border-indigo-500 transition-colors">
+                        মার্চেন্ট লগইন
+                    </a>
+                </div>
+            @endif
+        </div>
     </div>
 </nav>
 
