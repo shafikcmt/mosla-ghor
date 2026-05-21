@@ -20,8 +20,15 @@ use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PaymentSettingController as AdminPaymentSettingController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\CustomerAccountController;
+use App\Http\Controllers\CustomerAddressController;
 use App\Http\Controllers\CustomerAuthController;
+use App\Http\Controllers\CustomerProfileController;
+use App\Http\Controllers\CustomerReturnController;
+use App\Http\Controllers\CustomerSupportController;
+use App\Http\Controllers\CustomerWishlistController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\TrackOrderController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\Vendor\AuthController as VendorAuthController;
 use App\Http\Controllers\Vendor\DashboardController as VendorDashboardController;
@@ -30,6 +37,8 @@ use App\Http\Controllers\Vendor\ComboController as VendorComboController;
 use App\Http\Controllers\Vendor\OrderController as VendorOrderController;
 use App\Http\Controllers\Vendor\PayoutController as VendorPayoutController;
 use App\Http\Controllers\Vendor\ProfileController as VendorProfileController;
+use App\Http\Controllers\Admin\ReturnRequestController as AdminReturnRequestController;
+use App\Http\Controllers\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\Admin\VendorController as AdminVendorController;
 use App\Http\Controllers\Admin\VendorPayoutController as AdminVendorPayoutController;
 use Illuminate\Support\Facades\Route;
@@ -43,8 +52,44 @@ Route::name('customer.')->group(function () {
     Route::get('login',     [CustomerAuthController::class, 'showLogin'])->name('login');
     Route::post('login',    [CustomerAuthController::class, 'login'])->name('login.post');
     Route::post('logout',   [CustomerAuthController::class, 'logout'])->name('logout');
-    Route::get('account',   [CustomerAuthController::class, 'account'])->middleware('customer-auth')->name('account');
+
+    // ── Authenticated account section ──────────────────────────────────────
+    Route::prefix('account')->middleware('customer-auth')->group(function () {
+        Route::get('/',                                    [CustomerAccountController::class, 'dashboard'])->name('account');
+        Route::get('/orders',                             [CustomerAccountController::class, 'orders'])->name('orders.index');
+        Route::get('/orders/{id}',                        [CustomerAccountController::class, 'orderShow'])->name('orders.show');
+        Route::post('/orders/{id}/cancel',                [CustomerAccountController::class, 'cancelOrder'])->name('orders.cancel');
+
+        Route::get('/profile',                            [CustomerProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile',                            [CustomerProfileController::class, 'update'])->name('profile.update');
+
+        Route::get('/addresses',                          [CustomerAddressController::class, 'index'])->name('addresses.index');
+        Route::get('/addresses/create',                   [CustomerAddressController::class, 'create'])->name('addresses.create');
+        Route::post('/addresses',                         [CustomerAddressController::class, 'store'])->name('addresses.store');
+        Route::get('/addresses/{address}/edit',           [CustomerAddressController::class, 'edit'])->name('addresses.edit');
+        Route::put('/addresses/{address}',                [CustomerAddressController::class, 'update'])->name('addresses.update');
+        Route::delete('/addresses/{address}',             [CustomerAddressController::class, 'destroy'])->name('addresses.destroy');
+        Route::post('/addresses/{address}/default',       [CustomerAddressController::class, 'setDefault'])->name('addresses.setDefault');
+
+        Route::get('/returns',                            [CustomerReturnController::class, 'index'])->name('returns.index');
+        Route::get('/returns/create/{orderId}',           [CustomerReturnController::class, 'create'])->name('returns.create');
+        Route::post('/returns',                           [CustomerReturnController::class, 'store'])->name('returns.store');
+        Route::get('/returns/{returnRequest}',            [CustomerReturnController::class, 'show'])->name('returns.show');
+
+        Route::get('/support',                            [CustomerSupportController::class, 'index'])->name('support.index');
+        Route::get('/support/create',                     [CustomerSupportController::class, 'create'])->name('support.create');
+        Route::post('/support',                           [CustomerSupportController::class, 'store'])->name('support.store');
+        Route::get('/support/{supportTicket}',            [CustomerSupportController::class, 'show'])->name('support.show');
+
+        Route::get('/wishlist',                           [CustomerWishlistController::class, 'index'])->name('wishlist.index');
+        Route::post('/wishlist/{product}',                [CustomerWishlistController::class, 'store'])->name('wishlist.store');
+        Route::delete('/wishlist/{product}',              [CustomerWishlistController::class, 'destroy'])->name('wishlist.destroy');
+    });
 });
+
+// ── Public order tracking ──────────────────────────────────────────────────
+Route::get('/track-order',  [TrackOrderController::class, 'index'])->name('track-order');
+Route::post('/track-order', [TrackOrderController::class, 'track'])->name('track-order');
 
 Route::get('/address/unions/{upazila}', [AddressController::class, 'unions'])->name('address.unions');
 
@@ -186,4 +231,13 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::post('/{vendorPayout}/mark-paid',   [AdminVendorPayoutController::class, 'markPaid'])->name('mark-paid');
         Route::post('/{vendorPayout}/reject',      [AdminVendorPayoutController::class, 'reject'])->name('reject');
     });
+
+    // ── Customer service ───────────────────────────────────────────────────
+    Route::get('return-requests',                    [AdminReturnRequestController::class, 'index'])->name('return-requests.index');
+    Route::get('return-requests/{returnRequest}',    [AdminReturnRequestController::class, 'show'])->name('return-requests.show');
+    Route::put('return-requests/{returnRequest}',    [AdminReturnRequestController::class, 'update'])->name('return-requests.update');
+
+    Route::get('support-tickets',                    [AdminSupportTicketController::class, 'index'])->name('support-tickets.index');
+    Route::get('support-tickets/{supportTicket}',    [AdminSupportTicketController::class, 'show'])->name('support-tickets.show');
+    Route::post('support-tickets/{supportTicket}/reply', [AdminSupportTicketController::class, 'reply'])->name('support-tickets.reply');
 });

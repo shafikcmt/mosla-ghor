@@ -26,6 +26,8 @@ class Order extends Model
         'stock_deducted_at', 'stock_restored_at',
         // CRM
         'customer_id', 'accepts_marketing',
+        // Cancellation
+        'cancellation_reason', 'cancelled_by', 'cancelled_at',
     ];
 
     protected $casts = [
@@ -46,6 +48,7 @@ class Order extends Model
         'stock_deducted_at'          => 'datetime',
         'stock_restored_at'          => 'datetime',
         'accepts_marketing'          => 'boolean',
+        'cancelled_at'               => 'datetime',
     ];
 
     public function items(): HasMany
@@ -81,5 +84,15 @@ class Order extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function returnRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ReturnRequest::class);
+    }
+
+    public function supportTickets(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
     }
 }
