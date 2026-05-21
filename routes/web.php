@@ -21,6 +21,15 @@ use App\Http\Controllers\Admin\PaymentSettingController as AdminPaymentSettingCo
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\Vendor\AuthController as VendorAuthController;
+use App\Http\Controllers\Vendor\DashboardController as VendorDashboardController;
+use App\Http\Controllers\Vendor\ProductController as VendorProductController;
+use App\Http\Controllers\Vendor\ComboController as VendorComboController;
+use App\Http\Controllers\Vendor\OrderController as VendorOrderController;
+use App\Http\Controllers\Vendor\PayoutController as VendorPayoutController;
+use App\Http\Controllers\Vendor\ProfileController as VendorProfileController;
+use App\Http\Controllers\Admin\VendorController as AdminVendorController;
+use App\Http\Controllers\Admin\VendorPayoutController as AdminVendorPayoutController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class);
@@ -30,6 +39,35 @@ Route::get('/address/unions/{upazila}', [AddressController::class, 'unions'])->n
 Route::post('/order', [OrderController::class, 'store'])->name('order.store');
 Route::get('/order/success/{orderNumber}', [OrderController::class, 'success'])->name('order.success');
 
+// ── Vendor public routes ───────────────────────────────────────────────────
+Route::prefix('vendor')->name('vendor.')->group(function () {
+    Route::get('register',  [VendorAuthController::class, 'showRegister'])->name('register');
+    Route::post('register', [VendorAuthController::class, 'register'])->name('register.post');
+    Route::get('login',     [VendorAuthController::class, 'showLogin'])->name('login');
+    Route::post('login',    [VendorAuthController::class, 'login'])->name('login.post');
+    Route::post('logout',   [VendorAuthController::class, 'logout'])->name('logout');
+});
+
+// ── Vendor authenticated routes ────────────────────────────────────────────
+Route::prefix('vendor')->name('vendor.')->middleware('vendor')->group(function () {
+    Route::get('dashboard', [VendorDashboardController::class, 'index'])->name('dashboard');
+
+    Route::resource('products', VendorProductController::class)->except(['show']);
+
+    Route::resource('combos', VendorComboController::class)->except(['show']);
+    Route::post('combos/{combo}/toggle', [VendorComboController::class, 'toggle'])->name('combos.toggle');
+
+    Route::get('orders',          [VendorOrderController::class, 'index'])->name('orders.index');
+    Route::get('orders/{vendorOrder}', [VendorOrderController::class, 'show'])->name('orders.show');
+
+    Route::get('payouts',  [VendorPayoutController::class, 'index'])->name('payouts.index');
+    Route::post('payouts', [VendorPayoutController::class, 'store'])->name('payouts.store');
+
+    Route::get('profile',  [VendorProfileController::class, 'index'])->name('profile.index');
+    Route::put('profile',  [VendorProfileController::class, 'update'])->name('profile.update');
+});
+
+// ── Admin auth (public) ────────────────────────────────────────────────────
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/',      fn() => redirect()->route('admin.dashboard'));
     Route::get('login',  [AdminAuthController::class, 'showLogin'])->name('login');
@@ -104,4 +142,32 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
 
     Route::resource('reviews', AdminReviewController::class);
     Route::post('reviews/{review}/toggle', [AdminReviewController::class, 'toggle'])->name('reviews.toggle');
+
+    // ── Vendor management ──────────────────────────────────────────────────
+    Route::prefix('vendors')->name('vendors.')->group(function () {
+        Route::get('/',                    [AdminVendorController::class, 'index'])->name('index');
+        Route::get('/settings',            [AdminVendorController::class, 'settings'])->name('settings');
+        Route::post('/settings',           [AdminVendorController::class, 'saveSettings'])->name('save-settings');
+        Route::get('/{vendor}',            [AdminVendorController::class, 'show'])->name('show');
+        Route::get('/{vendor}/edit',       [AdminVendorController::class, 'edit'])->name('edit');
+        Route::put('/{vendor}',            [AdminVendorController::class, 'update'])->name('update');
+        Route::post('/{vendor}/approve',   [AdminVendorController::class, 'approve'])->name('approve');
+        Route::post('/{vendor}/reject',    [AdminVendorController::class, 'reject'])->name('reject');
+        Route::post('/{vendor}/suspend',   [AdminVendorController::class, 'suspend'])->name('suspend');
+        Route::post('/{vendor}/reactivate',[AdminVendorController::class, 'reactivate'])->name('reactivate');
+    });
+
+    // Admin approve vendor product
+    Route::post('vendor-products/{product}/approve', function (\App\Models\Product $product) {
+        $product->update(['approval_status' => 'approved']);
+        return back()->with('success', 'পণ্য অনুমোদিত হয়েছে।');
+    })->name('vendor-products.approve');
+
+    // Vendor payout management
+    Route::prefix('vendor-payouts')->name('vendor-payouts.')->group(function () {
+        Route::get('/',                            [AdminVendorPayoutController::class, 'index'])->name('index');
+        Route::post('/{vendorPayout}/approve',     [AdminVendorPayoutController::class, 'approve'])->name('approve');
+        Route::post('/{vendorPayout}/mark-paid',   [AdminVendorPayoutController::class, 'markPaid'])->name('mark-paid');
+        Route::post('/{vendorPayout}/reject',      [AdminVendorPayoutController::class, 'reject'])->name('reject');
+    });
 });

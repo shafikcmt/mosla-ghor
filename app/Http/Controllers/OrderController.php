@@ -15,6 +15,8 @@ use App\Models\PaymentSetting;
 use App\Models\PriceSetting;
 use App\Models\Product;
 use App\Models\ProductPrice;
+use App\Models\Vendor;
+use App\Models\VendorOrder;
 use App\Models\WebsiteSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -159,6 +161,11 @@ class OrderController extends Controller
                 $lineTotal = (float) $productPrice->final_price;
                 $subtotal += $lineTotal;
 
+                $vendorId   = $productPrice->product->vendor_id;
+                $vendorName = $vendorId
+                    ? ($productPrice->product->vendor?->shop_name ?? null)
+                    : null;
+
                 $processedItems[] = [
                     'sell_type'     => $productPrice->sell_type,
                     'price_id'      => $productPrice->id,
@@ -168,6 +175,8 @@ class OrderController extends Controller
                     'quantity_gram' => (int) $productPrice->quantity_gram,
                     'unit_price'    => $lineTotal,
                     'line_total'    => $lineTotal,
+                    'vendor_id'     => $vendorId,
+                    'vendor_name'   => $vendorName,
                 ];
             }
 
@@ -315,12 +324,47 @@ class OrderController extends Controller
             $order->update(['payment_screenshot' => $path]);
         }
 
+        $this->createVendorOrders($order);
         $this->upsertCustomer($order, $request->boolean('accepts_marketing'));
 
         return response()->json([
             'success'  => true,
             'redirect' => route('order.success', $order->order_number),
         ]);
+    }
+
+    private function createVendorOrders(Order $order): void
+    {
+        try {
+            $vendorTotals = [];
+
+            foreach ($order->items as $item) {
+                if (! $item->vendor_id) continue;
+
+                $vendorTotals[$item->vendor_id] = ($vendorTotals[$item->vendor_id] ?? 0.0) + (float) $item->line_total;
+            }
+
+            foreach ($vendorTotals as $vendorId => $subtotal) {
+                $vendor           = Vendor::find($vendorId);
+                $commissionType   = $vendor?->effectiveCommissionType() ?? 'percentage';
+                $commissionValue  = $vendor?->effectiveCommissionValue() ?? 0;
+                $commissionAmount = $vendor ? $vendor->calculateCommission($subtotal) : 0;
+                $payableAmount    = max(0, $subtotal - $commissionAmount);
+
+                VendorOrder::create([
+                    'order_id'                  => $order->id,
+                    'vendor_id'                 => $vendorId,
+                    'subtotal'                  => $subtotal,
+                    'commission_type'           => $commissionType,
+                    'commission_value_snapshot' => $commissionValue,
+                    'commission_amount'         => $commissionAmount,
+                    'payable_amount'            => $payableAmount,
+                    'status'                    => 'pending',
+                ]);
+            }
+        } catch (\Exception) {
+            // Non-critical — order is already placed
+        }
     }
 
     private function upsertCustomer(Order $order, bool $acceptsMarketing): void

@@ -1,0 +1,155 @@
+@php $product = $product ?? null; @endphp
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">বাংলা নাম <span class="text-red-500">*</span></label>
+        <input type="text" name="name_bn" id="name_bn" value="{{ old('name_bn', $product?->name_bn) }}" required autofocus
+               class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 @error('name_bn') border-red-400 @enderror">
+        @error('name_bn')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">English Name</label>
+        <input type="text" name="name_en" id="name_en" value="{{ old('name_en', $product?->name_en) }}"
+               class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+    </div>
+
+    <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Slug (URL) <span class="text-red-500">*</span></label>
+        <div class="flex gap-2">
+            <input type="text" name="slug" id="slug" value="{{ old('slug', $product?->slug) }}" required
+                   class="flex-1 border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400 @error('slug') border-red-400 @enderror">
+            <button type="button" id="btn-gen-slug"
+                    class="text-xs bg-gray-100 hover:bg-gray-200 border px-3 py-2 rounded text-gray-600 whitespace-nowrap">Auto</button>
+        </div>
+        @error('slug')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">খুচরা দাম — ১ কেজি (৳) <span class="text-red-500">*</span></label>
+        <input type="number" name="retail_price_1kg" value="{{ old('retail_price_1kg', $product?->retail_price_1kg) }}" step="0.01" min="0.01" required
+               class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 @error('retail_price_1kg') border-red-400 @enderror">
+        <p class="text-xs text-gray-400 mt-1">সব প্যাকের দাম এই মূল্য থেকে স্বয়ংক্রিয়ভাবে হিসাব হবে।</p>
+        @error('retail_price_1kg')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">পাইকারি দাম — ১ কেজি (৳)</label>
+        <input type="number" name="wholesale_price_1kg" value="{{ old('wholesale_price_1kg', $product?->wholesale_price_1kg) }}" step="0.01" min="0"
+               class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">স্টক (কেজি) <span class="text-red-500">*</span></label>
+        <input type="number" name="stock" value="{{ old('stock', $product?->stock ?? 0) }}" min="0" required
+               class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+    </div>
+
+    <div class="flex items-center gap-3 pt-5">
+        <input type="checkbox" name="is_active" id="is_active" value="1"
+               {{ old('is_active', $product?->is_active ?? true) ? 'checked' : '' }}
+               class="w-4 h-4 rounded cursor-pointer">
+        <label for="is_active" class="text-sm font-medium text-gray-700 cursor-pointer">
+            পণ্যটি সক্রিয় <span class="text-gray-400 font-normal">(স্টোরে দেখাবে)</span>
+        </label>
+    </div>
+
+    {{-- main image --}}
+    <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">মূল ছবি আপলোড</label>
+        @if($product?->main_image && str_starts_with($product->main_image, 'storage/'))
+        <div class="mb-3 flex items-start gap-3 p-3 bg-gray-50 border rounded">
+            <img src="{{ asset($product->main_image) }}" alt="" class="w-24 h-20 object-cover rounded border flex-shrink-0">
+            <label class="flex items-center gap-2 text-sm text-red-600 cursor-pointer mt-2">
+                <input type="checkbox" name="remove_main_image" value="1" class="rounded">
+                বর্তমান ছবি মুছুন
+            </label>
+        </div>
+        @endif
+        <input type="file" name="main_image_file" accept="image/jpeg,image/png,image/webp"
+               class="w-full border rounded px-3 py-2 text-sm bg-white focus:outline-none">
+        <p class="text-xs text-gray-400 mt-1">JPG, PNG, WebP — সর্বোচ্চ ৫ MB</p>
+    </div>
+
+    {{-- gallery --}}
+    <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">গ্যালারি ছবি (একাধিক)</label>
+        @php $galleryImages = $product?->gallery_images ?? []; @endphp
+        @if(count($galleryImages))
+        <div class="mb-3 flex flex-wrap gap-2 p-3 bg-gray-50 border rounded">
+            @foreach($galleryImages as $gi)
+            <div class="flex flex-col items-center gap-1">
+                <img src="{{ str_starts_with($gi, 'http') ? $gi : asset($gi) }}" alt="" class="w-20 h-16 object-cover rounded border">
+                <label class="flex items-center gap-1 text-xs text-red-600 cursor-pointer">
+                    <input type="checkbox" name="remove_gallery[]" value="{{ $gi }}" class="rounded"> মুছুন
+                </label>
+            </div>
+            @endforeach
+        </div>
+        @endif
+        <input type="file" name="gallery_images[]" accept="image/jpeg,image/png,image/webp" multiple
+               class="w-full border rounded px-3 py-2 text-sm bg-white focus:outline-none">
+        <p class="text-xs text-gray-400 mt-1">একাধিক ছবি বেছে নিন — প্রতিটি সর্বোচ্চ ৫ MB</p>
+    </div>
+
+    {{-- video url --}}
+    <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">ভিডিও URL (YouTube / বাহ্যিক)</label>
+        <input type="text" name="video_url" value="{{ old('video_url', $product?->video_url) }}"
+               placeholder="https://www.youtube.com/watch?v=..."
+               class="w-full border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400">
+    </div>
+
+    {{-- video file --}}
+    <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">ভিডিও আপলোড (লোকাল)</label>
+        @if(($product?->video_path ?? null) && str_starts_with($product->video_path, 'storage/'))
+        <div class="mb-3 p-3 bg-gray-50 border rounded">
+            <video src="{{ asset($product->video_path) }}" class="w-full max-w-xs h-28 rounded border bg-black" controls></video>
+            <label class="flex items-center gap-2 text-sm text-red-600 cursor-pointer mt-1">
+                <input type="checkbox" name="remove_video" value="1" class="rounded"> বর্তমান ভিডিও মুছুন
+            </label>
+        </div>
+        @endif
+        <input type="file" name="video_file" accept="video/mp4,video/webm,video/quicktime"
+               class="w-full border rounded px-3 py-2 text-sm bg-white focus:outline-none">
+        <p class="text-xs text-gray-400 mt-1">MP4, WebM, MOV — সর্বোচ্চ ৫০ MB</p>
+    </div>
+
+    <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">সংক্ষিপ্ত বিবরণ</label>
+        <textarea name="short_description" rows="2"
+                  class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 resize-none">{{ old('short_description', $product?->short_description) }}</textarea>
+    </div>
+
+    <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">বিস্তারিত বিবরণ</label>
+        <textarea name="description" rows="5"
+                  class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">{{ old('description', $product?->description) }}</textarea>
+    </div>
+
+</div>
+
+<script>
+(function () {
+    const nameEn = document.getElementById('name_en');
+    const slugEl = document.getElementById('slug');
+    const btnGen = document.getElementById('btn-gen-slug');
+    function toSlug(str) {
+        return str.toLowerCase().replace(/[^\w\s-]/g,'').trim().replace(/[\s_]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    }
+    if (nameEn && slugEl) {
+        nameEn.addEventListener('input', function() {
+            if (!slugEl.dataset.edited && this.value) slugEl.value = toSlug(this.value);
+        });
+        slugEl.addEventListener('input', function() { this.dataset.edited = '1'; });
+    }
+    if (btnGen && slugEl) {
+        btnGen.addEventListener('click', function() {
+            const src = (nameEn?.value) || (document.getElementById('name_bn')?.value ?? '');
+            if (src) { slugEl.value = toSlug(src); slugEl.dataset.edited = ''; }
+        });
+    }
+})();
+</script>

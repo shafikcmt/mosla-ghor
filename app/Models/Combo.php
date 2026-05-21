@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Combo extends Model
 {
     protected $fillable = [
+        'vendor_id',
         'name',
         'slug',
         'sell_type',
@@ -28,6 +30,11 @@ class Combo extends Model
     public function items(): HasMany
     {
         return $this->hasMany(ComboItem::class);
+    }
+
+    public function vendor(): BelongsTo
+    {
+        return $this->belongsTo(Vendor::class);
     }
 
     public function scopeActive(Builder $query): void

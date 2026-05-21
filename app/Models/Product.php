@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Product extends Model
 {
     protected $fillable = [
+        'vendor_id',
+        'approval_status',
         'name_bn',
         'name_en',
         'slug',
@@ -33,6 +36,26 @@ class Product extends Model
         'sort_order'          => 'integer',
         'is_active'           => 'boolean',
     ];
+
+    public function vendor(): BelongsTo
+    {
+        return $this->belongsTo(Vendor::class);
+    }
+
+    // Active scope: admin products always show; vendor products only if approved vendor
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('vendor_id')
+                  ->orWhere(function ($q2) {
+                      $q2->whereNotNull('vendor_id')
+                         ->where('approval_status', 'approved')
+                         ->whereHas('vendor', fn($v) => $v->where('status', 'approved')->where('is_active', true));
+                  });
+            })
+            ->orderBy('sort_order');
+    }
 
     // All variants of this product (e.g., Iran Jira, Indian Jira)
     public function variants(): HasMany
@@ -88,12 +111,6 @@ class Product extends Model
             ->where('is_active', true)
             ->orderBy('quantity_gram')
             ->limit(1);
-    }
-
-    // Scope: only active products, sorted by sort_order
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true)->orderBy('sort_order');
     }
 
     // Display name: prefer Bangla, fall back to English
