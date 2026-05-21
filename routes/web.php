@@ -45,20 +45,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class);
 
-// Temporary migration check — remove after verification
-Route::get('/mig-check-9x7k', function () {
-    $tables = ['customer_addresses', 'product_reviews', 'wishlists', 'return_requests', 'support_tickets'];
-    $results = [];
-    foreach ($tables as $table) {
-        $results[$table] = \Illuminate\Support\Facades\Schema::hasTable($table) ? 'OK' : 'MISSING';
-    }
-    $orderCols = ['cancellation_reason', 'cancelled_by', 'cancelled_at'];
-    foreach ($orderCols as $col) {
-        $results["orders.$col"] = \Illuminate\Support\Facades\Schema::hasColumn('orders', $col) ? 'OK' : 'MISSING';
-    }
-    return response()->json($results);
-});
-
 // ── Customer / User auth ───────────────────────────────────────────────────
 Route::name('customer.')->group(function () {
     Route::get('register',  [CustomerAuthController::class, 'showRegister'])->name('register');
