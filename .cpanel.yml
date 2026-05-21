@@ -2,8 +2,8 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home/heavwzih/moslamart.com/
 
-    # Copy latest code to live site
-    - /bin/cp -R * $DEPLOYPATH
+    # Copy latest code safely
+    - /bin/rsync -av --delete ./ $DEPLOYPATH --exclude='.git' --exclude='.env' --exclude='node_modules' --exclude='vendor' --exclude='storage' --exclude='public/storage' --exclude='database/database.sqlite' --exclude='database/*.sqlite'
 
     # Go to live project folder
     - cd $DEPLOYPATH
@@ -14,8 +14,7 @@ deployment:
     # Run only new pending migrations
     - php artisan migrate --force
 
-    # Run production seeder only if Database\Seeders\ProductionSeeder exists
-    # Important: ProductionSeeder must use updateOrCreate/firstOrCreate to avoid duplicate data
+    # Run ProductionSeeder only if exists
     - if php -r "require 'vendor/autoload.php'; exit(class_exists('Database\\Seeders\\ProductionSeeder') ? 0 : 1);"; then php artisan db:seed --class=ProductionSeeder --force; fi
 
     # Create storage symlink for uploaded images/videos
