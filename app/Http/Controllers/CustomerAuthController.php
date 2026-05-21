@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\User;
 use App\Models\WebsiteSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -10,14 +11,9 @@ use Illuminate\Support\Facades\Hash;
 
 class CustomerAuthController extends Controller
 {
-    private function guard()
-    {
-        return Auth::guard('customer');
-    }
-
     public function showRegister()
     {
-        if ($this->guard()->check()) {
+        if (Auth::check() && Auth::user()->role === 'customer') {
             return redirect()->route('customer.account');
         }
 
@@ -35,37 +31,40 @@ class CustomerAuthController extends Controller
     {
         $data = $request->validate([
             'name'          => 'required|string|max:100',
-            'mobile_number' => 'required|string|max:20',
-            'email'         => 'nullable|email|max:150',
+            'mobile_number' => 'required|string|max:20|unique:users,phone',
+            'email'         => 'nullable|email|max:150|unique:users,email',
             'password'      => 'required|string|min:6|confirmed',
         ], [
             'name.required'          => 'নাম লিখুন।',
             'mobile_number.required' => 'মোবাইল নম্বর লিখুন।',
+            'mobile_number.unique'   => 'এই মোবাইল নম্বর দিয়ে আগেই অ্যাকাউন্ট আছে।',
+            'email.unique'           => 'এই ইমেইল দিয়ে আগেই একটি অ্যাকাউন্ট আছে।',
             'password.required'      => 'পাসওয়ার্ড দিন।',
             'password.min'           => 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষর হতে হবে।',
             'password.confirmed'     => 'পাসওয়ার্ড মিলছে না।',
         ]);
 
-        // Block duplicate registration for the same mobile number that already has a password
-        if (Customer::where('mobile_number', $data['mobile_number'])->whereNotNull('password')->exists()) {
-            return back()
-                ->withErrors(['mobile_number' => 'এই মোবাইল নম্বর দিয়ে আগেই অ্যাকাউন্ট আছে।'])
-                ->withInput();
-        }
+        $user = User::create([
+            'name'     => $data['name'],
+            'email'    => $data['email'] ?? null,
+            'phone'    => $data['mobile_number'],
+            'password' => Hash::make($data['password']),
+            'role'     => 'customer',
+            'is_admin' => false,
+        ]);
 
-        // Re-use existing CRM record (from past orders) if available, else create new
-        $customer = Customer::where('mobile_number', $data['mobile_number'])->whereNull('password')->first()
+        // Link to existing CRM record (from past orders) or create a new profile
+        $customer = Customer::where('mobile_number', $data['mobile_number'])->first()
             ?? new Customer();
 
         $customer->fill([
             'name'          => $data['name'],
             'mobile_number' => $data['mobile_number'],
             'email'         => $data['email'] ?? null,
-            'password'      => Hash::make($data['password']),
             'is_active'     => true,
         ])->save();
 
-        $this->guard()->login($customer);
+        Auth::login($user);
 
         return redirect()->route('customer.account')
             ->with('success', 'অ্যাকাউন্ট তৈরি হয়েছে। স্বাগতম!');
@@ -73,7 +72,7 @@ class CustomerAuthController extends Controller
 
     public function showLogin()
     {
-        if ($this->guard()->check()) {
+        if (Auth::check() && Auth::user()->role === 'customer') {
             return redirect()->route('customer.account');
         }
 
@@ -97,17 +96,21 @@ class CustomerAuthController extends Controller
             'password.required'      => 'পাসওয়ার্ড দিন।',
         ]);
 
-        $customer = Customer::where('mobile_number', $data['mobile_number'])
-            ->whereNotNull('password')
-            ->first();
+        $input = $data['mobile_number'];
 
-        if (! $customer || ! Hash::check($data['password'], $customer->password)) {
+        if (str_contains($input, '@')) {
+            $user = User::where('email', $input)->where('role', 'customer')->first();
+        } else {
+            $user = User::where('phone', $input)->where('role', 'customer')->first();
+        }
+
+        if (! $user || ! Hash::check($data['password'], $user->password)) {
             return back()
-                ->withErrors(['mobile_number' => 'মোবাইল নম্বর বা পাসওয়ার্ড ভুল।'])
+                ->withErrors(['mobile_number' => 'মোবাইল/ইমেইল অথবা পাসওয়ার্ড সঠিক নয়।'])
                 ->withInput();
         }
 
-        $this->guard()->login($customer, $request->boolean('remember'));
+        Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
         return redirect()->intended(route('customer.account'));
@@ -115,7 +118,7 @@ class CustomerAuthController extends Controller
 
     public function logout(Request $request)
     {
-        $this->guard()->logout();
+        Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
@@ -124,8 +127,20 @@ class CustomerAuthController extends Controller
 
     public function account()
     {
-        $customer = $this->guard()->user();
-        $orders   = $customer->orders()->latest()->paginate(10);
+        $user = Auth::user();
+
+        $customer = Customer::where('mobile_number', $user->phone)->first();
+
+        if (! $customer) {
+            $customer = Customer::create([
+                'name'          => $user->name,
+                'mobile_number' => $user->phone,
+                'email'         => $user->email,
+                'is_active'     => true,
+            ]);
+        }
+
+        $orders = $customer->orders()->latest()->paginate(10);
 
         return view('customer.account', compact('customer', 'orders'));
     }

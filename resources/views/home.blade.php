@@ -144,7 +144,7 @@ $productsForJs = $products->map(function ($p) {
 {{-- ━━━━━━━━━━━━━━━━  NAVBAR  ━━━━━━━━━━━━━━━━ --}}
 @php
     $navVendor   = (Auth::check() && Auth::user()->isVendor()) ? Auth::user()->vendor : null;
-    $navCustomer = Auth::guard('customer')->user();
+    $navCustomer = (Auth::check() && Auth::user()->role === 'customer') ? Auth::user() : null;
 @endphp
 <nav class="nav-blur sticky top-0 z-50 border-b border-green-900 shadow-lg">
     <div class="max-w-7xl mx-auto px-5 py-4 flex justify-between items-center gap-4">

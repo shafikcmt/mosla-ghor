@@ -10,7 +10,7 @@ class CustomerMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
-        if (! Auth::guard('customer')->check()) {
+        if (! Auth::check() || Auth::user()->role !== 'customer') {
             return redirect()->route('customer.login')
                 ->with('error', 'এই পেজ দেখতে লগইন করুন।');
         }
