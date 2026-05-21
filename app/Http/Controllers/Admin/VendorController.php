@@ -46,6 +46,8 @@ class VendorController extends Controller
     public function approve(Vendor $vendor)
     {
         $vendor->update(['status' => 'approved', 'is_active' => true]);
+        // Re-show previously approved products
+        $vendor->products()->where('approval_status', 'approved')->update(['is_active' => true]);
 
         return back()->with('success', 'ভেন্ডর অনুমোদন করা হয়েছে।');
     }
@@ -53,6 +55,7 @@ class VendorController extends Controller
     public function reject(Vendor $vendor)
     {
         $vendor->update(['status' => 'rejected', 'is_active' => false]);
+        $vendor->products()->update(['is_active' => false]);
 
         return back()->with('success', 'ভেন্ডর প্রত্যাখ্যান করা হয়েছে।');
     }
@@ -60,6 +63,7 @@ class VendorController extends Controller
     public function suspend(Vendor $vendor)
     {
         $vendor->update(['status' => 'suspended', 'is_active' => false]);
+        $vendor->products()->update(['is_active' => false]);
 
         return back()->with('success', 'ভেন্ডর স্থগিত করা হয়েছে।');
     }
@@ -67,6 +71,7 @@ class VendorController extends Controller
     public function reactivate(Vendor $vendor)
     {
         $vendor->update(['status' => 'approved', 'is_active' => true]);
+        $vendor->products()->where('approval_status', 'approved')->update(['is_active' => true]);
 
         return back()->with('success', 'ভেন্ডর পুনরায় সক্রিয় করা হয়েছে।');
     }

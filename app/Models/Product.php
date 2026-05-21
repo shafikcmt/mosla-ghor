@@ -42,7 +42,6 @@ class Product extends Model
         return $this->belongsTo(Vendor::class);
     }
 
-    // Active scope: admin products always show; vendor products only if approved vendor
     public function scopeActive($query)
     {
         return $query->where('is_active', true)
@@ -50,8 +49,7 @@ class Product extends Model
                 $q->whereNull('vendor_id')
                   ->orWhere(function ($q2) {
                       $q2->whereNotNull('vendor_id')
-                         ->where('approval_status', 'approved')
-                         ->whereHas('vendor', fn($v) => $v->where('status', 'approved')->where('is_active', true));
+                         ->where('approval_status', 'approved');
                   });
             })
             ->orderBy('sort_order');
