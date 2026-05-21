@@ -57,8 +57,9 @@ Route::prefix('vendor')->name('vendor.')->middleware('vendor')->group(function (
     Route::resource('combos', VendorComboController::class)->except(['show']);
     Route::post('combos/{combo}/toggle', [VendorComboController::class, 'toggle'])->name('combos.toggle');
 
-    Route::get('orders',          [VendorOrderController::class, 'index'])->name('orders.index');
-    Route::get('orders/{vendorOrder}', [VendorOrderController::class, 'show'])->name('orders.show');
+    Route::get('orders',                          [VendorOrderController::class, 'index'])->name('orders.index');
+    Route::get('orders/{vendorOrder}',            [VendorOrderController::class, 'show'])->name('orders.show');
+    Route::patch('orders/{vendorOrder}/fulfillment', [VendorOrderController::class, 'updateFulfillment'])->name('orders.fulfillment');
 
     Route::get('payouts',  [VendorPayoutController::class, 'index'])->name('payouts.index');
     Route::post('payouts', [VendorPayoutController::class, 'store'])->name('payouts.store');

@@ -1,6 +1,17 @@
 @extends('vendor.layout')
 @section('title', 'অর্ডারসমূহ')
 
+@php
+$fsColors = [
+    'pending'             => 'bg-yellow-100 text-yellow-700',
+    'processing'          => 'bg-indigo-100 text-indigo-700',
+    'packed'              => 'bg-blue-100 text-blue-700',
+    'ready_for_pickup'    => 'bg-cyan-100 text-cyan-700',
+    'handed_to_courier'   => 'bg-teal-100 text-teal-700',
+    'cancelled_by_vendor' => 'bg-red-100 text-red-700',
+];
+@endphp
+
 @section('content')
 
 <div class="flex items-center justify-between mb-6">
@@ -12,8 +23,8 @@
         <select name="status" onchange="this.form.submit()"
                 class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="">— সব অবস্থা —</option>
-            @foreach(['pending','processing','shipped','delivered','cancelled'] as $s)
-            <option value="{{ $s }}" {{ request('status') === $s ? 'selected' : '' }}>{{ $s }}</option>
+            @foreach($fulfillmentStatuses as $key => $label)
+            <option value="{{ $key }}" {{ request('status') === $key ? 'selected' : '' }}>{{ $label }}</option>
             @endforeach
         </select>
     </form>
@@ -28,8 +39,9 @@
             <tr>
                 <th class="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">অর্ডার নং</th>
                 <th class="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase hidden md:table-cell">তারিখ</th>
-                <th class="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">পরিমাণ</th>
-                <th class="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">অবস্থা</th>
+                <th class="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">সাবটোটাল</th>
+                <th class="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase">ফুলফিলমেন্ট</th>
+                <th class="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase hidden md:table-cell">কুরিয়ার</th>
                 <th class="px-4 py-3 text-right font-semibold text-gray-600 text-xs uppercase">বিস্তারিত</th>
             </tr>
         </thead>
@@ -40,12 +52,15 @@
                 <td class="px-4 py-3 hidden md:table-cell text-gray-500 text-xs">{{ $vo->created_at->format('d M Y') }}</td>
                 <td class="px-4 py-3 font-mono font-semibold">৳{{ number_format($vo->subtotal, 0) }}</td>
                 <td class="px-4 py-3">
-                    <span class="inline-block text-xs px-2 py-0.5 rounded-full font-medium
-                        @if($vo->status === 'paid') bg-green-100 text-green-700
-                        @elseif($vo->status === 'pending') bg-yellow-100 text-yellow-700
-                        @else bg-gray-100 text-gray-600 @endif">
-                        {{ $vo->status }}
+                    <span class="inline-block text-xs px-2 py-0.5 rounded-full font-medium {{ $fsColors[$vo->fulfillment_status] ?? 'bg-gray-100 text-gray-600' }}">
+                        {{ $fulfillmentStatuses[$vo->fulfillment_status] ?? $vo->fulfillment_status }}
                     </span>
+                </td>
+                <td class="px-4 py-3 hidden md:table-cell text-gray-500 text-xs">
+                    {{ $vo->courier_name ?: '—' }}
+                    @if($vo->tracking_number)
+                    <span class="font-mono text-gray-400 ml-1">{{ $vo->tracking_number }}</span>
+                    @endif
                 </td>
                 <td class="px-4 py-3 text-right">
                     <a href="{{ route('vendor.orders.show', $vo) }}"

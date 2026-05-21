@@ -53,6 +53,11 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function vendorOrders(): HasMany
+    {
+        return $this->hasMany(VendorOrder::class);
+    }
+
     public function selectedCourier(): BelongsTo
     {
         return $this->belongsTo(Courier::class, 'selected_courier_id');

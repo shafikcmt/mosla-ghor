@@ -278,6 +278,71 @@
         @endif
     </div>
 
+    {{-- ── Vendor Fulfillment Panel ────────────────────────────────── --}}
+    @php $vendorOrders = $order->vendorOrders ?? collect(); @endphp
+    @if($vendorOrders->isNotEmpty())
+    @php
+    $vfsColors = [
+        'pending'             => 'bg-yellow-100 text-yellow-700',
+        'processing'          => 'bg-indigo-100 text-indigo-700',
+        'packed'              => 'bg-blue-100 text-blue-700',
+        'ready_for_pickup'    => 'bg-cyan-100 text-cyan-700',
+        'handed_to_courier'   => 'bg-teal-100 text-teal-700',
+        'cancelled_by_vendor' => 'bg-red-100 text-red-700',
+    ];
+    $vfsLabels = [
+        'pending'             => 'অপেক্ষায়',
+        'processing'          => 'প্রসেসিং',
+        'packed'              => 'প্যাক হয়েছে',
+        'ready_for_pickup'    => 'পিকআপের জন্য প্রস্তুত',
+        'handed_to_courier'   => 'কুরিয়ারে দেওয়া হয়েছে',
+        'cancelled_by_vendor' => 'ভেন্ডর কর্তৃক বাতিল',
+    ];
+    @endphp
+    <div class="no-print px-6 py-5 bg-indigo-50">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">ভেন্ডর ফুলফিলমেন্ট</h3>
+        <div class="space-y-4">
+            @foreach($vendorOrders as $vo)
+            <div class="bg-white rounded-lg border border-indigo-100 p-4">
+                <div class="flex items-start justify-between mb-3">
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">{{ $vo->vendor?->shop_name }}</p>
+                        <p class="text-xs text-gray-400">সাবটোটাল: ৳{{ number_format($vo->subtotal, 2) }} · প্রাপ্য: ৳{{ number_format($vo->payable_amount, 2) }}</p>
+                    </div>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $vfsColors[$vo->fulfillment_status] ?? 'bg-gray-100 text-gray-600' }}">
+                        {{ $vfsLabels[$vo->fulfillment_status] ?? $vo->fulfillment_status }}
+                    </span>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                    <div>
+                        <span class="text-gray-400">কুরিয়ার (ভেন্ডর):</span>
+                        <p class="font-medium text-gray-700">{{ $vo->courier_name ?: '—' }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">ট্র্যাকিং:</span>
+                        <p class="font-mono text-gray-700">{{ $vo->tracking_number ?: '—' }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">প্রস্তুত:</span>
+                        <p class="text-gray-700">{{ $vo->ready_at?->format('d M Y, h:i A') ?: '—' }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-400">কুরিয়ারে দেওয়া:</span>
+                        <p class="text-gray-700">{{ $vo->handed_to_courier_at?->format('d M Y, h:i A') ?: '—' }}</p>
+                    </div>
+                    @if($vo->vendor_note)
+                    <div class="col-span-2 md:col-span-4">
+                        <span class="text-gray-400">ভেন্ডর নোট:</span>
+                        <p class="text-gray-700 italic">{{ $vo->vendor_note }}</p>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     {{-- ── Courier / Delivery Section ─────────────────────────────── --}}
     <div class="no-print px-6 py-5 bg-blue-50">
         <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">কুরিয়ার / ডেলিভারি ম্যানেজমেন্ট</h3>
