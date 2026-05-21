@@ -66,7 +66,6 @@
 
     <div class="text-center mt-5 space-y-2 text-sm text-gray-500">
         <p>নতুন? <a href="{{ route('customer.register') }}" class="text-[#14532d] font-semibold hover:underline">রেজিস্ট্রেশন করুন</a></p>
-        <p>মার্চেন্ট? <a href="{{ route('vendor.login') }}" class="text-indigo-600 font-semibold hover:underline">মার্চেন্ট লগইন</a></p>
         <p><a href="/" class="text-gray-400 hover:text-gray-600">← হোম পেজে ফিরুন</a></p>
     </div>
 </div>

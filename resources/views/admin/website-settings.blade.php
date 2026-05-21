@@ -136,6 +136,52 @@
         </div>
     </div>
 
+    {{-- ── Vendor / merchant settings ─────────────────────────────── --}}
+    <div class="bg-white rounded shadow-sm border border-gray-100 mb-6">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="text-sm font-semibold text-gray-600">মার্চেন্ট সেটিং</h2>
+        </div>
+        <div class="px-6 py-5 space-y-4">
+
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" name="vendor_registration_enabled" value="1" class="mt-0.5 rounded border-gray-300 text-[#14532d]"
+                    {{ ($settings['vendor_registration_enabled'] ?? '0') === '1' ? 'checked' : '' }}>
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">মার্চেন্ট রেজিস্ট্রেশন চালু রাখুন</span>
+                    <span class="block text-xs text-gray-400 mt-0.5">বন্ধ থাকলে /vendor/register একটি বার্তা দেখাবে।</span>
+                </span>
+            </label>
+
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" name="vendor_login_enabled" value="1" class="mt-0.5 rounded border-gray-300 text-[#14532d]"
+                    {{ ($settings['vendor_login_enabled'] ?? '1') === '1' ? 'checked' : '' }}>
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">মার্চেন্ট লগইন চালু রাখুন</span>
+                    <span class="block text-xs text-gray-400 mt-0.5">বন্ধ থাকলে /vendor/login একটি বার্তা দেখাবে।</span>
+                </span>
+            </label>
+
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" name="show_vendor_links_in_header" value="1" class="mt-0.5 rounded border-gray-300 text-[#14532d]"
+                    {{ ($settings['show_vendor_links_in_header'] ?? '0') === '1' ? 'checked' : '' }}>
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">হেডারে মার্চেন্ট লিংক দেখান</span>
+                    <span class="block text-xs text-gray-400 mt-0.5">হোম পেজের নেভিগেশনে মার্চেন্ট লিংক যুক্ত হবে।</span>
+                </span>
+            </label>
+
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" name="show_vendor_links_in_footer" value="1" class="mt-0.5 rounded border-gray-300 text-[#14532d]"
+                    {{ ($settings['show_vendor_links_in_footer'] ?? '1') === '1' ? 'checked' : '' }}>
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">ফুটারে মার্চেন্ট লিংক দেখান</span>
+                    <span class="block text-xs text-gray-400 mt-0.5">হোম পেজের ফুটারে মার্চেন্ট রেজিস্ট্রেশন/লগইন লিংক দেখাবে।</span>
+                </span>
+            </label>
+
+        </div>
+    </div>
+
     <div class="flex gap-3">
         <button type="submit"
                 class="bg-gray-800 text-white px-8 py-2.5 rounded text-sm font-medium hover:bg-gray-700 transition-colors">

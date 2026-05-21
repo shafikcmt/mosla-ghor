@@ -75,7 +75,6 @@
 
     <div class="text-center mt-5 space-y-2 text-sm text-gray-500">
         <p>আগেই অ্যাকাউন্ট আছে? <a href="{{ route('customer.login') }}" class="text-[#14532d] font-semibold hover:underline">লগইন করুন</a></p>
-        <p>মার্চেন্ট হতে চান? <a href="{{ route('vendor.register') }}" class="text-indigo-600 font-semibold hover:underline">মার্চেন্ট রেজিস্ট্রেশন</a></p>
         <p><a href="/" class="text-gray-400 hover:text-gray-600">← হোম পেজে ফিরুন</a></p>
     </div>
 </div>

@@ -12,6 +12,8 @@ class WebsiteSettingController extends Controller
         'site_name', 'hero_badge_text', 'hero_title', 'hero_subtitle',
         'primary_cta_text', 'secondary_cta_text', 'hero_image_url',
         'whatsapp_number', 'messenger_url', 'facebook_page_url', 'footer_text',
+        'vendor_registration_enabled', 'vendor_login_enabled',
+        'show_vendor_links_in_header', 'show_vendor_links_in_footer',
     ];
 
     public function index()
@@ -37,10 +39,19 @@ class WebsiteSettingController extends Controller
             'footer_text'      => 'nullable|string|max:200',
         ]);
 
+        $boolFields = [
+            'vendor_registration_enabled', 'vendor_login_enabled',
+            'show_vendor_links_in_header', 'show_vendor_links_in_footer',
+        ];
+
         foreach (self::FIELDS as $key) {
+            $value = in_array($key, $boolFields)
+                ? ($request->boolean($key) ? '1' : '0')
+                : $request->input($key, '');
+
             WebsiteSetting::updateOrCreate(
                 ['key' => $key],
-                ['value' => $request->input($key, '')]
+                ['value' => $value]
             );
         }
 
