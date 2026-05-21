@@ -5,28 +5,25 @@ deployment:
     # Copy latest code safely
     - /bin/rsync -av --delete ./ $DEPLOYPATH --exclude='.git' --exclude='.env' --exclude='node_modules' --exclude='vendor' --exclude='storage' --exclude='public/storage' --exclude='database/database.sqlite' --exclude='database/*.sqlite'
 
-    # Go to live project folder
-    - cd $DEPLOYPATH
-
     # Install/update PHP dependencies
-    - composer install --no-dev --optimize-autoloader --no-interaction
+    - cd $DEPLOYPATH && composer install --no-dev --optimize-autoloader --no-interaction
 
     # Run only new pending migrations
-    - php artisan migrate --force
+    - cd $DEPLOYPATH && php artisan migrate --force
 
     # Run ProductionSeeder only if exists
-    - if php -r "require 'vendor/autoload.php'; exit(class_exists('Database\\Seeders\\ProductionSeeder') ? 0 : 1);"; then php artisan db:seed --class=ProductionSeeder --force; fi
+    - cd $DEPLOYPATH && if php -r "require 'vendor/autoload.php'; exit(class_exists('Database\\Seeders\\ProductionSeeder') ? 0 : 1);"; then php artisan db:seed --class=ProductionSeeder --force; fi
 
     # Create storage symlink for uploaded images/videos
-    - php artisan storage:link || true
+    - cd $DEPLOYPATH && php artisan storage:link || true
 
     # Fix writable folders
-    - chmod -R 775 storage bootstrap/cache || true
+    - chmod -R 775 $DEPLOYPATH/storage $DEPLOYPATH/bootstrap/cache || true
 
     # Clear old Laravel cache
-    - php artisan optimize:clear
+    - cd $DEPLOYPATH && php artisan optimize:clear
 
     # Rebuild production cache
-    - php artisan config:cache
-    - php artisan view:cache
-    - php artisan route:cache || true
+    - cd $DEPLOYPATH && php artisan config:cache
+    - cd $DEPLOYPATH && php artisan view:cache
+    - cd $DEPLOYPATH && php artisan route:cache || true
