@@ -24,16 +24,20 @@ class PaymentSetting extends Model
         'nagad_enabled'            => 'boolean',
     ];
 
-   public static function current(): static
+    public static function current(): static
     {
-        return static::firstOrNew([], [
-            'bkash_number' => '',
-            'bkash_type' => '',
-            'rocket_number' => '',
-            'rocket_type' => '',
-            'nagad_number' => '',
-            'nagad_type' => '',
-            'is_cash_on_delivery_active' => true,
+        // firstOrCreate persists the row immediately if it doesn't exist,
+        // ensuring update() has a valid primary key to target.
+        // firstOrNew() was the live bug: unsaved model → update() matched no rows.
+        return static::firstOrCreate([], [
+            'cash_on_delivery_enabled' => true,
+            'bkash_enabled'            => false,
+            'rocket_enabled'           => false,
+            'nagad_enabled'            => false,
+            'bkash_number'             => null,
+            'rocket_number'            => null,
+            'nagad_number'             => null,
+            'payment_instruction'      => null,
         ]);
     }
 
