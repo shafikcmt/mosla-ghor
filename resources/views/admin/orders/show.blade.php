@@ -358,6 +358,30 @@
                 <div class="font-semibold text-gray-600">{{ $order->suggestedCourier?->name ?? '—' }}</div>
             </div>
             <div class="bg-white rounded p-3 shadow-sm">
+                <div class="text-xs text-gray-400 mb-1">কুরিয়ার API স্ট্যাটাস</div>
+                <div class="font-semibold text-xs">
+                    @php $sc = $order->selectedCourier; @endphp
+                    @if(! $sc)
+                        <span class="text-gray-400">কুরিয়ার নেই</span>
+                    @elseif($sc->apiUsable())
+                        <span class="text-green-600">API সক্রিয়</span>
+                    @elseif($sc->supportsApi())
+                        <span class="text-amber-600">ম্যানুয়াল (API বন্ধ/কনফিগার নেই)</span>
+                    @else
+                        <span class="text-gray-500">ম্যানুয়াল কুরিয়ার</span>
+                    @endif
+                </div>
+            </div>
+            <div class="bg-white rounded p-3 shadow-sm">
+                <div class="text-xs text-gray-400 mb-1">কুরিয়ার খরচ</div>
+                <div class="font-semibold text-gray-800">
+                    ৳ {{ number_format((float) $order->courier_cost, 2) }}
+                    <span class="text-[10px] {{ $order->courier_cost_overridden ? 'text-orange-500' : 'text-green-600' }}">
+                        ({{ $order->courier_cost_overridden ? 'ম্যানুয়াল' : 'অটো' }})
+                    </span>
+                </div>
+            </div>
+            <div class="bg-white rounded p-3 shadow-sm">
                 <div class="text-xs text-gray-400 mb-1">কুরিয়ার স্ট্যাটাস</div>
                 <div class="font-semibold text-gray-800">
                     @if($order->courier_status)
@@ -427,16 +451,32 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">ডেলিভারি চার্জ ওভাররাইড (৳)</label>
-                    <input type="number" name="delivery_charge" placeholder="{{ number_format($order->delivery_charge, 2) }}"
+                    <label class="block text-xs font-medium text-gray-600 mb-1">
+                        ডেলিভারি চার্জ ওভাররাইড (৳)
+                        @if($order->delivery_charge_overridden)
+                            <span class="text-orange-500">(ম্যানুয়াল)</span>
+                        @else
+                            <span class="text-green-600">(অটো)</span>
+                        @endif
+                    </label>
+                    <input type="number" name="delivery_charge" placeholder="বর্তমান: {{ number_format($order->delivery_charge, 2) }}"
                            min="0" step="0.01"
                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-[#14532d] focus:outline-none">
+                    <p class="text-[10px] text-gray-400 mt-0.5">ফাঁকা রাখলে অটো হিসাব থাকবে।</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">কুরিয়ার খরচ (৳)</label>
-                    <input type="number" name="courier_cost" value="{{ $order->courier_cost }}"
+                    <label class="block text-xs font-medium text-gray-600 mb-1">
+                        কুরিয়ার খরচ (৳)
+                        @if($order->courier_cost_overridden)
+                            <span class="text-orange-500">(ম্যানুয়াল)</span>
+                        @else
+                            <span class="text-green-600">(অটো)</span>
+                        @endif
+                    </label>
+                    <input type="number" name="courier_cost" placeholder="বর্তমান: {{ number_format((float) $order->courier_cost, 2) }}"
                            min="0" step="0.01"
                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-[#14532d] focus:outline-none">
+                    <p class="text-[10px] text-gray-400 mt-0.5">ফাঁকা রাখলে অটো হিসাব থাকবে।</p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">ট্র্যাকিং আইডি</label>
@@ -454,7 +494,7 @@
                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-[#14532d] focus:outline-none">
                 </div>
             </div>
-            <div>
+            <div class="flex items-center gap-3">
                 <button type="submit"
                         class="bg-[#14532d] text-white text-sm px-5 py-2 rounded hover:bg-[#0d3520] transition-colors">
                     কুরিয়ার তথ্য আপডেট করুন
@@ -462,47 +502,71 @@
             </div>
         </form>
 
-        {{-- Send to Courier buttons --}}
+        {{-- Auto-recalculate (clears manual overrides) --}}
+        <form method="POST" action="{{ route('admin.orders.recalculateCourier', $order) }}" class="mt-3"
+              onsubmit="return confirm('ম্যানুয়াল ওভাররাইড মুছে অটো হিসাব করবেন?')">
+            @csrf
+            <button type="submit"
+                    class="text-xs text-blue-700 hover:text-blue-900 underline">
+                ↻ অটো হিসাব করুন (ম্যানুয়াল ওভাররাইড মুছে যাবে)
+            </button>
+        </form>
+
+        {{-- Send to Courier (uses the SELECTED courier) --}}
         <div class="mt-5 pt-4 border-t border-blue-200">
             <h4 class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">কুরিয়ারে পাঠান</h4>
-            <div class="flex flex-wrap gap-3">
 
-                {{-- Steadfast --}}
-                <form method="POST" action="{{ route('admin.orders.sendToCourier', $order) }}">
-                    @csrf
-                    @php $steadfast = $couriers->firstWhere('slug', 'steadfast'); @endphp
-                    <button type="submit"
-                            onclick="return confirm('Steadfast-এ পাঠাবেন?')"
-                            class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700 transition-colors">
-                        📦 Steadfast-এ পাঠান
-                        @if($steadfast && !$steadfast->api_enabled)
-                        <span class="text-blue-200 text-xs">(ম্যানুয়াল)</span>
-                        @endif
-                    </button>
-                </form>
+            @php $sc = $order->selectedCourier; @endphp
 
-                {{-- Pathao --}}
-                <form method="POST" action="{{ route('admin.orders.sendToCourier', $order) }}">
-                    @csrf
-                    <button type="button"
-                            onclick="alert('Pathao ম্যানুয়াল বুকিং: ট্র্যাকিং আইডি যোগ করুন উপরের ফর্মে।')"
-                            class="bg-orange-500 text-white text-sm px-4 py-2 rounded hover:bg-orange-600 transition-colors">
-                        🚴 Pathao বুকিং
-                        <span class="text-orange-200 text-xs">(ম্যানুয়াল)</span>
-                    </button>
-                </form>
+            @if(! $sc)
+                <div class="text-sm bg-amber-50 border border-amber-200 text-amber-700 rounded px-3 py-2">
+                    ⚠ প্রথমে উপরের ফর্ম থেকে একটি কুরিয়ার নির্বাচন করে সংরক্ষণ করুন।
+                </div>
+            @else
+                @if($sc->status !== 'active')
+                <div class="mb-3 text-sm bg-red-50 border border-red-200 text-red-700 rounded px-3 py-2">
+                    ⚠ নির্বাচিত কুরিয়ার <strong>{{ $sc->name }}</strong> নিষ্ক্রিয়। সক্রিয় করুন অথবা অন্য কুরিয়ার বেছে নিন।
+                </div>
+                @elseif($sc->supportsApi() && ! $sc->apiUsable())
+                <div class="mb-3 text-sm bg-amber-50 border border-amber-200 text-amber-700 rounded px-3 py-2">
+                    ℹ {{ $sc->name }} এর API বন্ধ অথবা credential নেই — ম্যানুয়াল বুকিং হিসেবে চিহ্নিত হবে।
+                </div>
+                @endif
 
-                {{-- Sundarban --}}
-                <form method="POST" action="{{ route('admin.orders.sendToCourier', $order) }}">
-                    @csrf
-                    <button type="button"
-                            onclick="alert('Sundarban ম্যানুয়াল বুকিং: উপরে ট্র্যাকিং আইডি এবং Consignment যোগ করুন।')"
-                            class="bg-green-700 text-white text-sm px-4 py-2 rounded hover:bg-green-800 transition-colors">
-                        🏢 Sundarban বুকিং
-                        <span class="text-green-300 text-xs">(ম্যানুয়াল)</span>
-                    </button>
-                </form>
+                <div class="flex flex-wrap gap-3">
+                    @if($order->consignment_id && $sc->apiUsable())
+                        {{-- Already booked via API — offer re-send explicitly --}}
+                        <span class="inline-flex items-center text-sm text-gray-500 bg-white border border-gray-200 rounded px-3 py-2">
+                            ইতোমধ্যে পাঠানো হয়েছে · Consignment: <span class="font-mono ml-1">{{ $order->consignment_id }}</span>
+                        </span>
+                        <form method="POST" action="{{ route('admin.orders.sendToCourier', $order) }}"
+                              onsubmit="return confirm('সতর্কতা: এটি আবার কুরিয়ারে বুকিং তৈরি করবে। নিশ্চিত?')">
+                            @csrf
+                            <input type="hidden" name="resend" value="1">
+                            <button type="submit"
+                                    class="bg-amber-600 text-white text-sm px-4 py-2 rounded hover:bg-amber-700 transition-colors">
+                                ↻ পুনরায় পাঠান
+                            </button>
+                        </form>
+                    @else
+                        <form method="POST" action="{{ route('admin.orders.sendToCourier', $order) }}"
+                              onsubmit="return confirm('{{ $sc->name }}-এ পাঠাবেন?')">
+                            @csrf
+                            <button type="submit" {{ $sc->status !== 'active' ? 'disabled' : '' }}
+                                    class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                                📦 {{ $sc->name }}-এ পাঠান
+                                @if($sc->apiUsable())
+                                    <span class="text-blue-200 text-xs">(API)</span>
+                                @else
+                                    <span class="text-blue-200 text-xs">(ম্যানুয়াল)</span>
+                                @endif
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            @endif
 
+            <div class="flex flex-wrap gap-3 mt-3">
                 {{-- Mark Delivered --}}
                 <form method="POST" action="{{ route('admin.orders.markDelivered', $order) }}"
                       onsubmit="return confirm('ডেলিভারড চিহ্নিত করবেন?')">

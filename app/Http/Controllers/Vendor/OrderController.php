@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Vendor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Courier;
+use App\Models\CourierSetting;
 use App\Models\VendorOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,10 +45,16 @@ class OrderController extends Controller
             'courier',
         ]);
 
-        $couriers            = Courier::active()->orderBy('name')->get();
+        // Couriers shown to vendors only when admin allows selection. Note the
+        // Courier model hides api_key/api_secret, so credentials are never exposed.
+        $settings = CourierSetting::current();
+        $couriers = $settings->vendorCanSelectCourier()
+            ? Courier::active()->orderBy('name')->get()
+            : collect();
+
         $fulfillmentStatuses = VendorOrder::fulfillmentStatuses();
 
-        return view('vendor.orders.show', compact('vendorOrder', 'couriers', 'fulfillmentStatuses'));
+        return view('vendor.orders.show', compact('vendorOrder', 'couriers', 'fulfillmentStatuses', 'settings'));
     }
 
     public function updateFulfillment(Request $request, VendorOrder $vendorOrder)
@@ -56,6 +63,8 @@ class OrderController extends Controller
             abort(403);
         }
 
+        $settings = CourierSetting::current();
+
         $data = $request->validate([
             'fulfillment_status' => 'required|in:pending,processing,packed,ready_for_pickup,handed_to_courier,cancelled_by_vendor',
             'courier_id'         => 'nullable|exists:couriers,id',
@@ -63,20 +72,35 @@ class OrderController extends Controller
             'vendor_note'        => 'nullable|string|max:500',
         ]);
 
+        // Guard: vendor may not mark handed-to-courier unless allowed.
+        if ($data['fulfillment_status'] === 'handed_to_courier'
+            && ! $settings->vendor_can_mark_handover
+            && $vendorOrder->fulfillment_status !== 'handed_to_courier') {
+            return redirect()->route('vendor.orders.show', $vendorOrder)
+                ->with('error', 'কুরিয়ারে হ্যান্ডওভার চিহ্নিত করার অনুমতি নেই। অ্যাডমিনের সাথে যোগাযোগ করুন।');
+        }
+
         $updates = [
             'fulfillment_status' => $data['fulfillment_status'],
-            'tracking_number'    => $data['tracking_number'] ?? null,
             'vendor_note'        => $data['vendor_note'] ?? null,
         ];
 
-        // Snapshot courier name when courier is selected
-        if (! empty($data['courier_id'])) {
-            $courier = Courier::find($data['courier_id']);
-            $updates['courier_id']   = $data['courier_id'];
-            $updates['courier_name'] = $courier?->name;
-        } else {
-            $updates['courier_id']   = null;
-            $updates['courier_name'] = null;
+        // Tracking number — only if vendor is allowed to update it.
+        if ($settings->vendor_can_update_tracking) {
+            $updates['tracking_number'] = $data['tracking_number'] ?? null;
+        }
+
+        // Courier selection — only if admin allows vendor courier selection.
+        if ($settings->vendorCanSelectCourier()) {
+            if (! empty($data['courier_id'])) {
+                // Only allow active couriers.
+                $courier = Courier::active()->find($data['courier_id']);
+                $updates['courier_id']   = $courier?->id;
+                $updates['courier_name'] = $courier?->name;
+            } else {
+                $updates['courier_id']   = null;
+                $updates['courier_name'] = null;
+            }
         }
 
         // Timestamps for status transitions

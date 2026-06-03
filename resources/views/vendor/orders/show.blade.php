@@ -201,14 +201,23 @@ $fsColors = [
                 <select name="fulfillment_status"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                     @foreach($fulfillmentStatuses as $key => $label)
-                    <option value="{{ $key }}" {{ $vendorOrder->fulfillment_status === $key ? 'selected' : '' }}>
-                        {{ $label }}
-                    </option>
+                        @php
+                            // Hide handover option when admin has disabled it (unless already in that state).
+                            $hideHandover = $key === 'handed_to_courier'
+                                && ! $settings->vendor_can_mark_handover
+                                && $vendorOrder->fulfillment_status !== 'handed_to_courier';
+                        @endphp
+                        @unless($hideHandover)
+                        <option value="{{ $key }}" {{ $vendorOrder->fulfillment_status === $key ? 'selected' : '' }}>
+                            {{ $label }}
+                        </option>
+                        @endunless
                     @endforeach
                 </select>
             </div>
 
-            {{-- Courier select --}}
+            {{-- Courier select — only when admin allows vendor selection --}}
+            @if($settings->vendorCanSelectCourier())
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">কুরিয়ার (ঐচ্ছিক)</label>
                 <select name="courier_id"
@@ -220,10 +229,20 @@ $fsColors = [
                     </option>
                     @endforeach
                 </select>
-                <p class="text-xs text-gray-400 mt-1">শুধুমাত্র অ্যাডমিন-অনুমোদিত কুরিয়ার দেখাচ্ছে।</p>
+                <p class="text-xs text-gray-400 mt-1">শুধুমাত্র অ্যাডমিন-অনুমোদিত সক্রিয় কুরিয়ার দেখাচ্ছে।</p>
             </div>
+            @else
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">কুরিয়ার</label>
+                <div class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500">
+                    {{ $vendorOrder->courier_name ?: 'অ্যাডমিন কর্তৃক নির্ধারিত হবে' }}
+                </div>
+                <p class="text-xs text-gray-400 mt-1">কুরিয়ার নির্বাচন অ্যাডমিন নিয়ন্ত্রণ করছেন।</p>
+            </div>
+            @endif
 
-            {{-- Tracking number --}}
+            {{-- Tracking number — only when admin allows --}}
+            @if($settings->vendor_can_update_tracking)
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">ট্র্যাকিং নম্বর</label>
                 <input type="text" name="tracking_number"
@@ -231,6 +250,14 @@ $fsColors = [
                        placeholder="যেমন: SF-12345678"
                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
+            @else
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">ট্র্যাকিং নম্বর</label>
+                <div class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500 font-mono">
+                    {{ $vendorOrder->tracking_number ?: '—' }}
+                </div>
+            </div>
+            @endif
 
             {{-- Vendor note --}}
             <div>

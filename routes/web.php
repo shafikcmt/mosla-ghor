@@ -183,6 +183,7 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('orders/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');
     Route::post('orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.updateStatus');
     Route::post('orders/{order}/update-courier', [AdminOrderController::class, 'updateCourier'])->name('orders.updateCourier');
+    Route::post('orders/{order}/recalculate-courier', [AdminOrderController::class, 'recalculateCourier'])->name('orders.recalculateCourier');
     Route::post('orders/{order}/send-to-courier', [AdminOrderController::class, 'sendToCourier'])->name('orders.sendToCourier');
     Route::post('orders/{order}/mark-delivered', [AdminOrderController::class, 'markDelivered'])->name('orders.markDelivered');
     Route::post('orders/{order}/mark-returned', [AdminOrderController::class, 'markReturned'])->name('orders.markReturned');
@@ -194,7 +195,9 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::resource('delivery-rates', AdminDeliveryRateController::class)->except(['show']);
 
     Route::get('courier-api-settings', [AdminCourierApiSettingController::class, 'index'])->name('courier-api-settings.index');
+    Route::post('courier-api-settings/permissions', [AdminCourierApiSettingController::class, 'saveSettings'])->name('courier-api-settings.permissions');
     Route::put('courier-api-settings/{courier}', [AdminCourierApiSettingController::class, 'update'])->name('courier-api-settings.update');
+    Route::post('courier-api-settings/{courier}/test', [AdminCourierApiSettingController::class, 'test'])->name('courier-api-settings.test');
 
     Route::get('courier-orders', [AdminCourierOrderController::class, 'index'])->name('courier-orders.index');
 

@@ -11,11 +11,6 @@ class CourierOrderController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Order::with(['selectedCourier'])
-            ->whereNotNull('courier_status')
-            ->orWhereNotNull('selected_courier_id');
-
-        // Re-query cleanly with filters
         $query = Order::with(['selectedCourier', 'zone'])
             ->where(function ($q) {
                 $q->whereNotNull('courier_status')->orWhereNotNull('selected_courier_id');

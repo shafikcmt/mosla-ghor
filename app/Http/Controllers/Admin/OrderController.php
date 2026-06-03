@@ -8,7 +8,7 @@ use App\Models\DeliveryZone;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\WebsiteSetting;
-use App\Services\SteadfastService;
+use App\Services\CourierService;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -87,92 +87,113 @@ class OrderController extends Controller
             'courier_note'         => 'nullable|string|max:1000',
         ]);
 
-        $updates = array_filter([
-            'selected_courier_id' => $data['selected_courier_id'] ?? null,
-            'courier_status'      => $data['courier_status'] ?? null,
-            'tracking_id'         => $data['tracking_id'] ?? null,
-            'consignment_id'      => $data['consignment_id'] ?? null,
-            'courier_note'        => $data['courier_note'] ?? null,
-        ], fn($v) => $v !== null);
+        // Courier can be set or cleared.
+        $order->selected_courier_id = $data['selected_courier_id'] ?? null;
 
-        if (isset($data['delivery_charge']) && $data['delivery_charge'] !== null) {
-            $updates['delivery_charge']            = $data['delivery_charge'];
-            $updates['delivery_charge_overridden'] = true;
-            $updates['grand_total']                = $order->subtotal + $order->packaging_cost + $data['delivery_charge'];
+        // Status only changes when a value is chosen ("— পরিবর্তন না করুন —" sends blank).
+        if (! empty($data['courier_status'])) {
+            $order->courier_status = $data['courier_status'];
         }
 
-        if (isset($data['courier_cost']) && $data['courier_cost'] !== null) {
-            $updates['courier_cost']             = $data['courier_cost'];
-            $updates['courier_cost_overridden']  = true;
+        // Text fields are editable/clearable directly.
+        $order->tracking_id    = $data['tracking_id'] ?? null;
+        $order->consignment_id = $data['consignment_id'] ?? null;
+        $order->courier_note   = $data['courier_note'] ?? null;
+
+        // Manual delivery-charge override (blank field = keep auto/calculated).
+        if (isset($data['delivery_charge']) && $data['delivery_charge'] !== null && $data['delivery_charge'] !== '') {
+            $order->delivery_charge            = $data['delivery_charge'];
+            $order->delivery_charge_overridden = true;
+            $order->grand_total                = $order->subtotal + $order->packaging_cost + (float) $data['delivery_charge'];
         }
 
+        // Manual courier-cost override (blank field = keep auto/calculated).
+        if (isset($data['courier_cost']) && $data['courier_cost'] !== null && $data['courier_cost'] !== '') {
+            $order->courier_cost            = $data['courier_cost'];
+            $order->courier_cost_overridden = true;
+        }
+
+        // Zone change.
         if (! empty($data['delivery_zone_id']) && $data['delivery_zone_id'] != $order->delivery_zone_id) {
             $zone = DeliveryZone::find($data['delivery_zone_id']);
             if ($zone) {
-                $updates['delivery_zone_id']   = $zone->id;
-                $updates['delivery_zone_name'] = $zone->zone_name;
-                $updates['delivery_zone_type'] = $zone->zone_type;
-                $updates['zone_overridden']    = true;
+                $order->delivery_zone_id   = $zone->id;
+                $order->delivery_zone_name = $zone->zone_name;
+                $order->delivery_zone_type = $zone->zone_type;
+                $order->zone_overridden    = true;
             }
         }
 
-        $order->update($updates);
+        // Auto-calculate suggested courier + rate. Manual overrides are preserved.
+        $suggestion = app(CourierService::class)->suggestForOrder($order);
+        if ($suggestion) {
+            $order->suggested_courier_id = $suggestion['courier_id'];
+
+            if (! $order->delivery_charge_overridden) {
+                $order->delivery_rate_id = $suggestion['delivery_rate_id'];
+                $order->delivery_charge  = $suggestion['customer_delivery_charge'];
+                $order->cod_charge       = $suggestion['cod_charge'];
+                $order->grand_total      = $order->subtotal + $order->packaging_cost + (float) $order->delivery_charge;
+            }
+
+            if (! $order->courier_cost_overridden) {
+                $order->courier_cost = $suggestion['courier_cost'];
+            }
+        }
+
+        $order->save();
 
         return redirect()->route('admin.orders.show', $order)
             ->with('success', 'কুরিয়ার তথ্য আপডেট হয়েছে।');
     }
 
+    /**
+     * Clear manual overrides so charges fall back to auto-calculated rates.
+     */
+    public function recalculateCourier(Order $order)
+    {
+        $order->loadMissing('items');
+        $order->delivery_charge_overridden = false;
+        $order->courier_cost_overridden    = false;
+
+        $suggestion = app(CourierService::class)->suggestForOrder($order);
+        if (! $suggestion) {
+            $order->save();
+
+            return redirect()->route('admin.orders.show', $order)
+                ->with('error', 'অটো হিসাব করা যায়নি — এই জোন/ওজনের জন্য কোনো সক্রিয় ডেলিভারি রেট পাওয়া যায়নি।');
+        }
+
+        $order->suggested_courier_id = $suggestion['courier_id'];
+        $order->delivery_rate_id     = $suggestion['delivery_rate_id'];
+        $order->delivery_charge      = $suggestion['customer_delivery_charge'];
+        $order->cod_charge           = $suggestion['cod_charge'];
+        $order->courier_cost         = $suggestion['courier_cost'];
+        $order->grand_total          = $order->subtotal + $order->packaging_cost + (float) $order->delivery_charge;
+        $order->save();
+
+        return redirect()->route('admin.orders.show', $order)
+            ->with('success', 'ডেলিভারি চার্জ ও কুরিয়ার খরচ অটো হিসাব করা হয়েছে।');
+    }
+
     public function sendToCourier(Request $request, Order $order)
     {
-        // Validation before sending
-        $warnings = [];
+        $order->loadMissing('items', 'selectedCourier');
 
-        if (! $order->mobile_number)      $warnings[] = 'কাস্টমারের ফোন নম্বর নেই।';
-        if (! $order->full_address)       $warnings[] = 'সম্পূর্ণ ঠিকানা নেই।';
-        if (! $order->delivery_zone_id)   $warnings[] = 'ডেলিভারি জোন নির্বাচিত নেই।';
-        if (! $order->selected_courier_id) $warnings[] = 'কুরিয়ার নির্বাচিত নেই।';
-        if ($order->items->isEmpty())     $warnings[] = 'অর্ডারে কোনো পণ্য নেই।';
-        if (! $order->stock_deducted_at)  $warnings[] = 'স্টক এখনো কাটা হয়নি।';
-
+        $warnings = app(CourierService::class)->readinessWarnings($order);
         if (! empty($warnings)) {
             return redirect()->route('admin.orders.show', $order)
                 ->with('error', 'কুরিয়ারে পাঠানো যায়নি: ' . implode(' ', $warnings));
         }
 
-        $courier = $order->selectedCourier;
-
-        // Steadfast API send
-        if ($courier->slug === 'steadfast' && $courier->api_enabled) {
-            $result = app(SteadfastService::class)->createOrder($courier, $order);
-
-            if ($result['success']) {
-                $order->update([
-                    'tracking_id'        => $result['tracking_id'],
-                    'consignment_id'     => $result['consignment_id'],
-                    'courier_status'     => 'sent_to_courier',
-                    'sent_to_courier_at' => now(),
-                    'order_status'       => 'shipped',
-                ]);
-
-                return redirect()->route('admin.orders.show', $order)
-                    ->with('success', 'Steadfast-এ সফলভাবে পাঠানো হয়েছে। Tracking: ' . $result['tracking_id']);
-            }
-
-            return redirect()->route('admin.orders.show', $order)
-                ->with('error', 'Steadfast API ত্রুটি: ' . $result['error']);
-        }
-
-        // Manual / non-API couriers — mark as sent with manual tracking
-        $tracking = $request->input('tracking_id') ?: $order->tracking_id;
-        $order->update([
-            'courier_status'     => 'sent_to_courier',
-            'sent_to_courier_at' => now(),
-            'tracking_id'        => $tracking,
-            'order_status'       => 'shipped',
-        ]);
+        $result = app(CourierService::class)->send(
+            $order,
+            $request->input('tracking_id'),
+            $request->boolean('resend')
+        );
 
         return redirect()->route('admin.orders.show', $order)
-            ->with('success', 'অর্ডার কুরিয়ারে পাঠানো হিসেবে চিহ্নিত হয়েছে।');
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
     public function markDelivered(Order $order)
