@@ -11,6 +11,7 @@ class Courier extends Model
         'name', 'slug', 'status', 'api_enabled', 'api_key', 'api_secret',
         'base_url', 'is_default', 'notes',
         'courier_api_last_checked_at', 'courier_api_last_status', 'courier_api_last_error',
+        'courier_api_last_message',
     ];
 
     protected $casts = [
@@ -36,6 +37,25 @@ class Courier extends Model
     public function rates(): HasMany
     {
         return $this->hasMany(DeliveryRate::class);
+    }
+
+    /**
+     * Clean the base_url whenever it is set so stored values never carry
+     * whitespace, newlines, or hidden/zero-width characters that would break
+     * DNS resolution (cause of "Could not resolve host" cURL error 6).
+     */
+    public function setBaseUrlAttribute($value): void
+    {
+        if ($value === null) {
+            $this->attributes['base_url'] = null;
+            return;
+        }
+
+        // Strip control chars, zero-width spaces, and BOM; then trim.
+        $clean = preg_replace('/[\x00-\x1F\x7F\x{200B}-\x{200D}\x{FEFF}]/u', '', (string) $value);
+        $clean = trim((string) $clean);
+
+        $this->attributes['base_url'] = $clean === '' ? null : $clean;
     }
 
     public function isActive(): bool

@@ -68,9 +68,14 @@ class CourierApiSettingController extends Controller
 
         $result = $steadfast->testConnection($courier);
 
+        // level → flash key: success (green) | warning (yellow) | error (red)
+        $flashKey = $result['success'] ? 'success' : ($result['level'] ?? 'error');
+        if (! in_array($flashKey, ['success', 'warning', 'error'], true)) {
+            $flashKey = 'error';
+        }
+
         return redirect()->route('admin.courier-api-settings.index')
-            ->with($result['success'] ? 'success' : 'error',
-                $courier->name . ' টেস্ট: ' . $result['message']);
+            ->with($flashKey, $courier->name . ' টেস্ট: ' . $result['message']);
     }
 
     /**

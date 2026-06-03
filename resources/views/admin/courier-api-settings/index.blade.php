@@ -162,8 +162,10 @@
         @if($courier->supportsApi())
         <div class="px-6 py-3 border-t border-gray-100 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
             <div class="text-xs text-gray-500">
-                @if($courier->courier_api_last_status === 'failed' && $courier->courier_api_last_error)
-                    <span class="text-red-600">সর্বশেষ ত্রুটি: {{ \Illuminate\Support\Str::limit($courier->courier_api_last_error, 120) }}</span>
+                @if($courier->courier_api_last_message)
+                    <span class="{{ $courier->courier_api_last_status === 'success' ? 'text-green-600' : 'text-red-600' }}">
+                        সর্বশেষ ফলাফল: {{ \Illuminate\Support\Str::limit($courier->courier_api_last_message, 140) }}
+                    </span>
                 @else
                     সংযোগ যাচাই করতে নিচের বোতামে ক্লিক করুন (credential সংরক্ষণ করার পর)।
                 @endif
