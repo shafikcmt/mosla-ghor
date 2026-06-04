@@ -131,7 +131,7 @@ Route::name('customer.')->group(function () {
 
 // ── Public order tracking ──────────────────────────────────────────────────
 Route::get('/track-order',  [TrackOrderController::class, 'index'])->name('track-order');
-Route::post('/track-order', [TrackOrderController::class, 'track'])->name('track-order');
+Route::post('/track-order', [TrackOrderController::class, 'track'])->name('track-order.submit');
 
 Route::get('/address/unions/{upazila}', [AddressController::class, 'unions'])->name('address.unions');
 

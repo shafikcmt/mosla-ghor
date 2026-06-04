@@ -20,14 +20,23 @@ class CourierApiSettingController extends Controller
 
     public function update(Request $request, Courier $courier)
     {
-        $data = $request->validate([
+        // Credentials are only touched when the admin explicitly opts in. This blocks
+        // browser autofill (e.g. the admin login email) from silently overwriting keys.
+        $replace = $request->boolean('replace_api_credentials');
+
+        $rules = [
             'api_enabled' => 'nullable|boolean',
-            'api_key'     => 'nullable|string|max:255',
-            'api_secret'  => 'nullable|string|max:255',
             'base_url'    => 'nullable|string|max:255',
             'status'      => 'required|in:active,inactive',
             'notes'       => 'nullable|string|max:1000',
-        ], [
+        ];
+
+        if ($replace) {
+            $rules['api_key']    = ['nullable', 'string', 'max:255', $this->notLoginEmailRule()];
+            $rules['api_secret'] = ['nullable', 'string', 'max:255', $this->notLoginEmailRule()];
+        }
+
+        $data = $request->validate($rules, [
             'status.required' => 'স্ট্যাটাস নির্বাচন করুন।',
             'status.in'       => 'স্ট্যাটাস সঠিক নয়।',
             'base_url.max'    => 'Base URL ২৫৫ অক্ষরের বেশি হতে পারবে না।',
@@ -35,9 +44,9 @@ class CourierApiSettingController extends Controller
 
         $data['api_enabled'] = $request->boolean('api_enabled');
 
-        // Blank key/secret means "leave unchanged" — never wipe stored credentials.
-        if (blank($request->input('api_key')))    unset($data['api_key']);
-        if (blank($request->input('api_secret'))) unset($data['api_secret']);
+        // Ignore credential fields unless the admin opted in; blank means "leave unchanged".
+        if (! $replace || blank($request->input('api_key')))    unset($data['api_key']);
+        if (! $replace || blank($request->input('api_secret'))) unset($data['api_secret']);
 
         // Warn (but still save) if API is enabled without credentials.
         $courier->fill($data);

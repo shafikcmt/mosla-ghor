@@ -86,8 +86,12 @@
             @endif
         </div>
 
-        <form method="POST" action="{{ route('admin.courier-api-settings.update', $courier) }}" class="px-6 py-5">
+        <form method="POST" action="{{ route('admin.courier-api-settings.update', $courier) }}" class="px-6 py-5" autocomplete="off">
             @csrf @method('PUT')
+
+            {{-- Decoy fields: absorb browser autofill so login email/password never lands in API Key/Secret. --}}
+            <input type="text" name="fake_username" autocomplete="username" tabindex="-1" aria-hidden="true" class="hidden" style="display:none">
+            <input type="password" name="fake_password" autocomplete="new-password" tabindex="-1" aria-hidden="true" class="hidden" style="display:none">
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
@@ -105,23 +109,42 @@
                 </div>
 
                 @if($courier->supportsApi())
+                {{-- Credential gate: fields stay locked (and unsubmitted) until the admin
+                     opts in, so browser autofill cannot silently overwrite stored keys. --}}
+                <div class="md:col-span-2 flex items-start gap-2 bg-gray-50 border border-gray-200 rounded px-3 py-2">
+                    <input type="checkbox" id="replace_creds_{{ $courier->id }}" name="replace_api_credentials" value="1"
+                           data-courier="{{ $courier->id }}"
+                           class="mt-0.5 w-4 h-4 accent-[#14532d] js-replace-creds">
+                    <label for="replace_creds_{{ $courier->id }}" class="text-sm text-gray-700 cursor-pointer">
+                        API Key / Secret পরিবর্তন করব
+                        <span class="block text-xs text-gray-400">
+                            বর্তমান:
+                            <span class="font-medium {{ $courier->isConfigured() ? 'text-emerald-600' : 'text-red-600' }}">
+                                {{ $courier->isConfigured() ? 'Configured' : 'Not configured' }}
+                            </span>
+                            @if($courier->api_key) · Key: {{ $courier->maskedKey() }} @endif
+                        </span>
+                    </label>
+                </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
                         API Key
                         <span class="text-gray-400 normal-case">(ফাঁকা রাখলে পরিবর্তন হবে না)</span>
                     </label>
-                    <input type="text" name="api_key" autocomplete="off"
+                    <input type="text" name="api_key" autocomplete="new-password" readonly disabled
+                           data-courier="{{ $courier->id }}"
                            placeholder="{{ $courier->api_key ? 'বর্তমান: ' . $courier->maskedKey() : 'এখনো সেট করা হয়নি' }}"
-                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-[#14532d] focus:outline-none">
+                           class="js-cred-field w-full border border-gray-300 rounded px-3 py-2 text-sm bg-gray-100 focus:ring-2 focus:ring-[#14532d] focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
                         Secret Key
                         <span class="text-gray-400 normal-case">(ফাঁকা রাখলে পরিবর্তন হবে না)</span>
                     </label>
-                    <input type="password" name="api_secret" autocomplete="new-password"
+                    <input type="password" name="api_secret" autocomplete="new-password" readonly disabled
+                           data-courier="{{ $courier->id }}"
                            placeholder="{{ $courier->api_secret ? 'বর্তমান: ' . $courier->maskedSecret() : 'এখনো সেট করা হয়নি' }}"
-                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-[#14532d] focus:outline-none">
+                           class="js-cred-field w-full border border-gray-300 rounded px-3 py-2 text-sm bg-gray-100 focus:ring-2 focus:ring-[#14532d] focus:outline-none">
                 </div>
                 @endif
             </div>
@@ -182,4 +205,20 @@
     </div>
     @endforeach
 </div>
+
+<script>
+    // Unlock API Key/Secret only when the admin ticks "I will change credentials".
+    // Disabled fields are not submitted, so autofill cannot overwrite stored keys.
+    document.querySelectorAll('.js-replace-creds').forEach(function (cb) {
+        cb.addEventListener('change', function () {
+            var id = cb.dataset.courier;
+            document.querySelectorAll('.js-cred-field[data-courier="' + id + '"]').forEach(function (f) {
+                f.disabled = cb.checked ? false : true;
+                f.readOnly = cb.checked ? false : true;
+                f.classList.toggle('bg-gray-100', !cb.checked);
+                if (!cb.checked) { f.value = ''; }
+            });
+        });
+    });
+</script>
 @endsection

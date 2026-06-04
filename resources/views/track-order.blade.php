@@ -24,7 +24,7 @@
         </div>
         @endif
 
-        <form method="POST" action="{{ route('track-order') }}" class="space-y-4">
+        <form method="POST" action="{{ route('track-order.submit') }}" class="space-y-4">
             @csrf
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">অর্ডার নম্বর <span class="text-red-500">*</span></label>

@@ -27,8 +27,8 @@ class CourierController extends Controller
             'slug'       => 'nullable|string|max:100|unique:couriers,slug',
             'status'     => 'required|in:active,inactive',
             'api_enabled'=> 'boolean',
-            'api_key'    => 'nullable|string|max:255',
-            'api_secret' => 'nullable|string|max:255',
+            'api_key'    => ['nullable', 'string', 'max:255', $this->notLoginEmailRule()],
+            'api_secret' => ['nullable', 'string', 'max:255', $this->notLoginEmailRule()],
             'base_url'   => 'nullable|string|max:255',
             'is_default' => 'boolean',
             'notes'      => 'nullable|string|max:1000',
@@ -54,21 +54,34 @@ class CourierController extends Controller
 
     public function update(Request $request, Courier $courier)
     {
-        $data = $request->validate([
+        // Credentials are only touched when the admin explicitly opts in — blocks
+        // browser autofill from silently overwriting stored API keys.
+        $replace = $request->boolean('replace_api_credentials');
+
+        $rules = [
             'name'       => 'required|string|max:100',
             'slug'       => 'nullable|string|max:100|unique:couriers,slug,' . $courier->id,
             'status'     => 'required|in:active,inactive',
             'api_enabled'=> 'boolean',
-            'api_key'    => 'nullable|string|max:255',
-            'api_secret' => 'nullable|string|max:255',
             'base_url'   => 'nullable|string|max:255',
             'is_default' => 'boolean',
             'notes'      => 'nullable|string|max:1000',
-        ]);
+        ];
+
+        if ($replace) {
+            $rules['api_key']    = ['nullable', 'string', 'max:255', $this->notLoginEmailRule()];
+            $rules['api_secret'] = ['nullable', 'string', 'max:255', $this->notLoginEmailRule()];
+        }
+
+        $data = $request->validate($rules);
 
         $data['slug']       = $data['slug'] ?: Str::slug($data['name']);
         $data['api_enabled']= $request->boolean('api_enabled');
         $data['is_default'] = $request->boolean('is_default');
+
+        // Ignore credential fields unless the admin opted in; blank means "leave unchanged".
+        if (! $replace || blank($request->input('api_key')))    unset($data['api_key']);
+        if (! $replace || blank($request->input('api_secret'))) unset($data['api_secret']);
 
         if ($data['is_default']) {
             Courier::where('id', '!=', $courier->id)->where('is_default', true)->update(['is_default' => false]);
