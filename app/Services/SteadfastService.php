@@ -259,6 +259,11 @@ class SteadfastService
             $message = 'Steadfast API host resolve করা যাচ্ছে না। Base URL, server DNS অথবা hosting outbound connection check করুন।';
         } elseif (preg_match('/timed out|timeout|operation timed out|curl error 28/i', $raw)) {
             $message = 'Steadfast সার্ভারে সংযোগ টাইমআউট হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।';
+        } elseif (preg_match('/subject (alt(ernative)? )?name|subject name|does ?n[\'o]t match|host ?name mismatch|curl error 51/i', $raw)) {
+            // SSL handshake succeeded but the cert does not cover this hostname.
+            // (e.g. "SSL: no alternative certificate subject name matches target host name")
+            // Do NOT disable SSL verification — this is a domain/SNI/hosting issue.
+            $message = 'Steadfast API SSL certificate host mismatch. Base URL/domain Steadfast support থেকে confirm করুন অথবা hosting SSL/SNI issue check করুন।';
         } elseif (preg_match('/ssl|certificate|curl error 60|curl error 35/i', $raw)) {
             $message = 'Steadfast সার্ভারের সাথে নিরাপদ (SSL) সংযোগ করা যায়নি। সার্ভারের SSL/CA সেটিং check করুন।';
         } elseif (preg_match('/connection refused|could not connect|failed to connect|curl error 7/i', $raw)) {

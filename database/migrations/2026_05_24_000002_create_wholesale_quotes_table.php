@@ -28,7 +28,7 @@ return new class extends Migration
 
             // Status: pending=awaiting admin approval, approved=customer can see,
             //         accepted=customer accepted, rejected=rejected, expired=past valid_until
-            $table->string('status')->default('pending');
+            $table->string('status', 50)->default('pending');
 
             // Admin approval gate
             $table->boolean('admin_approved')->default(false);

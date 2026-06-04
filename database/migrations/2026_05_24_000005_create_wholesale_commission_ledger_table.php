@@ -28,7 +28,7 @@ return new class extends Migration
             $table->string('cod_collected_by')->nullable();
 
             // Admin settlement
-            $table->string('settlement_status')->default('pending'); // pending | settled
+            $table->string('settlement_status', 50)->default('pending'); // pending | settled
             $table->timestamp('settled_at')->nullable();
             $table->foreignId('settled_by')->nullable()->constrained('users')->nullOnDelete();
             $table->text('admin_note')->nullable();

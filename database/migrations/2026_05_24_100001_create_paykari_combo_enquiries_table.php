@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('business_type'); // shop/restaurant/dealer/retailer/other
             $table->text('message')->nullable();
 
-            $table->string('status')->default('pending');
+            $table->string('status', 50)->default('pending');
             // pending → quoted → accepted → completed | rejected | cancelled
 
             $table->text('admin_note')->nullable();

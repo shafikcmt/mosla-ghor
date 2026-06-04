@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
 
             // scope: global | vendor | category
-            $table->string('scope')->default('global');
+            $table->string('scope', 50)->default('global');
             // scope_id = vendor_id when scope=vendor; null for global
             $table->unsignedBigInteger('scope_id')->nullable();
 

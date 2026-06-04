@@ -26,7 +26,7 @@ return new class extends Migration
             $table->text('note')->nullable();
             $table->date('valid_until')->nullable();
 
-            $table->string('status')->default('pending'); // pending/approved/rejected
+            $table->string('status', 50)->default('pending'); // pending/approved/rejected
             $table->boolean('admin_approved')->default(false);
             $table->text('admin_note')->nullable();
             $table->string('customer_response')->nullable(); // accepted/declined
