@@ -490,9 +490,18 @@ $productsForJs = $products->map(function ($p) {
                         @endforeach
                     </div>
 
+                    {{-- Wholesale CTA (hidden in retail mode) --}}
+                    <div id="card-wholesale-ui-{{ $product->id }}" style="display:none;" class="mt-3">
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                            <p class="text-amber-800 font-semibold text-xs">পাইকারি মূল্য জানতে enquiry পাঠান</p>
+                            <p class="text-gray-500 text-[11px] mt-0.5 leading-relaxed">Wholesale price available on request. Bulk quantity অনুযায়ী price change হতে পারে।</p>
+                        </div>
+                    </div>
+
                     <div class="flex-1 min-h-3"></div>
 
-                    <div class="mt-4 flex gap-2">
+                    {{-- Retail mode buttons --}}
+                    <div id="card-retail-btns-{{ $product->id }}" class="mt-4 flex gap-2">
                         <button onclick="openModal({{ $product->id }})"
                                 class="flex-1 bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
                             বিস্তারিত দেখুন
@@ -500,6 +509,18 @@ $productsForJs = $products->map(function ($p) {
                         <button onclick="goToCombo({{ $product->id }})"
                                 class="flex-1 border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] py-2.5 rounded-xl text-sm font-semibold transition-colors">
                             কম্বো
+                        </button>
+                    </div>
+
+                    {{-- Wholesale mode buttons (hidden in retail mode) --}}
+                    <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4 space-y-2">
+                        <button onclick="openWholesaleEnquiry({{ $product->id }}, false)"
+                                class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2.5 rounded-xl text-xs font-semibold transition-colors shadow-sm">
+                            Send Enquiry / দাম জানুন
+                        </button>
+                        <button onclick="openWholesaleEnquiry({{ $product->id }}, true)"
+                                class="w-full border border-amber-600 text-amber-700 hover:bg-amber-600 hover:text-white py-2 rounded-xl text-xs font-semibold transition-colors">
+                            Contact Supplier
                         </button>
                     </div>
                 </div>
@@ -658,18 +679,33 @@ $productsForJs = $products->map(function ($p) {
 <section id="combo-builder" class="py-16 md:py-20 px-5 bg-[#f6fdf8]">
     <div class="max-w-7xl mx-auto">
 
-        {{-- Header --}}
-        <div class="text-center mb-10">
+        {{-- Section Label + Combo Mode Tabs --}}
+        <div class="text-center mb-8">
             <div class="flex items-center justify-center gap-4 mb-3">
                 <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
                 <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">Build Your Own</span>
                 <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
             </div>
-            <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">নিজের কম্বো বানান</h2>
-            <p class="text-gray-400 text-sm mt-2 max-w-md mx-auto leading-relaxed">
-                আপনার পছন্দের মশলা বেছে নিন, পরিমাণ ঠিক করুন — আমরা পৌঁছে দেব।
-            </p>
+            <div class="inline-flex bg-white rounded-xl border border-green-200 overflow-hidden shadow-sm mt-4">
+                <button id="combo-tab-retail" onclick="switchComboTab('retail')"
+                        class="px-6 py-2.5 text-sm font-semibold transition-colors bg-[#14532d] text-[#c9a227]">
+                    Retail Combo
+                </button>
+                <button id="combo-tab-paykari" onclick="switchComboTab('paykari')"
+                        class="px-6 py-2.5 text-sm font-semibold transition-colors text-gray-600 hover:bg-amber-50">
+                    পাইকারি Combo
+                </button>
+            </div>
         </div>
+
+        {{-- ══════════  RETAIL COMBO  ══════════ --}}
+        <div id="combo-retail-section">
+            <div class="text-center mb-8">
+                <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">নিজের কম্বো বানান</h2>
+                <p class="text-gray-400 text-sm mt-2 max-w-md mx-auto leading-relaxed">
+                    আপনার পছন্দের মশলা বেছে নিন, পরিমাণ ঠিক করুন — আমরা পৌঁছে দেব।
+                </p>
+            </div>
 
         <div class="flex flex-col lg:flex-row gap-8 items-start">
 
@@ -804,6 +840,98 @@ $productsForJs = $products->map(function ($p) {
             </div>
 
         </div>
+        </div>{{-- /combo-retail-section --}}
+
+        {{-- ══════════  PAYKARI COMBO  ══════════ --}}
+        <div id="combo-paykari-section" style="display:none;">
+            <div class="text-center mb-8">
+                <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">পাইকারি কম্বো তৈরি করুন</h2>
+                <p class="text-gray-500 text-sm mt-2 max-w-lg mx-auto leading-relaxed">
+                    আপনার প্রয়োজন অনুযায়ী একাধিক মসলা ও quantity নির্বাচন করুন। MoslaMart আপনাকে best wholesale quote পাঠাবে।
+                </p>
+                <p class="text-amber-700 text-xs mt-2 bg-amber-50 inline-block px-4 py-1.5 rounded-full border border-amber-200">
+                    Wholesale price available on request. Quantity অনুযায়ী price change হতে পারে।
+                </p>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-8 items-start">
+
+                {{-- Paykari Product Picker --}}
+                <div class="flex-1 min-w-0">
+                    <div class="space-y-2.5">
+                    @foreach($products as $product)
+                    @if($product->activePrices->isNotEmpty() || $product->activeVariants->isNotEmpty())
+                    <div id="paykari-row-{{ $product->id }}"
+                         class="bg-white border border-amber-100 rounded-xl p-3 sm:p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 shadow-sm">
+                        {{-- Avatar --}}
+                        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center flex-shrink-0 shadow">
+                            <span class="text-white font-serif-bn font-bold text-lg">{{ mb_substr($product->name_bn, 0, 1) }}</span>
+                        </div>
+                        {{-- Name --}}
+                        <div class="flex-1 min-w-0">
+                            <div class="font-serif-bn text-[#14532d] font-bold text-sm sm:text-base leading-tight">{{ $product->name_bn }}</div>
+                            <div class="text-gray-400 text-[11px] uppercase tracking-wider">{{ $product->name_en }}</div>
+                        </div>
+                        {{-- KG Input --}}
+                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <input type="number"
+                                   id="paykari-qty-{{ $product->id }}"
+                                   value="1" min="1" max="9999" step="1"
+                                   class="border border-amber-200 rounded-xl px-3 py-2 text-sm text-[#14532d] font-semibold w-20 focus:outline-none focus:ring-2 focus:ring-amber-400 text-center bg-white">
+                            <span class="text-gray-500 text-xs font-medium">kg</span>
+                        </div>
+                        {{-- Add button --}}
+                        <button id="paykari-btn-{{ $product->id }}"
+                                onclick="addToPaykari({{ $product->id }})"
+                                class="flex-shrink-0 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm whitespace-nowrap w-full sm:w-auto">
+                            + Enquiry তে যোগ করুন
+                        </button>
+                    </div>
+                    @endif
+                    @endforeach
+                    </div>
+                </div>
+
+                {{-- Paykari Enquiry Basket --}}
+                <div class="w-full lg:w-80 xl:w-96 flex-shrink-0 lg:sticky lg:top-24">
+                    <div class="rounded-2xl shadow-xl overflow-hidden border border-amber-700">
+                        {{-- Header --}}
+                        <div class="bg-amber-700 px-5 py-4 flex items-center justify-between">
+                            <h3 class="font-serif-bn text-white text-lg font-bold">পাইকারি Enquiry তালিকা</h3>
+                            <span id="paykari-count-badge"
+                                  class="bg-white text-amber-700 text-xs font-bold px-2.5 py-1 rounded-full"
+                                  style="display:none;">0</span>
+                        </div>
+                        {{-- Items area --}}
+                        <div class="bg-amber-800 px-5 py-3 min-h-[110px] max-h-[300px] overflow-y-auto" id="paykari-items-wrap">
+                            <div id="paykari-empty" class="flex flex-col items-center justify-center py-5 text-center">
+                                <span class="text-3xl mb-2">📦</span>
+                                <p class="text-amber-300 text-sm">এখনো কোনো পণ্য যোগ করেননি।</p>
+                                <p class="text-amber-700 text-xs mt-1">বাম দিক থেকে পণ্য বেছে নিন।</p>
+                            </div>
+                            <div id="paykari-list"></div>
+                        </div>
+                        {{-- No-price note --}}
+                        <div class="bg-amber-900 px-5 py-3 text-amber-300 text-xs text-center leading-relaxed border-t border-amber-700">
+                            কোনো price দেখানো হচ্ছে না।<br>Vendor থেকে quote পাওয়ার পরে price জানানো হবে।
+                        </div>
+                        {{-- CTA --}}
+                        <div class="bg-amber-900 px-5 pb-5 pt-3">
+                            <button type="button" id="paykari-enquiry-btn"
+                                    onclick="openPaykariEnquiryForm()"
+                                    class="w-full bg-amber-500 text-white font-bold py-3 rounded-xl text-sm shadow-lg opacity-40 cursor-not-allowed pointer-events-none transition-all">
+                                Bulk Combo Enquiry পাঠান
+                            </button>
+                            <p class="text-amber-700 text-[10px] text-center mt-2 leading-relaxed">
+                                পণ্য যোগ করুন · তারপর enquiry পাঠান
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>{{-- /combo-paykari-section --}}
+
     </div>
 </section>
 
@@ -1016,6 +1144,136 @@ $productsForJs = $products->map(function ($p) {
     </div>
 </footer>
 
+{{-- ━━━━━━━━━━━━━━━━  PAYKARI COMBO ENQUIRY MODAL  ━━━━━━━━━━━━━━━━ --}}
+<div id="paykari-enq-overlay" class="fixed inset-0 z-[130] bg-black/75" style="display:none;"></div>
+<div id="paykari-enq-wrapper" class="fixed inset-0 z-[131] overflow-y-auto" style="display:none;">
+    <div class="flex min-h-full items-start justify-center p-4 py-8">
+        <div class="modal-enter relative bg-[#fef9ee] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+
+            {{-- Header --}}
+            <div class="bg-amber-700 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h2 class="font-serif-bn text-white text-xl font-bold">পাইকারি কম্বো Enquiry</h2>
+                    <p class="text-amber-200 text-xs mt-0.5">Bulk Combo Wholesale Enquiry</p>
+                </div>
+                <button onclick="closePaykariEnquiryForm()"
+                        class="w-8 h-8 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center text-xl leading-none transition-colors">&times;</button>
+            </div>
+
+            {{-- Selected items preview --}}
+            <div class="bg-amber-50 px-6 py-4 border-b border-amber-100">
+                <h4 class="text-amber-800 text-[11px] font-bold uppercase tracking-wider mb-2">নির্বাচিত পণ্যসমূহ</h4>
+                <div id="paykari-form-items-preview" class="space-y-1 text-sm max-h-32 overflow-y-auto"></div>
+            </div>
+
+            @auth
+            @if(Auth::user()->role === 'customer')
+            {{-- Logged-in customer form --}}
+            <form id="paykari-enquiry-form"
+                  action="{{ route('customer.paykari-combo.store') }}"
+                  method="POST">
+                @csrf
+                <div id="paykari-form-items-hidden"></div>
+
+                <div class="px-6 py-5 space-y-4">
+
+                    <div>
+                        <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
+                            ডেলিভারি লোকেশন <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" name="delivery_location"
+                               placeholder="বিভাগ, জেলা, উপজেলা / শহর..."
+                               class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
+                    </div>
+
+                    <div>
+                        <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
+                            ব্যবসার ধরন <span class="text-red-400">*</span>
+                        </label>
+                        <select name="business_type"
+                                class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
+                            <option value="">— বেছে নিন —</option>
+                            <option value="shop">শপ / দোকান</option>
+                            <option value="restaurant">রেস্তোরাঁ</option>
+                            <option value="dealer">ডিলার</option>
+                            <option value="retailer">রিটেইলার</option>
+                            <option value="other">অন্যান্য</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
+                                নাম <span class="text-red-400">*</span>
+                            </label>
+                            <input type="text" name="customer_name"
+                                   value="{{ Auth::user()->name }}"
+                                   class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
+                                ফোন / WhatsApp <span class="text-red-400">*</span>
+                            </label>
+                            <input type="tel" name="customer_phone"
+                                   value="{{ Auth::user()->phone }}"
+                                   class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
+                            WhatsApp নম্বর <span class="text-gray-400 text-xs font-normal">(ঐচ্ছিক — যদি আলাদা হয়)</span>
+                        </label>
+                        <input type="tel" name="customer_whatsapp"
+                               placeholder="01XXXXXXXXX"
+                               class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
+                    </div>
+
+                    <div>
+                        <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
+                            বার্তা / বিশেষ প্রয়োজনীয়তা <span class="text-gray-400 text-xs font-normal">(ঐচ্ছিক)</span>
+                        </label>
+                        <textarea name="message" rows="2"
+                                  placeholder="delivery সময়, পরিমাণ বিস্তারিত, বিশেষ প্রয়োজনীয়তা..."
+                                  class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white resize-none"></textarea>
+                    </div>
+
+                    <button type="submit"
+                            class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl text-sm shadow-lg transition-colors">
+                        Enquiry পাঠান →
+                    </button>
+                    <p class="text-gray-400 text-[10px] text-center leading-relaxed">
+                        Enquiry submit করার পরে MoslaMart team / supplier আপনাকে quote পাঠাবে।
+                    </p>
+                </div>
+            </form>
+            @else
+            <div class="px-6 py-8 text-center">
+                <p class="text-gray-600 mb-1 text-sm">পাইকারি enquiry submit করতে customer account-এ login করুন।</p>
+                <a href="{{ route('customer.login') }}"
+                   class="inline-block mt-4 bg-amber-600 text-white font-semibold px-8 py-2.5 rounded-xl text-sm hover:bg-amber-700 transition-colors">
+                    Login করুন
+                </a>
+            </div>
+            @endif
+            @else
+            <div class="px-6 py-8 text-center">
+                <p class="text-gray-600 text-sm mb-1">পাইকারি enquiry submit করতে login করুন।</p>
+                <p class="text-gray-400 text-xs mb-4">
+                    account নেই?
+                    <a href="{{ route('customer.register') }}" class="text-amber-600 font-semibold hover:underline">Register করুন</a>
+                </p>
+                <a href="{{ route('customer.login') }}"
+                   class="inline-block bg-amber-600 text-white font-semibold px-8 py-2.5 rounded-xl text-sm hover:bg-amber-700 transition-colors">
+                    Login করুন
+                </a>
+            </div>
+            @endauth
+
+        </div>
+    </div>
+</div>
+
 {{-- ━━━━━━━━━━━━━━━━  PRODUCT MODAL  ━━━━━━━━━━━━━━━━ --}}
 
 {{-- Backdrop --}}
@@ -1124,7 +1382,7 @@ $productsForJs = $products->map(function ($p) {
                 </div>
 
                 {{-- Quantity selector --}}
-                <div class="mt-5">
+                <div class="mt-5" id="modal-qty-section">
                     <h4 class="text-[#14532d] text-sm font-semibold mb-2 flex items-center gap-2">
                         পরিমাণ বেছে নিন
                         <span class="flex-1 h-px bg-green-100 inline-block"></span>
@@ -1141,8 +1399,8 @@ $productsForJs = $products->map(function ($p) {
                     </div>
                 </div>
 
-                {{-- Action buttons --}}
-                <div class="flex gap-3 mt-6">
+                {{-- Retail action buttons --}}
+                <div id="modal-retail-actions" class="flex gap-3 mt-6">
                     <button onclick="addToComboFromModal()"
                             class="flex-1 border-2 border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] py-3 rounded-xl text-sm font-bold transition-colors">
                         + কম্বোতে যোগ করুন
@@ -1151,6 +1409,29 @@ $productsForJs = $products->map(function ($p) {
                             class="flex-1 bg-[#14532d] hover:bg-[#166534] text-[#fef9ee] py-3 rounded-xl text-sm font-bold transition-colors shadow">
                         এখনই অর্ডার করুন →
                     </button>
+                </div>
+
+                {{-- Wholesale enquiry section (hidden in retail mode) --}}
+                <div id="modal-wholesale-section" style="display:none;" class="mt-5">
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                        <p class="text-amber-800 font-semibold text-sm text-center">পাইকারি মূল্য অনুরোধে জানানো হবে</p>
+                        <p class="text-gray-500 text-xs mt-1 text-center leading-relaxed">
+                            Wholesale price available on request. Bulk quantity অনুযায়ী price change হতে পারে।
+                        </p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="openWholesaleEnquiry(currentId, false)"
+                                class="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl text-sm font-bold transition-colors shadow">
+                            Send Enquiry / দাম জানুন
+                        </button>
+                        <button onclick="openWholesaleEnquiry(currentId, true)"
+                                class="flex-1 border-2 border-amber-600 text-amber-700 hover:bg-amber-600 hover:text-white py-3 rounded-xl text-sm font-bold transition-colors">
+                            Contact Supplier
+                        </button>
+                    </div>
+                    <div class="mt-3 bg-green-50 border border-green-200 rounded-xl p-3 text-xs text-green-800 leading-relaxed text-center">
+                        আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য MoslaMart-এর ভিতরেই supplier-এর সাথে chat এবং order process complete করুন।
+                    </div>
                 </div>
             </div>
         </div>
@@ -1512,6 +1793,139 @@ $productsForJs = $products->map(function ($p) {
          style="max-height:90vh; max-width:90vw;">
 </div>
 
+{{-- ━━━━━━━━━━━━━━━━  WHOLESALE ENQUIRY MODAL  ━━━━━━━━━━━━━━━━ --}}
+<div id="enq-overlay" class="fixed inset-0 z-[150] bg-black/70" style="display:none;"></div>
+<div id="enq-wrapper" class="fixed inset-0 z-[151] overflow-y-auto" style="display:none;">
+    <div class="flex min-h-full items-start sm:items-center justify-center p-4 py-8">
+        <div class="modal-enter relative bg-[#fef9ee] rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+
+            {{-- Header --}}
+            <div class="bg-amber-700 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h2 class="font-serif-bn text-white text-xl font-bold">পাইকারি Enquiry</h2>
+                    <p class="text-amber-200 text-xs mt-0.5">Get Latest Price / Contact Supplier</p>
+                </div>
+                <button onclick="closeEnquiry()"
+                        class="w-8 h-8 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center text-xl leading-none transition-colors">&times;</button>
+            </div>
+
+            {{-- Safety notice --}}
+            <div class="bg-green-50 border-b border-green-200 px-6 py-3">
+                <p class="text-green-800 text-xs leading-relaxed text-center">
+                    আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য MoslaMart-এর ভিতরেই supplier-এর সাথে chat এবং order process complete করুন।
+                </p>
+            </div>
+
+            {{-- Product info --}}
+            <div class="px-6 py-3 bg-amber-50 border-b border-amber-100">
+                <p class="text-amber-900 font-semibold text-sm">পণ্য: <span id="enq-product-name-disp" class="text-[#14532d]"></span></p>
+            </div>
+
+            {{-- Always-present hidden inputs so JS never crashes --}}
+            <input type="hidden" id="enq-product-id" value="">
+            <input type="hidden" id="enq-redirect-chat" value="0">
+
+            @php $isLoggedIn = Auth::check() && Auth::user()->role === 'customer'; @endphp
+            @if(!$isLoggedIn)
+            <div class="px-6 py-4 text-center">
+                <p class="text-gray-700 text-sm mb-3">Enquiry পাঠাতে প্রথমে লগইন বা রেজিস্ট্রেশন করুন।</p>
+                <div class="flex gap-3 justify-center">
+                    <a href="{{ route('customer.login') }}" id="enq-login-link"
+                       class="bg-[#14532d] text-white font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-[#166534] transition-colors">
+                        লগইন করুন
+                    </a>
+                    <a href="{{ route('customer.register') }}"
+                       class="border-2 border-[#14532d] text-[#14532d] font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-[#14532d] hover:text-white transition-colors">
+                        রেজিস্ট্রেশন
+                    </a>
+                </div>
+            </div>
+            @else
+            {{-- Enquiry form --}}
+            <form id="enq-form" action="{{ route('customer.wholesale.enquiry.store') }}" method="POST">
+                @csrf
+                <input type="hidden" name="product_id" id="enq-form-product-id">
+                <input type="hidden" name="redirect_to_chat" id="enq-form-redirect-chat" value="0">
+
+                <div class="px-6 py-5 space-y-4">
+
+                    {{-- Quantity --}}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">পরিমাণ (kg) <span class="text-red-400">*</span></label>
+                            <input type="number" name="quantity_kg" min="1" step="0.5"
+                                   placeholder="যেমন: 10, 50, 100"
+                                   class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">ব্যবসার ধরন <span class="text-red-400">*</span></label>
+                            <select name="business_type"
+                                    class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white">
+                                <option value="">— বেছে নিন —</option>
+                                <option value="shop">শপ / দোকান</option>
+                                <option value="restaurant">রেস্তোরাঁ</option>
+                                <option value="dealer">ডিলার</option>
+                                <option value="retailer">রিটেইলার</option>
+                                <option value="other">অন্যান্য</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {{-- Delivery location --}}
+                    <div>
+                        <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">ডেলিভারি লোকেশন <span class="text-red-400">*</span></label>
+                        <input type="text" name="delivery_location"
+                               placeholder="জেলা / উপজেলা / এলাকার নাম"
+                               class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white">
+                    </div>
+
+                    {{-- Name & Phone --}}
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">আপনার নাম <span class="text-red-400">*</span></label>
+                            <input type="text" name="customer_name"
+                                   value="{{ $navCustomer?->name ?? '' }}"
+                                   placeholder="পূর্ণ নাম"
+                                   class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">ফোন / WhatsApp <span class="text-red-400">*</span></label>
+                            <input type="text" name="customer_phone"
+                                   value="{{ $navCustomer?->mobile_number ?? '' }}"
+                                   placeholder="01XXXXXXXXX"
+                                   class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white">
+                        </div>
+                    </div>
+
+                    {{-- Message --}}
+                    <div>
+                        <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">বার্তা / বিশেষ চাহিদা</label>
+                        <textarea name="message" rows="3"
+                                  placeholder="পণ্যের গ্রেড, প্যাকেজিং, বা অন্য কোনো বিশেষ চাহিদা জানান..."
+                                  class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white resize-none"></textarea>
+                    </div>
+
+                    @if ($errors->any())
+                    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs">
+                        @foreach($errors->all() as $e)<p>{{ $e }}</p>@endforeach
+                    </div>
+                    @endif
+
+                    <button type="submit"
+                            class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3.5 rounded-xl text-base shadow-lg transition-colors">
+                        Enquiry পাঠান →
+                    </button>
+
+                    <p class="text-gray-400 text-[10px] text-center">
+                        Enquiry পাওয়ার পরে MoslaMart থেকে supplier-এর quote আপনার account-এ পাঠানো হবে।
+                    </p>
+                </div>
+            </form>
+            @endif
+        </div>
+    </div>
+</div>
+
 {{-- ━━━━━━━━━━━━━━━━  MOBILE COMBO BAR  ━━━━━━━━━━━━━━━━ --}}
 <div id="combo-bar" class="fixed bottom-0 inset-x-0 z-50 lg:hidden" style="display:none;">
     <div class="bg-[#14532d] border-t-2 border-[#c9a227] px-4 py-3 shadow-2xl">
@@ -1638,20 +2052,37 @@ function setTab(tab) {
 }
 
 function refreshCardsForTab() {
+    const isWholesale = activeTab === 'wholesale';
     Object.values(PRODUCTS).forEach(function(p) {
-        const prices = activeTabPrices(p);
-        const fp   = document.getElementById('card-from-' + p.id);
-        const wrap = document.getElementById('card-price-wrap-' + p.id);
-        const cc   = document.getElementById('card-chips-' + p.id);
-        if (wrap) wrap.style.display = prices.length ? '' : 'none';
-        if (fp)   fp.textContent = prices.length ? '৳' + fmt(prices[0].final_price) : '';
-        if (cc)   cc.innerHTML = prices.map(function(pr) {
-            return '<div class="p-chip p-1.5 text-center">' +
-                '<div class="chip-lbl text-gray-400 text-[10px] leading-tight">' + pr.label + '</div>' +
-                '<div class="chip-val text-[#14532d] text-[13px] font-semibold leading-tight mt-0.5">৳' + fmt(pr.final_price) + '</div>' +
-                (pr.is_manual_override ? '<div style="color:#c9a227;font-size:9px;">★</div>' : '') +
-                '</div>';
-        }).join('');
+        const prices     = activeTabPrices(p);
+        const fp         = document.getElementById('card-from-' + p.id);
+        const wrap       = document.getElementById('card-price-wrap-' + p.id);
+        const cc         = document.getElementById('card-chips-' + p.id);
+        const wUI        = document.getElementById('card-wholesale-ui-' + p.id);
+        const retailBtns = document.getElementById('card-retail-btns-' + p.id);
+        const wholeBtns  = document.getElementById('card-wholesale-btns-' + p.id);
+
+        if (isWholesale) {
+            if (wrap)       wrap.style.display       = 'none';
+            if (cc)         cc.style.display          = 'none';
+            if (wUI)        wUI.style.display         = '';
+            if (retailBtns) retailBtns.style.display  = 'none';
+            if (wholeBtns)  wholeBtns.style.display   = '';
+        } else {
+            if (wrap) wrap.style.display = prices.length ? '' : 'none';
+            if (cc)   cc.style.display   = '';
+            if (fp)   fp.textContent = prices.length ? '৳' + fmt(prices[0].final_price) : '';
+            if (cc)   cc.innerHTML = prices.map(function(pr) {
+                return '<div class="p-chip p-1.5 text-center">' +
+                    '<div class="chip-lbl text-gray-400 text-[10px] leading-tight">' + pr.label + '</div>' +
+                    '<div class="chip-val text-[#14532d] text-[13px] font-semibold leading-tight mt-0.5">৳' + fmt(pr.final_price) + '</div>' +
+                    (pr.is_manual_override ? '<div style="color:#c9a227;font-size:9px;">★</div>' : '') +
+                    '</div>';
+            }).join('');
+            if (wUI)        wUI.style.display         = 'none';
+            if (retailBtns) retailBtns.style.display  = '';
+            if (wholeBtns)  wholeBtns.style.display   = 'none';
+        }
     });
 }
 
@@ -1707,8 +2138,197 @@ function refreshCombosForTab() {
     }
 }
 
+// ── Wholesale Enquiry Modal ───────────────────────────────────────────────
+let enquiryProductId = null;
+
+function openWholesaleEnquiry(productId, goToChat) {
+    const p = PRODUCTS[productId];
+    if (!p) return;
+    enquiryProductId = productId;
+
+    // Sync the always-present hidden inputs
+    const pidEl  = document.getElementById('enq-product-id');
+    const chatEl = document.getElementById('enq-redirect-chat');
+    if (pidEl)  pidEl.value  = productId;
+    if (chatEl) chatEl.value = goToChat ? '1' : '0';
+
+    // Sync the form inputs (only exist when logged in)
+    const formPid  = document.getElementById('enq-form-product-id');
+    const formChat = document.getElementById('enq-form-redirect-chat');
+    if (formPid)  formPid.value  = productId;
+    if (formChat) formChat.value = goToChat ? '1' : '0';
+
+    const nameEl = document.getElementById('enq-product-name-disp');
+    if (nameEl) nameEl.textContent = p.name_bn + (p.name_en ? ' / ' + p.name_en : '');
+
+    // Close product-detail modal if open
+    closeModal();
+
+    const overlay = document.getElementById('enq-overlay');
+    const wrapper = document.getElementById('enq-wrapper');
+    if (overlay) overlay.style.display = 'block';
+    if (wrapper) wrapper.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeEnquiry() {
+    const overlay = document.getElementById('enq-overlay');
+    const wrapper = document.getElementById('enq-wrapper');
+    if (overlay) overlay.style.display = 'none';
+    if (wrapper) wrapper.style.display = 'none';
+    document.body.style.overflow = '';
+    enquiryProductId = null;
+}
+
 // Restore saved tab
 try { const saved = localStorage.getItem('mstab'); if (saved === 'wholesale') setTab('wholesale'); } catch(e) {}
+
+// ── Combo Builder Mode (Retail / Paykari) ─────────────────────────────────
+function switchComboTab(tab) {
+    const retailSection  = document.getElementById('combo-retail-section');
+    const paykariSection = document.getElementById('combo-paykari-section');
+    const retailTab      = document.getElementById('combo-tab-retail');
+    const paykariTab     = document.getElementById('combo-tab-paykari');
+    if (!retailSection || !paykariSection) return;
+
+    if (tab === 'retail') {
+        retailSection.style.display  = '';
+        paykariSection.style.display = 'none';
+        retailTab.className  = 'px-6 py-2.5 text-sm font-semibold transition-colors bg-[#14532d] text-[#c9a227]';
+        paykariTab.className = 'px-6 py-2.5 text-sm font-semibold transition-colors text-gray-600 hover:bg-amber-50';
+    } else {
+        retailSection.style.display  = 'none';
+        paykariSection.style.display = '';
+        paykariTab.className = 'px-6 py-2.5 text-sm font-semibold transition-colors bg-amber-700 text-white';
+        retailTab.className  = 'px-6 py-2.5 text-sm font-semibold transition-colors text-gray-600 hover:bg-gray-50';
+    }
+    try { localStorage.setItem('msComboTab', tab); } catch(e) {}
+}
+
+// ── Paykari Combo Builder ────────────────────────────────────────────────
+let paykariItems = [];
+let paykariUid   = 0;
+
+function addToPaykari(productId) {
+    const p = PRODUCTS[productId];
+    if (!p) return;
+    const qtyEl = document.getElementById('paykari-qty-' + productId);
+    const qty   = qtyEl ? parseFloat(qtyEl.value) : 1;
+    if (!qty || qty <= 0) return;
+
+    // Duplicate → update qty and flash
+    const dup = paykariItems.find(x => x.productId === productId);
+    if (dup) {
+        dup.quantityKg = qty;
+        renderPaykariBasket();
+        flashPaykariItem(dup.uid);
+        return;
+    }
+
+    paykariUid++;
+    paykariItems.push({ uid: paykariUid, productId, nameBn: p.name_bn, nameEn: p.name_en, quantityKg: qty });
+
+    const btn = document.getElementById('paykari-btn-' + productId);
+    if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = '✓ যোগ হয়েছে';
+        btn.style.background = '#92400e';
+        setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1400);
+    }
+    renderPaykariBasket();
+}
+
+function removeFromPaykari(uid) {
+    paykariItems = paykariItems.filter(x => x.uid !== uid);
+    renderPaykariBasket();
+}
+
+function editPaykariQty(uid, val) {
+    const item = paykariItems.find(x => x.uid === uid);
+    if (item && parseFloat(val) > 0) item.quantityKg = parseFloat(val);
+}
+
+function flashPaykariItem(uid) {
+    const el = document.getElementById('pitem-' + uid);
+    if (!el) return;
+    el.style.transition = 'background .15s';
+    el.style.background = 'rgba(251,191,36,.3)';
+    setTimeout(() => { el.style.background = ''; }, 900);
+}
+
+function renderPaykariBasket() {
+    const listEl  = document.getElementById('paykari-list');
+    const emptyEl = document.getElementById('paykari-empty');
+    const badgeEl = document.getElementById('paykari-count-badge');
+    const btnEl   = document.getElementById('paykari-enquiry-btn');
+    if (!listEl) return;
+
+    const n = paykariItems.length;
+
+    if (n === 0) {
+        if (emptyEl) emptyEl.style.display = '';
+        listEl.innerHTML = '';
+        if (badgeEl) { badgeEl.style.display = 'none'; badgeEl.textContent = '0'; }
+        if (btnEl) { btnEl.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none'); }
+        return;
+    }
+
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (badgeEl) { badgeEl.style.display = ''; badgeEl.textContent = n; }
+    if (btnEl)   { btnEl.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none'); }
+
+    listEl.innerHTML = paykariItems.map(item => `
+        <div id="pitem-${item.uid}" class="flex items-center justify-between py-2 border-b border-amber-700 last:border-0">
+            <div class="flex-1 min-w-0 mr-2">
+                <span class="font-serif-bn text-white text-sm font-semibold">${item.nameBn || ''}</span>
+                ${item.nameEn ? '<span class="text-amber-400 text-xs ml-1">/ ' + item.nameEn + '</span>' : ''}
+            </div>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+                <input type="number" value="${item.quantityKg}" min="1" step="1"
+                       onchange="editPaykariQty(${item.uid}, this.value)"
+                       class="w-14 text-center text-xs border border-amber-600 rounded-lg bg-amber-900 text-amber-200 py-1 focus:outline-none">
+                <span class="text-amber-400 text-xs">kg</span>
+                <button onclick="removeFromPaykari(${item.uid})"
+                        class="text-amber-500 hover:text-red-400 transition-colors text-xl leading-none ml-1 font-bold">&times;</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function openPaykariEnquiryForm() {
+    if (paykariItems.length === 0) return;
+
+    const preview = document.getElementById('paykari-form-items-preview');
+    if (preview) {
+        preview.innerHTML = paykariItems.map(item =>
+            `<div class="flex justify-between text-amber-800 py-0.5">
+                <span class="font-serif-bn font-semibold text-sm">${item.nameBn || ''}</span>
+                <span class="text-amber-600 font-medium text-sm">${item.quantityKg} kg</span>
+             </div>`
+        ).join('');
+    }
+
+    const hiddenContainer = document.getElementById('paykari-form-items-hidden');
+    if (hiddenContainer) {
+        hiddenContainer.innerHTML = paykariItems.map((item, i) =>
+            `<input type="hidden" name="items[${i}][product_id]" value="${item.productId}">
+             <input type="hidden" name="items[${i}][quantity_kg]" value="${item.quantityKg}">`
+        ).join('');
+    }
+
+    document.getElementById('paykari-enq-overlay').style.display = 'block';
+    document.getElementById('paykari-enq-wrapper').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+function closePaykariEnquiryForm() {
+    document.getElementById('paykari-enq-overlay').style.display = 'none';
+    document.getElementById('paykari-enq-wrapper').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+// Restore saved combo tab
+try { if (localStorage.getItem('msComboTab') === 'paykari') switchComboTab('paykari'); } catch(e) {}
 
 // ── Modal open/close ──────────────────────────────────────────────────────
 function openModal(id) {
@@ -1827,9 +2447,26 @@ function fillModal(p) {
         modalCurrentVariantId = null;
     }
 
-    // Prices grid
-    const prices = modalCurrentVariantId ? getVariantPrices(p, modalCurrentVariantId) : activeTabPrices(p);
-    rebuildModalPrices(prices);
+    // Prices grid + wholesale toggle
+    const isWholesale   = activeTab === 'wholesale';
+    const pricesSection = document.getElementById('modal-prices-grid')?.closest('.mt-5');
+    const qtySection    = document.getElementById('modal-qty-section');
+    const retailActions = document.getElementById('modal-retail-actions');
+    const wsSection     = document.getElementById('modal-wholesale-section');
+
+    if (isWholesale) {
+        if (pricesSection) pricesSection.style.display = 'none';
+        if (qtySection)    qtySection.style.display    = 'none';
+        if (retailActions) retailActions.style.display = 'none';
+        if (wsSection)     wsSection.style.display     = '';
+    } else {
+        if (pricesSection) pricesSection.style.display = '';
+        if (qtySection)    qtySection.style.display    = '';
+        if (retailActions) retailActions.style.display = '';
+        if (wsSection)     wsSection.style.display     = 'none';
+        const prices = modalCurrentVariantId ? getVariantPrices(p, modalCurrentVariantId) : activeTabPrices(p);
+        rebuildModalPrices(prices);
+    }
 }
 
 // ── Modal slideshow controls ───────────────────────────────────────────────

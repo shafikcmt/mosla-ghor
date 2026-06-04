@@ -41,6 +41,21 @@ use App\Http\Controllers\Admin\ReturnRequestController as AdminReturnRequestCont
 use App\Http\Controllers\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\Admin\VendorController as AdminVendorController;
 use App\Http\Controllers\Admin\VendorPayoutController as AdminVendorPayoutController;
+use App\Http\Controllers\Admin\WholesaleEnquiryController as AdminWholesaleEnquiryController;
+use App\Http\Controllers\Admin\WholesaleQuoteController as AdminWholesaleQuoteController;
+use App\Http\Controllers\Admin\WholesaleChatController as AdminWholesaleChatController;
+use App\Http\Controllers\Admin\WholesaleCommissionController as AdminWholesaleCommissionController;
+use App\Http\Controllers\Admin\VendorWalletController as AdminVendorWalletController;
+use App\Http\Controllers\Vendor\WholesaleEnquiryController as VendorWholesaleEnquiryController;
+use App\Http\Controllers\Vendor\WholesaleQuoteController as VendorWholesaleQuoteController;
+use App\Http\Controllers\Vendor\WholesaleChatController as VendorWholesaleChatController;
+use App\Http\Controllers\Vendor\WholesaleEarningsController as VendorWholesaleEarningsController;
+use App\Http\Controllers\Customer\WholesaleEnquiryController as CustomerWholesaleEnquiryController;
+use App\Http\Controllers\Customer\WholesaleQuoteController as CustomerWholesaleQuoteController;
+use App\Http\Controllers\Customer\WholesaleChatController as CustomerWholesaleChatController;
+use App\Http\Controllers\Customer\PaykariComboEnquiryController as CustomerPaykariComboEnquiryController;
+use App\Http\Controllers\Admin\PaykariComboEnquiryController as AdminPaykariComboEnquiryController;
+use App\Http\Controllers\Vendor\PaykariComboEnquiryController as VendorPaykariComboEnquiryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class);
@@ -84,6 +99,33 @@ Route::name('customer.')->group(function () {
         Route::get('/wishlist',                           [CustomerWishlistController::class, 'index'])->name('wishlist.index');
         Route::post('/wishlist/{product}',                [CustomerWishlistController::class, 'store'])->name('wishlist.store');
         Route::delete('/wishlist/{product}',              [CustomerWishlistController::class, 'destroy'])->name('wishlist.destroy');
+
+        // ── Paykari Combo Enquiry ──────────────────────────────────────────────
+        Route::prefix('paykari-combo')->name('paykari-combo.')->group(function () {
+            Route::get('/',                         [CustomerPaykariComboEnquiryController::class, 'index'])->name('index');
+            Route::post('/',                         [CustomerPaykariComboEnquiryController::class, 'store'])->name('store');
+            Route::get('/{enquiry}',                 [CustomerPaykariComboEnquiryController::class, 'show'])->name('show');
+            Route::patch('/{enquiry}/cancel',        [CustomerPaykariComboEnquiryController::class, 'cancel'])->name('cancel');
+            Route::post('/{enquiry}/accept-quote',   [CustomerPaykariComboEnquiryController::class, 'acceptQuote'])->name('accept-quote');
+            Route::post('/{enquiry}/decline-quote',  [CustomerPaykariComboEnquiryController::class, 'declineQuote'])->name('decline-quote');
+        });
+
+        // ── Wholesale enquiry ──────────────────────────────────────────────
+        Route::prefix('wholesale')->name('wholesale.')->group(function () {
+            Route::get('enquiries',                           [CustomerWholesaleEnquiryController::class, 'index'])->name('enquiry.index');
+            Route::post('enquiries',                          [CustomerWholesaleEnquiryController::class, 'store'])->name('enquiry.store');
+            Route::get('enquiries/{enquiry}',                 [CustomerWholesaleEnquiryController::class, 'show'])->name('enquiry.show');
+            Route::post('enquiries/{enquiry}/cancel',         [CustomerWholesaleEnquiryController::class, 'cancel'])->name('enquiry.cancel');
+
+            Route::get('quotes',                              [CustomerWholesaleQuoteController::class, 'index'])->name('quote.index');
+            Route::get('quotes/{quote}',                      [CustomerWholesaleQuoteController::class, 'show'])->name('quote.show');
+            Route::post('quotes/{quote}/accept',              [CustomerWholesaleQuoteController::class, 'accept'])->name('quote.accept');
+            Route::post('quotes/{quote}/reject',              [CustomerWholesaleQuoteController::class, 'reject'])->name('quote.reject');
+
+            Route::get('chat/{enquiry}',                      [CustomerWholesaleChatController::class, 'show'])->name('chat.show');
+            Route::post('chat/{enquiry}',                     [CustomerWholesaleChatController::class, 'store'])->name('chat.store');
+            Route::get('chat/{enquiry}/unread',               [CustomerWholesaleChatController::class, 'unread'])->name('chat.unread');
+        });
     });
 });
 
@@ -123,6 +165,32 @@ Route::prefix('vendor')->name('vendor.')->middleware('vendor')->group(function (
 
     Route::get('profile',  [VendorProfileController::class, 'index'])->name('profile.index');
     Route::put('profile',  [VendorProfileController::class, 'update'])->name('profile.update');
+
+    // ── Paykari Combo (Vendor) ─────────────────────────────────────────────
+    Route::prefix('paykari-combo')->name('paykari-combo.')->group(function () {
+        Route::get('/',                          [VendorPaykariComboEnquiryController::class, 'index'])->name('index');
+        Route::get('/{enquiry}',                  [VendorPaykariComboEnquiryController::class, 'show'])->name('show');
+        Route::get('/{enquiry}/quote',            [VendorPaykariComboEnquiryController::class, 'createQuote'])->name('quote');
+        Route::post('/{enquiry}/quote',           [VendorPaykariComboEnquiryController::class, 'storeQuote'])->name('quote.store');
+    });
+
+    // ── Wholesale ──────────────────────────────────────────────────────────
+    Route::prefix('wholesale')->name('wholesale.')->group(function () {
+        Route::get('enquiries',                            [VendorWholesaleEnquiryController::class, 'index'])->name('enquiry.index');
+        Route::get('enquiries/{enquiry}',                  [VendorWholesaleEnquiryController::class, 'show'])->name('enquiry.show');
+        Route::post('enquiries/{enquiry}/decline',         [VendorWholesaleEnquiryController::class, 'decline'])->name('enquiry.decline');
+
+        Route::get('enquiries/{enquiry}/quotes/create',    [VendorWholesaleQuoteController::class, 'create'])->name('quote.create');
+        Route::post('enquiries/{enquiry}/quotes',          [VendorWholesaleQuoteController::class, 'store'])->name('quote.store');
+        Route::get('quotes',                               [VendorWholesaleQuoteController::class, 'index'])->name('quote.index');
+        Route::get('quotes/{quote}',                       [VendorWholesaleQuoteController::class, 'show'])->name('quote.show');
+
+        Route::get('chat/{enquiry}',                       [VendorWholesaleChatController::class, 'show'])->name('chat.show');
+        Route::post('chat/{enquiry}',                      [VendorWholesaleChatController::class, 'store'])->name('chat.store');
+        Route::get('chat/{enquiry}/unread',                [VendorWholesaleChatController::class, 'unread'])->name('chat.unread');
+
+        Route::get('earnings',                             [VendorWholesaleEarningsController::class, 'index'])->name('earnings.index');
+    });
 });
 
 // ── Admin auth (public) ────────────────────────────────────────────────────
@@ -233,6 +301,48 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::post('/{vendorPayout}/approve',     [AdminVendorPayoutController::class, 'approve'])->name('approve');
         Route::post('/{vendorPayout}/mark-paid',   [AdminVendorPayoutController::class, 'markPaid'])->name('mark-paid');
         Route::post('/{vendorPayout}/reject',      [AdminVendorPayoutController::class, 'reject'])->name('reject');
+    });
+
+    // ── Paykari Combo (Admin) ─────────────────────────────────────────────
+    Route::prefix('paykari-combo')->name('paykari-combo.')->group(function () {
+        Route::get('/',                             [AdminPaykariComboEnquiryController::class, 'index'])->name('index');
+        Route::get('/{enquiry}',                     [AdminPaykariComboEnquiryController::class, 'show'])->name('show');
+        Route::patch('/{enquiry}/status',            [AdminPaykariComboEnquiryController::class, 'updateStatus'])->name('status');
+        Route::post('/quote/{quote}/approve',        [AdminPaykariComboEnquiryController::class, 'approveQuote'])->name('quote.approve');
+        Route::post('/quote/{quote}/reject',         [AdminPaykariComboEnquiryController::class, 'rejectQuote'])->name('quote.reject');
+    });
+
+    // ── Wholesale (Admin) ──────────────────────────────────────────────────
+    Route::prefix('wholesale')->name('wholesale.')->group(function () {
+        Route::get('enquiries',                   [AdminWholesaleEnquiryController::class, 'index'])->name('enquiry.index');
+        Route::get('enquiries/{enquiry}',          [AdminWholesaleEnquiryController::class, 'show'])->name('enquiry.show');
+        Route::post('enquiries/{enquiry}/status',  [AdminWholesaleEnquiryController::class, 'updateStatus'])->name('enquiry.status');
+
+        Route::get('quotes',                      [AdminWholesaleQuoteController::class, 'index'])->name('quote.index');
+        Route::get('quotes/{quote}',               [AdminWholesaleQuoteController::class, 'show'])->name('quote.show');
+        Route::post('quotes/{quote}/approve',      [AdminWholesaleQuoteController::class, 'approve'])->name('quote.approve');
+        Route::post('quotes/{quote}/reject',       [AdminWholesaleQuoteController::class, 'reject'])->name('quote.reject');
+
+        Route::get('chat',                        [AdminWholesaleChatController::class, 'index'])->name('chat.index');
+        Route::get('chat/{enquiry}',               [AdminWholesaleChatController::class, 'show'])->name('chat.show');
+        Route::post('chat/{enquiry}',              [AdminWholesaleChatController::class, 'store'])->name('chat.store');
+    });
+
+    // ── Commission Settings (Admin) ─────────────────────────────────────────
+    Route::prefix('commission')->name('commission.')->group(function () {
+        Route::get('settings',                    [AdminWholesaleCommissionController::class, 'index'])->name('settings.index');
+        Route::post('settings',                    [AdminWholesaleCommissionController::class, 'store'])->name('settings.store');
+        Route::put('settings/{setting}',           [AdminWholesaleCommissionController::class, 'update'])->name('settings.update');
+        Route::delete('settings/{setting}',        [AdminWholesaleCommissionController::class, 'destroy'])->name('settings.destroy');
+        Route::get('ledger',                      [AdminWholesaleCommissionController::class, 'ledger'])->name('ledger.index');
+        Route::post('ledger/{ledger}/settle',      [AdminWholesaleCommissionController::class, 'settle'])->name('ledger.settle');
+        Route::post('ledger/bulk-settle',          [AdminWholesaleCommissionController::class, 'bulkSettle'])->name('ledger.bulk-settle');
+    });
+
+    // ── Vendor Wallet (Admin) ───────────────────────────────────────────────
+    Route::prefix('vendor-wallet')->name('vendor-wallet.')->group(function () {
+        Route::get('/',          [AdminVendorWalletController::class, 'index'])->name('index');
+        Route::get('/{vendor}',   [AdminVendorWalletController::class, 'show'])->name('show');
     });
 
     // ── Customer service ───────────────────────────────────────────────────

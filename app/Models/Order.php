@@ -28,6 +28,8 @@ class Order extends Model
         'customer_id', 'accepts_marketing',
         // Cancellation
         'cancellation_reason', 'cancelled_by', 'cancelled_at',
+        // Wholesale
+        'enquiry_id',
     ];
 
     protected $casts = [
@@ -94,5 +96,15 @@ class Order extends Model
     public function supportTickets(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(SupportTicket::class);
+    }
+
+    public function wholesaleEnquiry(): BelongsTo
+    {
+        return $this->belongsTo(WholesaleEnquiry::class, 'enquiry_id');
+    }
+
+    public function commissionLedger(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(WholesaleCommissionLedger::class);
     }
 }

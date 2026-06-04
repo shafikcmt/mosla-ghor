@@ -50,13 +50,15 @@
             @php
             $r = request()->route()?->getName();
             $navItems = [
-                ['route' => 'customer.account',          'label' => 'ড্যাশবোর্ড',    'icon' => '🏠'],
-                ['route' => 'customer.orders.index',     'label' => 'আমার অর্ডার',   'icon' => '📦'],
-                ['route' => 'customer.returns.index',    'label' => 'রিটার্ন/রিফান্ড','icon' => '↩️'],
-                ['route' => 'customer.wishlist.index',   'label' => 'উইশলিস্ট',      'icon' => '❤️'],
-                ['route' => 'customer.addresses.index',  'label' => 'ঠিকানা',         'icon' => '📍'],
-                ['route' => 'customer.profile.edit',     'label' => 'প্রোফাইল',       'icon' => '👤'],
-                ['route' => 'customer.support.index',    'label' => 'সাপোর্ট',        'icon' => '💬'],
+                ['route' => 'customer.account',                        'label' => 'ড্যাশবোর্ড',        'icon' => '🏠'],
+                ['route' => 'customer.orders.index',                   'label' => 'আমার অর্ডার',       'icon' => '📦'],
+                ['route' => 'customer.wholesale.enquiry.index',        'label' => 'পাইকারি Enquiry',   'icon' => '🏭'],
+                ['route' => 'customer.wholesale.quote.index',          'label' => 'কোটেশন',            'icon' => '📋'],
+                ['route' => 'customer.returns.index',                  'label' => 'রিটার্ন/রিফান্ড',  'icon' => '↩️'],
+                ['route' => 'customer.wishlist.index',                 'label' => 'উইশলিস্ট',          'icon' => '❤️'],
+                ['route' => 'customer.addresses.index',                'label' => 'ঠিকানা',             'icon' => '📍'],
+                ['route' => 'customer.profile.edit',                   'label' => 'প্রোফাইল',           'icon' => '👤'],
+                ['route' => 'customer.support.index',                  'label' => 'সাপোর্ট',            'icon' => '💬'],
             ];
             @endphp
             @foreach($navItems as $item)

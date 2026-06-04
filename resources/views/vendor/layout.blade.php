@@ -103,7 +103,33 @@
             অর্ডারসমূহ
         </a>
 
+        <p class="nav-group-label">পাইকারি</p>
+
+        <a href="{{ route('vendor.wholesale.enquiry.index') }}"
+           class="nav-link {{ $active('vendor.wholesale.enquiry.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+            </svg>
+            নতুন Enquiry
+        </a>
+
+        <a href="{{ route('vendor.wholesale.quote.index') }}"
+           class="nav-link {{ $active('vendor.wholesale.quote.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            কোটেশন
+        </a>
+
         <p class="nav-group-label">আয়</p>
+
+        <a href="{{ route('vendor.wholesale.earnings.index') }}"
+           class="nav-link {{ $active('vendor.wholesale.earnings.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            আয় / কমিশন
+        </a>
 
         <a href="{{ route('vendor.payouts.index') }}"
            class="nav-link {{ $active('vendor.payouts.*') ? 'active' : '' }}">

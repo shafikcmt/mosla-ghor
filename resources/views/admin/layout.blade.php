@@ -183,6 +183,49 @@
             লগইন সেটিং
         </a>
 
+        {{-- Wholesale --}}
+        <p class="nav-group-label">Wholesale</p>
+
+        <a href="{{ route('admin.wholesale.enquiry.index') }}"
+           class="nav-link {{ $active('admin.wholesale.enquiry.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+            </svg>
+            Enquiry সমূহ
+        </a>
+
+        <a href="{{ route('admin.wholesale.quote.index') }}"
+           class="nav-link {{ $active('admin.wholesale.quote.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            কোটেশন অনুমোদন
+        </a>
+
+        <a href="{{ route('admin.wholesale.chat.index') }}"
+           class="nav-link {{ $active('admin.wholesale.chat.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12z"/>
+            </svg>
+            Chat Monitor
+        </a>
+
+        <a href="{{ route('admin.commission.settings.index') }}"
+           class="nav-link {{ $active('admin.commission.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Commission সেটিং
+        </a>
+
+        <a href="{{ route('admin.vendor-wallet.index') }}"
+           class="nav-link {{ $active('admin.vendor-wallet.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+            </svg>
+            Vendor Wallet
+        </a>
+
         {{-- Multivendor --}}
         <p class="nav-group-label">Marketplace</p>
 

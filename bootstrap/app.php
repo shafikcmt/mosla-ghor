@@ -18,5 +18,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Redirect back with a friendly message on CSRF token expiry (419)
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Session expired. Please try again.'], 419);
+            }
+            return redirect()->back()
+                ->withInput($request->except('password', 'password_confirmation'))
+                ->with('error', 'Session expired. Please try again. (পেজটি refresh করে আবার চেষ্টা করুন।)');
+        });
     })->create();

@@ -47,6 +47,16 @@ class Vendor extends Model
         return $this->hasMany(VendorPayout::class);
     }
 
+    public function wholesaleEnquiries(): HasMany
+    {
+        return $this->hasMany(WholesaleEnquiry::class);
+    }
+
+    public function commissionLedger(): HasMany
+    {
+        return $this->hasMany(WholesaleCommissionLedger::class);
+    }
+
     public function isApproved(): bool
     {
         return $this->status === 'approved' && $this->is_active;
@@ -81,5 +91,18 @@ class Vendor extends Model
         }
 
         return round($value, 2);
+    }
+
+    public function calculateWholesaleCommission(float $subtotal): array
+    {
+        $setting = WholesaleCommissionSetting::resolveFor($this->id, 'wholesale');
+        $amount  = $setting->calculate($subtotal);
+
+        return [
+            'commission_type'            => $setting->commission_type,
+            'commission_value_snapshot'  => (float) $setting->commission_value,
+            'commission_amount'          => $amount,
+            'vendor_earning'             => round($subtotal - $amount, 2),
+        ];
     }
 }
