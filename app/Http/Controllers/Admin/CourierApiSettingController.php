@@ -25,10 +25,12 @@ class CourierApiSettingController extends Controller
         $replace = $request->boolean('replace_api_credentials');
 
         $rules = [
-            'api_enabled' => 'nullable|boolean',
-            'base_url'    => 'nullable|string|max:255',
-            'status'      => 'required|in:active,inactive',
-            'notes'       => 'nullable|string|max:1000',
+            'api_enabled'     => 'nullable|boolean',
+            'base_url'        => 'nullable|string|max:255',
+            'base_url_select' => 'nullable|string|max:255',
+            'base_url_custom' => 'nullable|string|max:255',
+            'status'          => 'required|in:active,inactive',
+            'notes'           => 'nullable|string|max:1000',
         ];
 
         if ($replace) {
@@ -41,6 +43,14 @@ class CourierApiSettingController extends Controller
             'status.in'       => 'স্ট্যাটাস সঠিক নয়।',
             'base_url.max'    => 'Base URL ২৫৫ অক্ষরের বেশি হতে পারবে না।',
         ]);
+
+        // Resolve base URL from the dropdown (preset) or the custom field.
+        if ($request->filled('base_url_select')) {
+            $sel = $request->input('base_url_select');
+            $resolved = $sel === 'custom' ? trim((string) $request->input('base_url_custom')) : $sel;
+            $data['base_url'] = $resolved !== '' ? $resolved : null;
+        }
+        unset($data['base_url_select'], $data['base_url_custom']);
 
         $data['api_enabled'] = $request->boolean('api_enabled');
 
@@ -85,6 +95,38 @@ class CourierApiSettingController extends Controller
 
         return redirect()->route('admin.courier-api-settings.index')
             ->with($flashKey, $courier->name . ' টেস্ট: ' . $result['message']);
+    }
+
+    /**
+     * Run a single diagnostic (dns | ssl | balance | full) for an API courier.
+     */
+    public function diagnose(Request $request, Courier $courier, SteadfastService $steadfast)
+    {
+        if (! $courier->supportsApi()) {
+            return redirect()->route('admin.courier-api-settings.index')
+                ->with('error', $courier->name . ' এর জন্য API ডায়াগনস্টিক সাপোর্ট নেই (ম্যানুয়াল কুরিয়ার)।');
+        }
+
+        $type = $request->input('type', 'full');
+        if (! in_array($type, ['dns', 'ssl', 'balance', 'full'], true)) {
+            $type = 'full';
+        }
+
+        $result = match ($type) {
+            'dns'     => $steadfast->testDns($courier),
+            'ssl'     => $steadfast->testSsl($courier),
+            'balance' => $steadfast->testConnection($courier),
+            default   => $steadfast->fullTest($courier),
+        };
+
+        $labels  = ['dns' => 'DNS', 'ssl' => 'SSL', 'balance' => 'Balance', 'full' => 'Full'];
+        $flashKey = $result['success'] ? 'success' : ($result['level'] ?? 'error');
+        if (! in_array($flashKey, ['success', 'warning', 'error'], true)) {
+            $flashKey = 'error';
+        }
+
+        return redirect()->route('admin.courier-api-settings.index')
+            ->with($flashKey, $courier->name . ' — ' . ($labels[$type] ?? 'Test') . ' টেস্ট: ' . $result['message']);
     }
 
     /**

@@ -115,9 +115,28 @@
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Base URL</label>
-                    <input type="text" name="base_url" value="{{ old('base_url', $courier->base_url) }}"
-                           placeholder="https://..."
-                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-[#14532d] focus:outline-none">
+                    @if($courier->supportsApi())
+                        @php
+                            $known      = \App\Services\SteadfastService::KNOWN_BASE_URLS;
+                            $currentUrl = $courier->base_url;
+                            $isCustom   = $currentUrl && ! in_array($currentUrl, $known, true);
+                        @endphp
+                        <select name="base_url_select" data-courier="{{ $courier->id }}"
+                                class="js-baseurl-select w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-[#14532d] focus:outline-none">
+                            @foreach($known as $url)
+                            <option value="{{ $url }}" {{ $currentUrl === $url ? 'selected' : '' }}>{{ $url }}</option>
+                            @endforeach
+                            <option value="custom" {{ $isCustom ? 'selected' : '' }}>কাস্টম URL…</option>
+                        </select>
+                        <input type="text" name="base_url_custom" data-courier="{{ $courier->id }}"
+                               value="{{ $isCustom ? $currentUrl : '' }}"
+                               placeholder="https://your-custom-endpoint/api/v1"
+                               class="js-baseurl-custom mt-2 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-[#14532d] focus:outline-none {{ $isCustom ? '' : 'hidden' }}">
+                    @else
+                        <input type="text" name="base_url" value="{{ old('base_url', $courier->base_url) }}"
+                               placeholder="https://..."
+                               class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-[#14532d] focus:outline-none">
+                    @endif
                 </div>
 
                 @if($courier->supportsApi())
@@ -193,25 +212,40 @@
             </div>
         </form>
 
-        {{-- Test connection (API couriers only) --}}
+        {{-- Diagnostics (API couriers only) --}}
         @if($courier->supportsApi())
-        <div class="px-6 py-3 border-t border-gray-100 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
+        <div class="px-6 py-3 border-t border-gray-100 bg-gray-50 space-y-3">
             <div class="text-xs text-gray-500">
                 @if($courier->courier_api_last_message)
                     <span class="{{ $courier->courier_api_last_status === 'success' ? 'text-green-600' : 'text-red-600' }}">
-                        সর্বশেষ ফলাফল: {{ \Illuminate\Support\Str::limit($courier->courier_api_last_message, 140) }}
+                        সর্বশেষ ফলাফল: {{ \Illuminate\Support\Str::limit($courier->courier_api_last_message, 160) }}
                     </span>
                 @else
-                    সংযোগ যাচাই করতে নিচের বোতামে ক্লিক করুন (credential সংরক্ষণ করার পর)।
+                    DNS / SSL / API ব্যালেন্স আলাদাভাবে অথবা একসাথে যাচাই করুন (credential সংরক্ষণ করার পর)।
                 @endif
             </div>
-            <form method="POST" action="{{ route('admin.courier-api-settings.test', $courier) }}">
-                @csrf
-                <button type="submit"
-                        class="bg-blue-600 text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-blue-700 transition-colors">
-                    🔌 Test Connection
-                </button>
-            </form>
+
+            <div class="flex flex-wrap items-center gap-2">
+                @foreach(['dns' => '🌐 DNS টেস্ট', 'ssl' => '🔒 SSL/cURL টেস্ট', 'balance' => '💰 API Balance', 'full' => '🔌 Full Test'] as $type => $label)
+                <form method="POST" action="{{ route('admin.courier-api-settings.diagnose', $courier) }}">
+                    @csrf
+                    <input type="hidden" name="type" value="{{ $type }}">
+                    <button type="submit"
+                            class="{{ $type === 'full' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-800' }} text-white text-xs font-semibold px-3 py-1.5 rounded transition-colors">
+                        {{ $label }}
+                    </button>
+                </form>
+                @endforeach
+            </div>
+
+            {{-- Terminal help: run these from the server SSH/cPanel terminal --}}
+            <details class="text-xs text-gray-500">
+                <summary class="cursor-pointer text-indigo-600 hover:underline">টার্মিনাল কমান্ড (DNS/SSL ম্যানুয়াল চেক)</summary>
+                <pre class="mt-2 bg-gray-900 text-gray-100 rounded p-3 overflow-x-auto leading-relaxed">php -r "echo gethostbyname('portal.steadfast.com.bd').PHP_EOL;"
+curl -Iv https://portal.steadfast.com.bd/api/v1/get_balance
+curl -Iv https://portal.packzy.com/api/v1/get_balance</pre>
+                <p class="mt-1 text-gray-400">Local-এ resolve না হলে কিন্তু live server-এ হলে — সেটি local network/DNS issue. Server-এ DNS ঠিক কিন্তু SSL hostname mismatch হলে — Steadfast support থেকে সঠিক base URL confirm করুন।</p>
+            </details>
         </div>
         @endif
     </div>
@@ -230,6 +264,15 @@
                 f.classList.toggle('bg-gray-100', !cb.checked);
                 if (!cb.checked) { f.value = ''; }
             });
+        });
+    });
+
+    // Show the custom Base URL field only when "কাস্টম URL…" is chosen.
+    document.querySelectorAll('.js-baseurl-select').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+            var id = sel.dataset.courier;
+            var custom = document.querySelector('.js-baseurl-custom[data-courier="' + id + '"]');
+            if (custom) { custom.classList.toggle('hidden', sel.value !== 'custom'); }
         });
     });
 </script>

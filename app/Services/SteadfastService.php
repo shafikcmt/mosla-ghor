@@ -32,6 +32,12 @@ class SteadfastService
     private const TIMEOUT = 20;
     private const CONNECT_TIMEOUT = 10;
 
+    /** Known Steadfast/Packzy API base URLs offered in the admin dropdown. */
+    public const KNOWN_BASE_URLS = [
+        'https://portal.steadfast.com.bd/api/v1',
+        'https://portal.packzy.com/api/v1',
+    ];
+
     /**
      * Create a delivery consignment at Steadfast for the given order.
      *
@@ -176,6 +182,100 @@ class SteadfastService
     }
 
     // ─────────────────────────────────────────────────────────────────────
+    // Diagnostics (DNS / SSL / Balance / Full) — admin only
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Resolve the API host over DNS only — no HTTP. Distinguishes a local DNS
+     * problem from a server one (the UI explains the difference).
+     *
+     * @return array{success:bool, message:string, level:string, detail:?string}
+     */
+    public function testDns(Courier $courier): array
+    {
+        $host = parse_url($this->normalizeBaseUrl($courier->base_url) ?? self::DEFAULT_BASE_URL, PHP_URL_HOST);
+
+        if (empty($host)) {
+            return $this->diag(false, 'Base URL সঠিক নয় — host পাওয়া যায়নি।', 'error');
+        }
+
+        $ip = @gethostbyname($host);
+
+        // gethostbyname returns the input unchanged on failure.
+        if ($ip === $host || ! filter_var($ip, FILTER_VALIDATE_IP)) {
+            return $this->diag(
+                false,
+                'API host resolve করা যাচ্ছে না। Local/server DNS অথবা hosting outbound connection check করুন।'
+                    . ' (host: ' . $host . ')'
+                    . ' — Local network থেকে resolve না হলে live server-এ আলাদাভাবে check করুন।',
+                'error',
+                'host=' . $host
+            );
+        }
+
+        return $this->diag(true, 'DNS OK — ' . $host . ' → ' . $ip, 'success');
+    }
+
+    /**
+     * Verify the TLS handshake to the API host. Any HTTP response (even 401)
+     * means SSL is fine; a connection-level SSL error is classified clearly.
+     *
+     * @return array{success:bool, message:string, level:string, detail:?string}
+     */
+    public function testSsl(Courier $courier): array
+    {
+        $baseUrl = $this->normalizeBaseUrl($courier->base_url);
+        if ($baseUrl === null) {
+            return $this->diag(false, 'Base URL সঠিক নয়।', 'error');
+        }
+
+        $endpoint = $this->buildUrl($baseUrl, 'get_balance');
+
+        try {
+            $response = $this->client($courier)->get($endpoint);
+
+            return $this->diag(true, 'SSL / সংযোগ ঠিক আছে (HTTP ' . $response->status() . ')।', 'success');
+        } catch (ConnectionException $e) {
+            $raw = $e->getMessage();
+            $message = $this->classifyConnectionError($raw);
+            $this->recordResult($courier, false, $message, $raw);
+
+            return $this->diag(false, $message, 'error', $raw);
+        } catch (\Throwable $e) {
+            return $this->diag(false, 'SSL/সংযোগ যাচাই ব্যর্থ হয়েছে।', 'error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Run DNS → SSL → Balance in order, stopping at the first failure.
+     */
+    public function fullTest(Courier $courier): array
+    {
+        $dns = $this->testDns($courier);
+        if (! $dns['success']) {
+            return $dns;
+        }
+
+        $ssl = $this->testSsl($courier);
+        if (! $ssl['success']) {
+            return $ssl;
+        }
+
+        // Balance check exercises credentials too; reuse the existing path.
+        return $this->testConnection($courier);
+    }
+
+    private function diag(bool $success, string $message, string $level, ?string $detail = null): array
+    {
+        return [
+            'success' => $success,
+            'message' => $message,
+            'level'   => $level,
+            'detail'  => $detail,
+        ];
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
     // Internal helpers
     // ─────────────────────────────────────────────────────────────────────
 
@@ -254,25 +354,40 @@ class SteadfastService
             'timestamp' => now()->toDateTimeString(),
         ]);
 
-        // cURL 6 / DNS resolution failure.
-        if (preg_match('/could not resolve host|curl error 6|name or service not known|resolve host/i', $raw)) {
-            $message = 'Steadfast API host resolve করা যাচ্ছে না। Base URL, server DNS অথবা hosting outbound connection check করুন।';
-        } elseif (preg_match('/timed out|timeout|operation timed out|curl error 28/i', $raw)) {
-            $message = 'Steadfast সার্ভারে সংযোগ টাইমআউট হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।';
-        } elseif (preg_match('/subject (alt(ernative)? )?name|subject name|does ?n[\'o]t match|host ?name mismatch|curl error 51/i', $raw)) {
-            // SSL handshake succeeded but the cert does not cover this hostname.
-            // (e.g. "SSL: no alternative certificate subject name matches target host name")
-            // Do NOT disable SSL verification — this is a domain/SNI/hosting issue.
-            $message = 'Steadfast API SSL certificate host mismatch. Base URL/domain Steadfast support থেকে confirm করুন অথবা hosting SSL/SNI issue check করুন।';
-        } elseif (preg_match('/ssl|certificate|curl error 60|curl error 35/i', $raw)) {
-            $message = 'Steadfast সার্ভারের সাথে নিরাপদ (SSL) সংযোগ করা যায়নি। সার্ভারের SSL/CA সেটিং check করুন।';
-        } elseif (preg_match('/connection refused|could not connect|failed to connect|curl error 7/i', $raw)) {
-            $message = 'Steadfast সার্ভারে সংযোগ করা যায়নি (connection refused)। hosting outbound connection check করুন।';
-        } else {
-            $message = 'Steadfast সার্ভারে সংযোগ করা যায়নি। নেটওয়ার্ক / hosting outbound connection check করুন।';
+        return $this->fail($courier, $this->classifyConnectionError($raw), 'error', errorKey: $errorKey, technical: $raw);
+    }
+
+    /**
+     * Map a raw cURL/connection error string to a friendly Bangla message.
+     * Shared by the send/test paths and the diagnostics endpoint.
+     */
+    public function classifyConnectionError(string $raw): string
+    {
+        // SSL hostname/subject mismatch — check BEFORE the generic SSL and DNS
+        // branches. Handshake reached the server but the cert doesn't cover the host.
+        // (e.g. "SSL: no alternative certificate subject name matches target host name")
+        // Do NOT disable SSL verification — this is a domain/SNI/hosting issue.
+        // (?![0-9]) keeps "curl error 51" from matching "curl error 51x".
+        if (preg_match('/subject (alt(ernative)? )?name|subject name|does ?n[\'o]t match|host ?name mismatch|curl error 51(?![0-9])/i', $raw)) {
+            return 'API SSL certificate hostname match করছে না। Base URL/Steadfast endpoint confirm করুন।';
+        }
+        // Generic SSL/cert failure (cURL 60/35). Checked before DNS so "curl error 60"
+        // is not mis-classified by a looser pattern.
+        if (preg_match('/ssl|certificate|curl error 60(?![0-9])|curl error 35(?![0-9])/i', $raw)) {
+            return 'Steadfast সার্ভারের সাথে নিরাপদ (SSL) সংযোগ করা যায়নি। সার্ভারের SSL/CA সেটিং check করুন।';
+        }
+        // cURL 6 / DNS resolution failure. (?![0-9]) so "curl error 6" ≠ "curl error 60".
+        if (preg_match('/could not resolve host|curl error 6(?![0-9])|name or service not known|resolve host/i', $raw)) {
+            return 'API host resolve করা যাচ্ছে না। Local/server DNS অথবা hosting outbound connection check করুন।';
+        }
+        if (preg_match('/timed out|timeout|operation timed out|curl error 28(?![0-9])/i', $raw)) {
+            return 'API connection timeout হয়েছে।';
+        }
+        if (preg_match('/connection refused|could not connect|failed to connect|curl error 7(?![0-9])/i', $raw)) {
+            return 'Steadfast সার্ভারে সংযোগ করা যায়নি (connection refused)। hosting outbound connection check করুন।';
         }
 
-        return $this->fail($courier, $message, 'error', errorKey: $errorKey, technical: $raw);
+        return 'Steadfast সার্ভারে সংযোগ করা যায়নি। নেটওয়ার্ক / hosting outbound connection check করুন।';
     }
 
     private function handleHttpError(Courier $courier, $response, string $endpoint, string $errorKey = 'message'): array

@@ -274,6 +274,7 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::post('courier-api-settings/permissions', [AdminCourierApiSettingController::class, 'saveSettings'])->name('courier-api-settings.permissions');
     Route::put('courier-api-settings/{courier}', [AdminCourierApiSettingController::class, 'update'])->name('courier-api-settings.update');
     Route::post('courier-api-settings/{courier}/test', [AdminCourierApiSettingController::class, 'test'])->name('courier-api-settings.test');
+    Route::post('courier-api-settings/{courier}/diagnose', [AdminCourierApiSettingController::class, 'diagnose'])->name('courier-api-settings.diagnose');
 
     Route::get('courier-orders', [AdminCourierOrderController::class, 'index'])->name('courier-orders.index');
 
