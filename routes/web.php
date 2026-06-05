@@ -301,6 +301,8 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::get('/',                    [AdminVendorController::class, 'index'])->name('index');
         Route::get('/settings',            [AdminVendorController::class, 'settings'])->name('settings');
         Route::post('/settings',           [AdminVendorController::class, 'saveSettings'])->name('save-settings');
+        Route::get('/create',              [AdminVendorController::class, 'create'])->name('create');
+        Route::post('/',                   [AdminVendorController::class, 'store'])->name('store');
         Route::get('/{vendor}',            [AdminVendorController::class, 'show'])->name('show');
         Route::get('/{vendor}/edit',       [AdminVendorController::class, 'edit'])->name('edit');
         Route::put('/{vendor}',            [AdminVendorController::class, 'update'])->name('update');
@@ -308,6 +310,7 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::post('/{vendor}/reject',    [AdminVendorController::class, 'reject'])->name('reject');
         Route::post('/{vendor}/suspend',   [AdminVendorController::class, 'suspend'])->name('suspend');
         Route::post('/{vendor}/reactivate',[AdminVendorController::class, 'reactivate'])->name('reactivate');
+        Route::post('/{vendor}/reset-password', [AdminVendorController::class, 'resetPassword'])->name('reset-password');
     });
 
     // Admin approve vendor product

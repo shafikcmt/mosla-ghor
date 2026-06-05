@@ -16,39 +16,68 @@
     </span>
 </div>
 
+{{-- One-time credential banner (after create / reset password) --}}
+@if(session('generated_password'))
+<div class="mb-5 bg-emerald-50 border border-emerald-200 rounded-xl p-4" x-data="{ shown: true }">
+    <div class="flex items-start justify-between gap-3">
+        <div>
+            <p class="text-sm font-semibold text-emerald-800">🔑 লগইন ক্রেডেনশিয়াল (একবারই দেখানো হবে)</p>
+            <p class="text-xs text-emerald-600 mt-0.5">এখনই কপি করে ভেন্ডরকে দিন — পরে আর দেখা যাবে না।</p>
+            <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <div class="bg-white rounded-lg border border-emerald-100 px-3 py-2">
+                    <span class="text-xs text-gray-400 block">ইমেইল</span>
+                    <span class="font-mono" id="cred-email">{{ session('generated_email') }}</span>
+                </div>
+                <div class="bg-white rounded-lg border border-emerald-100 px-3 py-2 flex items-center justify-between gap-2">
+                    <div>
+                        <span class="text-xs text-gray-400 block">পাসওয়ার্ড</span>
+                        <span class="font-mono" id="cred-pass">{{ session('generated_password') }}</span>
+                    </div>
+                    <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('cred-pass').innerText); this.innerText='✓ কপি হয়েছে'"
+                            class="text-xs bg-emerald-600 text-white px-2.5 py-1 rounded hover:bg-emerald-700 whitespace-nowrap">কপি</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 {{-- Action buttons --}}
 <div class="flex flex-wrap gap-2 mb-6">
     @if($vendor->status === 'pending')
     <form method="POST" action="{{ route('admin.vendors.approve', $vendor) }}">
         @csrf
-        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-            ✓ অনুমোদন করুন
-        </button>
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">✓ অনুমোদন করুন</button>
     </form>
     <form method="POST" action="{{ route('admin.vendors.reject', $vendor) }}">
         @csrf
         <button type="submit" onclick="return confirm('প্রত্যাখ্যান করবেন?')"
-                class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-            ✗ প্রত্যাখ্যান করুন
-        </button>
+                class="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">✗ প্রত্যাখ্যান করুন</button>
     </form>
     @elseif($vendor->status === 'approved')
     <form method="POST" action="{{ route('admin.vendors.suspend', $vendor) }}">
         @csrf
         <button type="submit" onclick="return confirm('স্থগিত করবেন?')"
-                class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-            স্থগিত করুন
-        </button>
+                class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">স্থগিত করুন</button>
     </form>
     @elseif(in_array($vendor->status, ['suspended', 'rejected']))
     <form method="POST" action="{{ route('admin.vendors.reactivate', $vendor) }}">
         @csrf
-        <button type="submit"
-                class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-            পুনরায় সক্রিয় করুন
-        </button>
+        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">পুনরায় সক্রিয় করুন</button>
     </form>
     @endif
+
+    <a href="{{ route('admin.vendors.edit', $vendor) }}"
+       class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">✎ সম্পাদনা</a>
+
+    <form method="POST" action="{{ route('admin.vendors.reset-password', $vendor) }}"
+          onsubmit="return confirm('নতুন পাসওয়ার্ড তৈরি করবেন? পুরোনো পাসওয়ার্ড আর কাজ করবে না।')">
+        @csrf
+        <button type="submit" class="bg-gray-700 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">🔑 পাসওয়ার্ড রিসেট</button>
+    </form>
+
+    <a href="{{ route('admin.vendor-pickup-points.index', ['vendor_id' => $vendor->id]) }}"
+       class="border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium px-4 py-2 rounded-lg transition-colors">📍 পিকআপ পয়েন্ট</a>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
@@ -59,54 +88,34 @@
         <dl class="grid grid-cols-2 gap-3 text-sm">
             <div><dt class="text-gray-500 text-xs">মালিকের নাম</dt><dd class="font-medium">{{ $vendor->owner_name }}</dd></div>
             <div><dt class="text-gray-500 text-xs">ফোন</dt><dd class="font-mono">{{ $vendor->phone }}</dd></div>
-            <div><dt class="text-gray-500 text-xs">ইমেইল</dt><dd>{{ $vendor->email }}</dd></div>
+            <div><dt class="text-gray-500 text-xs">ইমেইল (login)</dt><dd>{{ $vendor->email }}</dd></div>
             <div><dt class="text-gray-500 text-xs">ব্যবসার ধরন</dt><dd>{{ $vendor->business_type ?: '—' }}</dd></div>
-            <div class="col-span-2"><dt class="text-gray-500 text-xs">ঠিকানা</dt><dd>{{ $vendor->address ?: '—' }}</dd></div>
-            <div><dt class="text-gray-500 text-xs">কমিশন</dt>
-                <dd>{{ $vendor->commission_type ?? 'ডিফল্ট' }} — {{ $vendor->commission_value ?? '—' }}</dd>
-            </div>
-            <div><dt class="text-gray-500 text-xs">পণ্য অটো অনুমোদন</dt>
-                <dd>{{ $vendor->product_auto_approve ? 'হ্যাঁ' : 'না' }}</dd>
-            </div>
+            <div class="col-span-2"><dt class="text-gray-500 text-xs">ঠিকানা</dt><dd>{{ implode(', ', array_filter([$vendor->address, $vendor->city, $vendor->district])) ?: '—' }}</dd></div>
+            <div><dt class="text-gray-500 text-xs">ট্রেড লাইসেন্স</dt><dd>{{ $vendor->trade_license ?: '—' }}</dd></div>
+            <div><dt class="text-gray-500 text-xs">NID</dt><dd>{{ $vendor->nid ?: '—' }}</dd></div>
+            <div><dt class="text-gray-500 text-xs">কমিশন</dt><dd>{{ $vendor->commission_type ?? 'ডিফল্ট' }} — {{ $vendor->commission_value ?? '—' }}</dd></div>
+            <div><dt class="text-gray-500 text-xs">পণ্য অটো অনুমোদন</dt><dd>{{ $vendor->product_auto_approve ? 'হ্যাঁ' : 'না' }}</dd></div>
             <div class="col-span-2"><dt class="text-gray-500 text-xs">অ্যাডমিন নোট</dt><dd class="text-gray-600">{{ $vendor->admin_note ?: '—' }}</dd></div>
         </dl>
     </div>
 
-    {{-- Edit commission / settings --}}
+    {{-- Pickup points --}}
     <div class="bg-white rounded-xl border border-gray-100 p-5">
-        <h3 class="font-semibold text-gray-700 text-sm mb-4 pb-2 border-b">সেটিং আপডেট</h3>
-        <form method="POST" action="{{ route('admin.vendors.update', $vendor) }}" class="space-y-3">
-            @csrf @method('PUT')
-
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">কমিশন ধরন</label>
-                <select name="commission_type"
-                        class="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-400">
-                    <option value="">ডিফল্ট ব্যবহার করুন</option>
-                    <option value="percentage" {{ $vendor->commission_type === 'percentage' ? 'selected' : '' }}>শতাংশ (%)</option>
-                    <option value="fixed" {{ $vendor->commission_type === 'fixed' ? 'selected' : '' }}>নির্দিষ্ট (৳)</option>
-                </select>
+        <div class="flex items-center justify-between mb-4 pb-2 border-b">
+            <h3 class="font-semibold text-gray-700 text-sm">পিকআপ পয়েন্ট</h3>
+            <a href="{{ route('admin.vendor-pickup-points.create', ['vendor_id' => $vendor->id]) }}" class="text-xs text-[#1a6b3a] hover:underline">+ যোগ</a>
+        </div>
+        @forelse($vendor->pickupPoints as $pp)
+        <div class="text-sm py-2 border-b border-gray-50 last:border-0">
+            <div class="flex items-center justify-between">
+                <span class="font-medium text-gray-800">{{ $pp->pickup_name }}</span>
+                @if($pp->is_default)<span class="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">ডিফল্ট</span>@endif
             </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">কমিশন মান</label>
-                <input type="number" name="commission_value" value="{{ $vendor->commission_value }}" step="0.01" min="0"
-                       class="w-full border rounded px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-green-400">
-            </div>
-            <div class="flex items-center gap-2">
-                <input type="checkbox" name="product_auto_approve" value="1" id="paa"
-                       {{ $vendor->product_auto_approve ? 'checked' : '' }}>
-                <label for="paa" class="text-xs text-gray-700 cursor-pointer">পণ্য অটো অনুমোদন</label>
-            </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-600 mb-1">অ্যাডমিন নোট</label>
-                <textarea name="admin_note" rows="2"
-                          class="w-full border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-green-400">{{ $vendor->admin_note }}</textarea>
-            </div>
-            <button type="submit"
-                    class="w-full bg-[#1a6b3a] hover:bg-[#14532d] text-white text-sm font-medium py-2 rounded-lg transition-colors">
-                আপডেট করুন
-            </button>
-        </form>
+            <p class="text-xs text-gray-400">{{ $pp->phone }} · {{ $pp->city }}, {{ $pp->district }}</p>
+        </div>
+        @empty
+        <p class="text-xs text-gray-400">কোনো পিকআপ পয়েন্ট নেই।</p>
+        @endforelse
     </div>
 </div>
 

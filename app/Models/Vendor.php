@@ -10,9 +10,11 @@ class Vendor extends Model
 {
     protected $fillable = [
         'user_id', 'shop_name', 'slug', 'owner_name', 'phone', 'email',
-        'address', 'logo', 'banner', 'business_type', 'kyc_document',
+        'address', 'district', 'city', 'trade_license', 'nid',
+        'logo', 'banner', 'business_type', 'kyc_document',
         'payment_info', 'commission_type', 'commission_value',
         'product_auto_approve', 'status', 'is_active', 'admin_note',
+        'approved_at', 'approved_by', 'suspended_at',
     ];
 
     protected $casts = [
@@ -20,7 +22,12 @@ class Vendor extends Model
         'commission_value'     => 'decimal:2',
         'product_auto_approve' => 'boolean',
         'is_active'            => 'boolean',
+        'approved_at'          => 'datetime',
+        'suspended_at'         => 'datetime',
     ];
+
+    /** Business types offered in the admin create/edit forms. */
+    public const BUSINESS_TYPES = ['Shop', 'Restaurant', 'Dealer', 'Wholesaler', 'Retailer', 'Other'];
 
     public function user(): BelongsTo
     {
