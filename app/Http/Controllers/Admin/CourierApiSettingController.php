@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Contracts\CourierDiagnosticsInterface;
 use App\Http\Controllers\Controller;
 use App\Models\Courier;
 use App\Models\CourierSetting;
-use App\Services\SteadfastService;
+use App\Services\CourierDriverFactory;
 use Illuminate\Http\Request;
 
 class CourierApiSettingController extends Controller
@@ -78,14 +79,14 @@ class CourierApiSettingController extends Controller
     /**
      * Test connectivity / credentials for an API courier.
      */
-    public function test(Courier $courier, SteadfastService $steadfast)
+    public function test(Courier $courier, CourierDriverFactory $drivers)
     {
         if (! $courier->supportsApi()) {
             return redirect()->route('admin.courier-api-settings.index')
                 ->with('error', $courier->name . ' এর জন্য API টেস্ট সাপোর্ট নেই (ম্যানুয়াল কুরিয়ার)।');
         }
 
-        $result = $steadfast->testConnection($courier);
+        $result = $drivers->for($courier)->testConnection($courier);
 
         // level → flash key: success (green) | warning (yellow) | error (red)
         $flashKey = $result['success'] ? 'success' : ($result['level'] ?? 'error');
@@ -100,9 +101,11 @@ class CourierApiSettingController extends Controller
     /**
      * Run a single diagnostic (dns | ssl | balance | full) for an API courier.
      */
-    public function diagnose(Request $request, Courier $courier, SteadfastService $steadfast)
+    public function diagnose(Request $request, Courier $courier, CourierDriverFactory $drivers)
     {
-        if (! $courier->supportsApi()) {
+        $driver = $drivers->for($courier);
+
+        if (! $courier->supportsApi() || ! $driver instanceof CourierDiagnosticsInterface) {
             return redirect()->route('admin.courier-api-settings.index')
                 ->with('error', $courier->name . ' এর জন্য API ডায়াগনস্টিক সাপোর্ট নেই (ম্যানুয়াল কুরিয়ার)।');
         }
@@ -113,10 +116,10 @@ class CourierApiSettingController extends Controller
         }
 
         $result = match ($type) {
-            'dns'     => $steadfast->testDns($courier),
-            'ssl'     => $steadfast->testSsl($courier),
-            'balance' => $steadfast->testConnection($courier),
-            default   => $steadfast->fullTest($courier),
+            'dns'     => $driver->testDns($courier),
+            'ssl'     => $driver->testSsl($courier),
+            'balance' => $driver->testConnection($courier),
+            default   => $driver->fullTest($courier),
         };
 
         $labels  = ['dns' => 'DNS', 'ssl' => 'SSL', 'balance' => 'Balance', 'full' => 'Full'];

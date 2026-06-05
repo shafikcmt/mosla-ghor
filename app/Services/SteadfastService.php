@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
+use App\Contracts\CourierDiagnosticsInterface;
+use App\Contracts\CourierDriverInterface;
 use App\Models\Courier;
-use App\Models\Order;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -26,7 +27,7 @@ use Illuminate\Support\Facades\Log;
  * "Could not resolve host", the server has no working DNS / outbound HTTPS.
  * Ask the hosting provider to enable outbound connections and fix DNS.
  */
-class SteadfastService
+class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInterface
 {
     private const DEFAULT_BASE_URL = 'https://portal.steadfast.com.bd/api/v1';
     private const TIMEOUT = 20;
@@ -38,12 +39,22 @@ class SteadfastService
         'https://portal.packzy.com/api/v1',
     ];
 
+    public function supportsApi(): bool
+    {
+        return true;
+    }
+
     /**
-     * Create a delivery consignment at Steadfast for the given order.
+     * Create a Steadfast consignment from a ready-made payload. The common
+     * CourierService builds the payload (retail order or vendor parcel); this
+     * driver only knows Steadfast's endpoint, headers and response shape.
+     *
+     * Required payload keys: invoice, recipient_name, recipient_phone,
+     * recipient_address, cod_amount, note.
      *
      * @return array{success:bool, message?:string, error?:string, tracking_id?:?string, consignment_id?:?string, status_code?:?int, data?:mixed}
      */
-    public function createOrder(Courier $courier, Order $order): array
+    public function createParcel(Courier $courier, array $payload): array
     {
         if (! $courier->api_enabled || ! $courier->api_key || ! $courier->api_secret) {
             return $this->fail($courier, 'Steadfast API চালু নেই অথবা API Key/Secret কনফিগার করা হয়নি।', 'warning', errorKey: 'error');
@@ -56,32 +67,13 @@ class SteadfastService
 
         $endpoint = $this->buildUrl($baseUrl, 'create_order');
 
-        $address = implode(', ', array_filter([
-            $order->full_address,
-            $order->union_name,
-            $order->upazila_name,
-            $order->district_name,
-            $order->division_name,
-        ]));
-
-        $payload = [
-            'invoice'           => $order->order_number,
-            'recipient_name'    => $order->customer_name,
-            'recipient_phone'   => $order->mobile_number,
-            'recipient_address' => $address,
-            'cod_amount'        => $order->payment_method === 'cash_on_delivery'
-                ? (float) $order->grand_total
-                : 0,
-            'note'              => $order->order_note ?? '',
-        ];
-
         try {
             $response = $this->client($courier)->post($endpoint, $payload);
 
-            // NOTE: never log api_key/api_secret — only the payload + sanitized response.
+            // NOTE: never log api_key/api_secret — only the invoice + sanitized response.
             Log::info('Steadfast create_order', [
                 'courier'  => $courier->name,
-                'order'    => $order->order_number,
+                'invoice'  => $payload['invoice'] ?? null,
                 'endpoint' => $endpoint,
                 'status'   => $response->status(),
                 'body'     => $this->sanitize($response->body()),

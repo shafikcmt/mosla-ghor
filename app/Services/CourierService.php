@@ -6,11 +6,10 @@ use App\Models\Courier;
 use App\Models\DeliveryRate;
 use App\Models\DeliveryZone;
 use App\Models\Order;
-use Illuminate\Support\Facades\Log;
 
 class CourierService
 {
-    public function __construct(private SteadfastService $steadfast)
+    public function __construct(private CourierDriverFactory $drivers)
     {
     }
 
@@ -61,7 +60,7 @@ class CourierService
                 ];
             }
 
-            $result = $this->callApi($courier, $order);
+            $result = $this->drivers->for($courier)->createParcel($courier, $this->payloadForOrder($order));
 
             if ($result['success']) {
                 $order->update([
@@ -81,8 +80,10 @@ class CourierService
             return ['success' => false, 'message' => $result['error'] ?? ($courier->name . ' API ত্রুটি।')];
         }
 
-        // ── Manual courier path ─────────────────────────────────────────────
+        // ── Manual courier path (via the manual driver) ─────────────────────
         $tracking = $manualTracking ?: $order->tracking_id;
+
+        $this->drivers->manual()->createParcel($courier, ['tracking_id' => $tracking]);
 
         $order->update([
             'courier_status'     => 'sent_to_courier',
@@ -102,16 +103,29 @@ class CourierService
         ];
     }
 
-    private function callApi(Courier $courier, Order $order): array
+    /**
+     * Build the standard parcel payload for a retail order.
+     */
+    private function payloadForOrder(Order $order): array
     {
-        if ($courier->slug === 'steadfast') {
-            return $this->steadfast->createOrder($courier, $order);
-        }
+        $address = implode(', ', array_filter([
+            $order->full_address,
+            $order->union_name,
+            $order->upazila_name,
+            $order->district_name,
+            $order->division_name,
+        ]));
 
-        // Should not happen because apiUsable() gates on API_SUPPORTED_SLUGS.
-        Log::warning('No API integration for courier', ['courier' => $courier->slug]);
-
-        return ['success' => false, 'error' => $courier->name . ' এর জন্য API ইন্টিগ্রেশন নেই — ম্যানুয়াল বুকিং করুন।'];
+        return [
+            'invoice'           => $order->order_number,
+            'recipient_name'    => $order->customer_name,
+            'recipient_phone'   => $order->mobile_number,
+            'recipient_address' => $address,
+            'cod_amount'        => $order->payment_method === 'cash_on_delivery'
+                ? (float) $order->grand_total
+                : 0,
+            'note'              => $order->order_note ?? '',
+        ];
     }
 
     /**
