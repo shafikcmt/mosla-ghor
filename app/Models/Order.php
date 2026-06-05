@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
@@ -31,6 +32,11 @@ class Order extends Model
         'cancellation_reason', 'cancelled_by', 'cancelled_at',
         // Wholesale
         'enquiry_id',
+        // Vendor POS / local-business workflow
+        'order_source', 'created_by_vendor_id', 'vendor_customer_id',
+        'discount_amount', 'partial_paid_amount', 'due_amount',
+        'invoice_token', 'payment_link_token', 'reorder_token',
+        'whatsapp_sent_at', 'customer_confirmed_at', 'invoice_disabled_at',
     ];
 
     protected $casts = [
@@ -52,6 +58,12 @@ class Order extends Model
         'stock_restored_at'          => 'datetime',
         'accepts_marketing'          => 'boolean',
         'cancelled_at'               => 'datetime',
+        'discount_amount'            => 'decimal:2',
+        'partial_paid_amount'        => 'decimal:2',
+        'due_amount'                 => 'decimal:2',
+        'whatsapp_sent_at'           => 'datetime',
+        'customer_confirmed_at'      => 'datetime',
+        'invoice_disabled_at'        => 'datetime',
     ];
 
     public function items(): HasMany
@@ -123,5 +135,61 @@ class Order extends Model
     public function commissionLedger(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(WholesaleCommissionLedger::class);
+    }
+
+    // ── Vendor POS / local-business workflow ─────────────────────────────────
+
+    public function createdByVendor(): BelongsTo
+    {
+        return $this->belongsTo(Vendor::class, 'created_by_vendor_id');
+    }
+
+    public function vendorCustomer(): BelongsTo
+    {
+        return $this->belongsTo(VendorCustomer::class, 'vendor_customer_id');
+    }
+
+    public function isVendorCreated(): bool
+    {
+        return $this->order_source === 'vendor_created_order'
+            || ! empty($this->created_by_vendor_id);
+    }
+
+    /** Generate the secure public tokens once (idempotent). */
+    public function ensureTokens(): void
+    {
+        $dirty = false;
+        foreach (['invoice_token', 'payment_link_token', 'reorder_token'] as $col) {
+            if (empty($this->{$col})) {
+                $this->{$col} = Str::random(40);
+                $dirty = true;
+            }
+        }
+        if ($dirty) {
+            $this->save();
+        }
+    }
+
+    public function invoiceUrl(): ?string
+    {
+        return $this->invoice_token ? url('/invoice/' . $this->invoice_token) : null;
+    }
+
+    public function reorderUrl(): ?string
+    {
+        return $this->reorder_token ? url('/invoice/' . $this->invoice_token . '/reorder') : null;
+    }
+
+    /** Invoice link is usable: token set, not admin-disabled, not expired. */
+    public function isInvoiceActive(): bool
+    {
+        if (empty($this->invoice_token) || $this->invoice_disabled_at) {
+            return false;
+        }
+        $days = (int) WebsiteSetting::get('invoice_token_expiry_days', 0);
+        if ($days > 0 && $this->created_at && $this->created_at->copy()->addDays($days)->isPast()) {
+            return false;
+        }
+        return true;
     }
 }

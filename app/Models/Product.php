@@ -15,6 +15,10 @@ class Product extends Model
         'name_bn',
         'name_en',
         'slug',
+        'sku',
+        'category',
+        'brand',
+        'unit',
         'main_image',
         'gallery_images',
         'video_url',
@@ -23,7 +27,11 @@ class Product extends Model
         'description',
         'retail_price_1kg',
         'wholesale_price_1kg',
+        'purchase_price',
+        'selling_price',
         'stock',
+        'stock_qty',
+        'low_stock_threshold',
         'sort_order',
         'is_active',
     ];
@@ -32,10 +40,17 @@ class Product extends Model
         'gallery_images'      => 'array',
         'retail_price_1kg'    => 'decimal:2',
         'wholesale_price_1kg' => 'decimal:2',
+        'purchase_price'      => 'decimal:2',
+        'selling_price'       => 'decimal:2',
         'stock'               => 'integer',
+        'stock_qty'           => 'decimal:3',
+        'low_stock_threshold' => 'decimal:3',
         'sort_order'          => 'integer',
         'is_active'           => 'boolean',
     ];
+
+    /** Units a vendor can pick for unit-managed products. */
+    public const UNITS = ['kg', 'gram', 'pcs', 'bag', 'carton', 'packet'];
 
     public function vendor(): BelongsTo
     {
@@ -125,7 +140,62 @@ class Product extends Model
 
     public function isInStock(): bool
     {
-        return $this->stock > 0;
+        return $this->onHand() > 0;
+    }
+
+    // ── Stock helpers ────────────────────────────────────────────────────────
+    // Legacy spice products store on-hand as whole-kg integer in `stock`.
+    // Vendor unit-managed products (stock_qty not null) use the decimal `stock_qty`.
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(VendorStockMovement::class)->latest();
+    }
+
+    public function isUnitManaged(): bool
+    {
+        return $this->stock_qty !== null;
+    }
+
+    /** Canonical on-hand quantity in the product's own unit. */
+    public function onHand(): float
+    {
+        return $this->isUnitManaged() ? (float) $this->stock_qty : (float) $this->stock;
+    }
+
+    /** Write a new on-hand value to the correct column (does not persist). */
+    public function applyOnHand(float $value): void
+    {
+        if ($this->isUnitManaged()) {
+            $this->stock_qty = round(max(0, $value), 3);
+        } else {
+            // Legacy kg-based products keep whole-kg integers.
+            $this->stock = (int) max(0, round($value));
+        }
+    }
+
+    public function stockUnit(): string
+    {
+        return $this->unit ?: 'kg';
+    }
+
+    public function stockStatus(): string
+    {
+        $onHand    = $this->onHand();
+        $threshold = (float) $this->low_stock_threshold;
+
+        if ($onHand <= 0) {
+            return 'out_of_stock';
+        }
+        if ($threshold > 0 && $onHand <= $threshold) {
+            return 'low_stock';
+        }
+        return 'in_stock';
+    }
+
+    public function isLowStock(): bool
+    {
+        return $this->stockStatus() === 'low_stock';
     }
 
     // Create or refresh all standard pack-size rows in product_prices.

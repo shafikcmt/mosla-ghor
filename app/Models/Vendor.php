@@ -59,6 +59,22 @@ class Vendor extends Model
         return $this->hasMany(VendorPickupPoint::class);
     }
 
+    public function customers(): HasMany
+    {
+        return $this->hasMany(VendorCustomer::class);
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(VendorStockMovement::class);
+    }
+
+    /** Orders this vendor created on a customer's behalf (POS). */
+    public function createdOrders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'created_by_vendor_id');
+    }
+
     public function defaultPickupPoint(): ?VendorPickupPoint
     {
         return VendorPickupPoint::defaultFor($this->id);
