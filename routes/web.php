@@ -43,6 +43,7 @@ use App\Http\Controllers\Admin\SupportTicketController as AdminSupportTicketCont
 use App\Http\Controllers\Admin\VendorController as AdminVendorController;
 use App\Http\Controllers\Admin\VendorPayoutController as AdminVendorPayoutController;
 use App\Http\Controllers\Admin\VendorPickupPointController as AdminVendorPickupPointController;
+use App\Http\Controllers\Admin\VendorParcelController as AdminVendorParcelController;
 use App\Http\Controllers\Admin\WholesaleEnquiryController as AdminWholesaleEnquiryController;
 use App\Http\Controllers\Admin\WholesaleQuoteController as AdminWholesaleQuoteController;
 use App\Http\Controllers\Admin\WholesaleChatController as AdminWholesaleChatController;
@@ -262,6 +263,10 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::post('orders/{order}/update-courier', [AdminOrderController::class, 'updateCourier'])->name('orders.updateCourier');
     Route::post('orders/{order}/recalculate-courier', [AdminOrderController::class, 'recalculateCourier'])->name('orders.recalculateCourier');
     Route::post('orders/{order}/send-to-courier', [AdminOrderController::class, 'sendToCourier'])->name('orders.sendToCourier');
+
+    // Admin control over a vendor order's parcel
+    Route::post('vendor-orders/{vendorOrder}/parcel', [AdminVendorParcelController::class, 'store'])->name('vendor-orders.parcel.store');
+    Route::put('vendor-orders/{vendorOrder}/parcel',  [AdminVendorParcelController::class, 'update'])->name('vendor-orders.parcel.update');
     Route::post('orders/{order}/mark-delivered', [AdminOrderController::class, 'markDelivered'])->name('orders.markDelivered');
     Route::post('orders/{order}/mark-returned', [AdminOrderController::class, 'markReturned'])->name('orders.markReturned');
     Route::post('orders/{order}/restore-stock', [AdminOrderController::class, 'restoreStock'])->name('orders.restoreStock');

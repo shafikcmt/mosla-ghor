@@ -21,7 +21,7 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load(['items', 'selectedCourier', 'suggestedCourier', 'zone', 'vendorOrders.vendor']);
+        $order->load(['items', 'selectedCourier', 'suggestedCourier', 'zone', 'vendorOrders.vendor', 'vendorOrders.courier', 'vendorOrders.pickupPoint', 'vendorOrders.vendor.pickupPoints']);
         $couriers = Courier::orderBy('name')->get();
         $zones    = DeliveryZone::where('is_active', true)->orderBy('zone_name')->get();
 

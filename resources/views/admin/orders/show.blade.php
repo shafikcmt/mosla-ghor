@@ -337,6 +337,95 @@
                     </div>
                     @endif
                 </div>
+
+                {{-- Parcel status snapshot --}}
+                @php $voPickups = $vo->vendor?->pickupPoints->where('status','active') ?? collect(); @endphp
+                <div class="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                    <div><span class="text-gray-400">পিকআপ:</span><p class="text-gray-700">{{ $vo->pickupPoint?->pickup_name ?: '—' }}</p></div>
+                    <div>
+                        <span class="text-gray-400">কুরিয়ার টাইপ:</span>
+                        <p class="text-gray-700">
+                            @if($vo->courier)
+                                {{ $vo->courier->supportsApi() ? 'API' : 'ম্যানুয়াল' }}
+                                @if($vo->courier->supportsApi())
+                                    <span class="{{ $vo->courier->isConfigured() ? 'text-emerald-600' : 'text-red-600' }}">
+                                        ({{ $vo->courier->isConfigured() ? 'configured' : 'not configured' }})
+                                    </span>
+                                @endif
+                            @else — @endif
+                        </p>
+                    </div>
+                    <div><span class="text-gray-400">কন্সাইনমেন্ট:</span><p class="font-mono text-gray-700">{{ $vo->consignment_id ?: '—' }}</p></div>
+                    <div><span class="text-gray-400">কুরিয়ার স্ট্যাটাস:</span><p class="text-gray-700">{{ $vo->courier_status ?: '—' }}</p></div>
+                    <div><span class="text-gray-400">পার্সেল করেছেন:</span><p class="text-gray-700">{{ $vo->parcel_created_by ?: '—' }}</p></div>
+                    <div><span class="text-gray-400">পাঠানো হয়েছে:</span><p class="text-gray-700">{{ $vo->sent_to_courier_at?->format('d M Y, h:i A') ?: '—' }}</p></div>
+                    @if($vo->courier?->courier_api_last_message)
+                    <div class="col-span-2"><span class="text-gray-400">শেষ API বার্তা:</span><p class="text-gray-600">{{ \Illuminate\Support\Str::limit($vo->courier->courier_api_last_message, 80) }}</p></div>
+                    @endif
+                </div>
+
+                {{-- Admin parcel control --}}
+                <details class="mt-3">
+                    <summary class="cursor-pointer text-xs font-medium text-indigo-600 hover:underline">অ্যাডমিন পার্সেল কন্ট্রোল</summary>
+
+                    {{-- Create / re-send parcel --}}
+                    <form method="POST" action="{{ route('admin.vendor-orders.parcel.store', $vo) }}" class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+                        @csrf
+                        <div>
+                            <label class="block text-[11px] text-gray-500 mb-0.5">কুরিয়ার</label>
+                            <select name="courier_id" required class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs bg-white">
+                                <option value="">— বেছে নিন —</option>
+                                @foreach($couriers as $c)
+                                <option value="{{ $c->id }}" {{ $vo->courier_id == $c->id ? 'selected' : '' }} {{ $c->status !== 'active' ? 'disabled' : '' }}>
+                                    {{ $c->name }}{{ $c->status !== 'active' ? ' (নিষ্ক্রিয়)' : '' }}
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-gray-500 mb-0.5">পিকআপ</label>
+                            <select name="pickup_point_id" class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs bg-white">
+                                <option value="">— ভেন্ডর ডিফল্ট —</option>
+                                @foreach($voPickups as $pp)
+                                <option value="{{ $pp->id }}" {{ $vo->pickup_point_id == $pp->id ? 'selected' : '' }}>{{ $pp->pickup_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-gray-500 mb-0.5">নোট</label>
+                            <input type="text" name="parcel_note" class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="flex items-center gap-1 text-[11px] text-gray-600"><input type="checkbox" name="resend" value="1" class="w-3.5 h-3.5 accent-[#14532d]"> পুনরায়</label>
+                            <button class="bg-[#14532d] text-white text-xs px-3 py-1.5 rounded hover:bg-[#0d3520]">পার্সেল করুন</button>
+                        </div>
+                    </form>
+
+                    {{-- Edit tracking / status (no API call) --}}
+                    <form method="POST" action="{{ route('admin.vendor-orders.parcel.update', $vo) }}" class="mt-2 grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+                        @csrf @method('PUT')
+                        <div>
+                            <label class="block text-[11px] text-gray-500 mb-0.5">ট্র্যাকিং</label>
+                            <input type="text" name="tracking_number" value="{{ $vo->tracking_number }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-gray-500 mb-0.5">কন্সাইনমেন্ট</label>
+                            <input type="text" name="consignment_id" value="{{ $vo->consignment_id }}" class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-gray-500 mb-0.5">কুরিয়ার স্ট্যাটাস</label>
+                            <select name="courier_status" class="w-full border border-gray-300 rounded px-2 py-1.5 text-xs bg-white">
+                                <option value="">— পরিবর্তন না —</option>
+                                @foreach($courierStatuses as $key => $label)
+                                <option value="{{ $key }}" {{ $vo->courier_status === $key ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <button class="bg-gray-700 text-white text-xs px-3 py-1.5 rounded hover:bg-gray-800">আপডেট</button>
+                        </div>
+                    </form>
+                </details>
             </div>
             @endforeach
         </div>
