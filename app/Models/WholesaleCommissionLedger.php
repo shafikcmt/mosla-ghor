@@ -7,6 +7,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WholesaleCommissionLedger extends Model
 {
+    /**
+     * Migration creates the singular `wholesale_commission_ledger`, but Eloquent
+     * would otherwise pluralise the class to `wholesale_commission_ledgers`.
+     * Pin the real table name so local SQLite and live MySQL both resolve it.
+     */
+    protected $table = 'wholesale_commission_ledger';
+
     protected $fillable = [
         'vendor_id', 'customer_id', 'enquiry_id', 'quote_id', 'order_id',
         'order_type', 'subtotal', 'commission_type', 'commission_value_snapshot',

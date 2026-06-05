@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('wholesale_commission_ledger')) {
+            return;
+        }
+
         Schema::create('wholesale_commission_ledger', function (Blueprint $table) {
             $table->id();
 
