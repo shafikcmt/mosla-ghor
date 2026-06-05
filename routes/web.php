@@ -161,6 +161,7 @@ Route::prefix('vendor')->name('vendor.')->middleware('vendor')->group(function (
     Route::get('orders',                          [VendorOrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{vendorOrder}',            [VendorOrderController::class, 'show'])->name('orders.show');
     Route::patch('orders/{vendorOrder}/fulfillment', [VendorOrderController::class, 'updateFulfillment'])->name('orders.fulfillment');
+    Route::post('orders/{vendorOrder}/parcel',       [VendorOrderController::class, 'parcel'])->name('orders.parcel');
 
     Route::get('payouts',  [VendorPayoutController::class, 'index'])->name('payouts.index');
     Route::post('payouts', [VendorPayoutController::class, 'store'])->name('payouts.store');

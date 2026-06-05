@@ -6,6 +6,8 @@ use App\Models\Courier;
 use App\Models\DeliveryRate;
 use App\Models\DeliveryZone;
 use App\Models\Order;
+use App\Models\VendorOrder;
+use App\Models\VendorPickupPoint;
 
 class CourierService
 {
@@ -100,6 +102,110 @@ class CourierService
             'success' => true,
             'manual'  => true,
             'message' => $order->order_number . ' — ' . $courier->name . ' কুরিয়ারে পাঠানো হিসেবে চিহ্নিত হয়েছে।' . $note,
+        ];
+    }
+
+    private const DUPLICATE_PARCEL_MSG = 'এই অর্ডারের জন্য courier parcel আগে থেকেই তৈরি করা আছে।';
+
+    /**
+     * Vendor (or admin) requests a parcel for a vendor order — no API call.
+     * Admin approves/sends it later (vendor_can_request mode).
+     */
+    public function requestVendorParcel(VendorOrder $vendorOrder, Courier $courier, ?VendorPickupPoint $pickup, ?string $note, string $createdBy, int $userId): array
+    {
+        if ($vendorOrder->hasParcel()) {
+            return ['success' => false, 'message' => self::DUPLICATE_PARCEL_MSG];
+        }
+
+        $vendorOrder->update([
+            'courier_id'                => $courier->id,
+            'courier_name'              => $courier->name,
+            'pickup_point_id'           => $pickup?->id,
+            'courier_note'              => $note,
+            'courier_status'            => 'requested',
+            'parcel_created_by'         => $createdBy,
+            'parcel_created_by_user_id' => $userId,
+        ]);
+
+        return ['success' => true, 'message' => 'পার্সেল রিকোয়েস্ট পাঠানো হয়েছে — অ্যাডমিন অনুমোদন করে কুরিয়ারে পাঠাবেন।'];
+    }
+
+    /**
+     * Create an actual parcel for a vendor order (API when usable, else manual),
+     * using the admin-saved credentials server-side. Vendor never sees them.
+     *
+     * @param  string  $createdBy  'vendor' | 'admin'
+     */
+    public function createVendorParcel(VendorOrder $vendorOrder, Courier $courier, ?VendorPickupPoint $pickup, ?string $note, string $createdBy, int $userId, bool $resend = false): array
+    {
+        if (! $resend && $vendorOrder->hasParcel()) {
+            return ['success' => false, 'message' => self::DUPLICATE_PARCEL_MSG];
+        }
+
+        if ($courier->status !== 'active') {
+            return ['success' => false, 'message' => $courier->name . ' কুরিয়ারটি নিষ্ক্রিয়।'];
+        }
+
+        $driver  = $courier->apiUsable() ? $this->drivers->for($courier) : $this->drivers->manual();
+        $result  = $driver->createParcel($courier, $this->payloadForVendorOrder($vendorOrder, $note));
+
+        if (! $result['success']) {
+            return ['success' => false, 'message' => $result['error'] ?? $result['message'] ?? ($courier->name . ' API ত্রুটি।')];
+        }
+
+        $vendorOrder->update([
+            'courier_id'                => $courier->id,
+            'courier_name'              => $courier->name,
+            'pickup_point_id'           => $pickup?->id,
+            'tracking_number'           => $result['tracking_id'] ?? $vendorOrder->tracking_number,
+            'consignment_id'            => $result['consignment_id'] ?? $vendorOrder->consignment_id,
+            'courier_status'            => 'sent_to_courier',
+            'courier_note'              => $note,
+            'sent_to_courier_at'        => now(),
+            'parcel_created_by'         => $createdBy,
+            'parcel_created_by_user_id' => $userId,
+        ]);
+
+        $manual = ! empty($result['manual']);
+
+        return [
+            'success' => true,
+            'manual'  => $manual,
+            'message' => $courier->name . ($manual ? ' — ম্যানুয়াল পার্সেল তৈরি হয়েছে।' : '-এ পার্সেল সফলভাবে তৈরি হয়েছে।')
+                . (! empty($result['tracking_id']) ? ' Tracking: ' . $result['tracking_id'] : ''),
+        ];
+    }
+
+    /**
+     * Parcel payload for a vendor order. Recipient comes from the parent order;
+     * the invoice is per-vendor. COD policy (confirmed): full order total only
+     * when the order has a single vendor; multi-vendor parcels send COD=0 (admin
+     * reconciles); prepaid is always 0.
+     */
+    private function payloadForVendorOrder(VendorOrder $vendorOrder, ?string $note): array
+    {
+        $order = $vendorOrder->order;
+
+        $address = implode(', ', array_filter([
+            $order->full_address,
+            $order->union_name,
+            $order->upazila_name,
+            $order->district_name,
+            $order->division_name,
+        ]));
+
+        $cod = 0.0;
+        if ($order->payment_method === 'cash_on_delivery' && $order->vendorOrders()->count() <= 1) {
+            $cod = (float) $order->grand_total;
+        }
+
+        return [
+            'invoice'           => $order->order_number . '-V' . $vendorOrder->vendor_id,
+            'recipient_name'    => $order->customer_name,
+            'recipient_phone'   => $order->mobile_number,
+            'recipient_address' => $address,
+            'cod_amount'        => $cod,
+            'note'              => $note ?: ($order->order_note ?? ''),
         ];
     }
 

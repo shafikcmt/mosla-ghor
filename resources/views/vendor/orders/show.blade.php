@@ -183,6 +183,93 @@ $fsColors = [
     </table>
 </div>
 
+{{-- Courier parcel section --}}
+<div class="bg-white rounded-xl border border-emerald-100 overflow-hidden mb-5">
+    <div class="px-5 py-4 border-b border-emerald-100 bg-emerald-50">
+        <h3 class="font-semibold text-emerald-800 text-sm">কুরিয়ার পার্সেল</h3>
+        <p class="text-xs text-emerald-600 mt-0.5">পিকআপ পয়েন্ট ও অ্যাডমিন-অনুমোদিত কুরিয়ার বেছে পার্সেল তৈরি/রিকোয়েস্ট করুন। API credential কখনো দেখানো হয় না।</p>
+    </div>
+
+    <div class="p-5">
+    @if($vendorOrder->hasParcel())
+        {{-- Already has a parcel — read-only summary, no duplicate creation --}}
+        <div class="mb-3 text-sm bg-emerald-50 border border-emerald-200 text-emerald-800 rounded px-3 py-2">
+            ✓ এই অর্ডারের জন্য courier parcel আগে থেকেই তৈরি করা আছে।
+        </div>
+        <dl class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div><dt class="text-gray-500 text-xs">কুরিয়ার</dt><dd class="font-medium">{{ $vendorOrder->courier_name ?: '—' }}</dd></div>
+            <div><dt class="text-gray-500 text-xs">কুরিয়ার স্ট্যাটাস</dt><dd class="font-medium">{{ $vendorOrder->courier_status ?: '—' }}</dd></div>
+            <div><dt class="text-gray-500 text-xs">ট্র্যাকিং</dt><dd class="font-mono text-xs">{{ $vendorOrder->tracking_number ?: '—' }}</dd></div>
+            <div><dt class="text-gray-500 text-xs">কন্সাইনমেন্ট</dt><dd class="font-mono text-xs">{{ $vendorOrder->consignment_id ?: '—' }}</dd></div>
+            <div><dt class="text-gray-500 text-xs">তৈরি করেছেন</dt><dd class="font-medium">{{ $vendorOrder->parcel_created_by ?: '—' }}</dd></div>
+            @if($vendorOrder->sent_to_courier_at)
+            <div><dt class="text-gray-500 text-xs">পাঠানো হয়েছে</dt><dd class="text-xs">{{ $vendorOrder->sent_to_courier_at->format('d M Y, h:i A') }}</dd></div>
+            @endif
+        </dl>
+
+    @elseif($settings->vendorCanRequestParcel())
+        @if($pickupPoints->isEmpty())
+            <div class="text-sm bg-yellow-50 border border-yellow-200 text-yellow-800 rounded px-3 py-3">
+                পার্সেল তৈরির আগে অন্তত একটি সক্রিয় পিকআপ পয়েন্ট দরকার।
+                @if($settings->vendorCanSetupPickup())
+                    <a href="{{ route('vendor.pickup-points.create') }}" class="text-indigo-600 hover:underline font-medium">পিকআপ পয়েন্ট যোগ করুন</a>।
+                @else
+                    অ্যাডমিনের সাথে যোগাযোগ করুন।
+                @endif
+            </div>
+        @else
+        <form method="POST" action="{{ route('vendor.orders.parcel', $vendorOrder) }}">
+            @csrf
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">পিকআপ পয়েন্ট <span class="text-red-500">*</span></label>
+                    <select name="pickup_point_id" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                        @foreach($pickupPoints as $pp)
+                        <option value="{{ $pp->id }}" {{ $pp->is_default ? 'selected' : '' }}>
+                            {{ $pp->pickup_name }} — {{ $pp->city }}{{ $pp->is_default ? ' (ডিফল্ট)' : '' }}
+                        </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">কুরিয়ার <span class="text-red-500">*</span></label>
+                    <select name="courier_id" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                        <option value="">— কুরিয়ার বেছে নিন —</option>
+                        @foreach($couriers as $courier)
+                        <option value="{{ $courier->id }}" {{ $vendorOrder->courier_id == $courier->id ? 'selected' : '' }}>{{ $courier->name }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-gray-400 mt-1">শুধুমাত্র অ্যাডমিন-অনুমোদিত কুরিয়ার।</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">পার্সেল নোট</label>
+                    <input type="text" name="parcel_note" value="{{ old('parcel_note') }}"
+                           placeholder="ঐচ্ছিক নোট"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit"
+                        class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium px-6 py-2 rounded-lg transition-colors">
+                    @if($settings->vendorCanCreateParcel()) পার্সেল তৈরি করুন @else পার্সেল রিকোয়েস্ট করুন @endif
+                </button>
+                <span class="text-xs text-gray-400 ml-2">
+                    @if($settings->vendorCanCreateParcel()) কুরিয়ারে সরাসরি পার্সেল তৈরি হবে। @else অ্যাডমিন অনুমোদন করে পাঠাবেন। @endif
+                </span>
+            </div>
+        </form>
+        @endif
+
+    @else
+        <div class="text-sm bg-gray-50 border border-gray-200 text-gray-500 rounded px-3 py-3">
+            কুরিয়ার পার্সেল অ্যাডমিন পরিচালনা করছেন।
+        </div>
+    @endif
+    </div>
+</div>
+
 {{-- Fulfillment update form --}}
 <div class="bg-white rounded-xl border border-indigo-100 overflow-hidden">
     <div class="px-5 py-4 border-b border-indigo-100 bg-indigo-50">

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Courier;
 use App\Models\CourierSetting;
 use App\Models\VendorOrder;
+use App\Services\CourierService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -45,16 +46,77 @@ class OrderController extends Controller
             'courier',
         ]);
 
-        // Couriers shown to vendors only when admin allows selection. Note the
-        // Courier model hides api_key/api_secret, so credentials are never exposed.
+        // Couriers shown to vendors: admin-approved (active + vendor_allowed) only,
+        // and only when admin allows selection. The Courier model hides
+        // api_key/api_secret, so credentials are never exposed.
         $settings = CourierSetting::current();
-        $couriers = $settings->vendorCanSelectCourier()
-            ? Courier::active()->orderBy('name')->get()
+        $couriers = ($settings->vendorCanSelectCourier() || $settings->vendorCanRequestParcel())
+            ? Courier::vendorAllowed()->orderBy('name')->get()
             : collect();
+
+        // Active pickup points (default first) for the parcel form.
+        $pickupPoints = $this->vendor()->pickupPoints()
+            ->where('status', 'active')
+            ->orderByDesc('is_default')->orderBy('pickup_name')->get();
 
         $fulfillmentStatuses = VendorOrder::fulfillmentStatuses();
 
-        return view('vendor.orders.show', compact('vendorOrder', 'couriers', 'fulfillmentStatuses', 'settings'));
+        return view('vendor.orders.show', compact('vendorOrder', 'couriers', 'pickupPoints', 'fulfillmentStatuses', 'settings'));
+    }
+
+    /**
+     * Vendor creates (or requests) a courier parcel for their own order.
+     * Mode-gated: vendor_can_parcel → create via API; vendor_can_request → request.
+     */
+    public function parcel(Request $request, VendorOrder $vendorOrder, CourierService $courierService)
+    {
+        if ($vendorOrder->vendor_id !== $this->vendor()?->id) {
+            abort(403);
+        }
+
+        $settings = CourierSetting::current();
+        if (! $settings->vendorCanRequestParcel()) {
+            return redirect()->route('vendor.orders.show', $vendorOrder)
+                ->with('error', 'কুরিয়ার পার্সেল ব্যবস্থাপনার অনুমতি নেই। অ্যাডমিন কুরিয়ার পরিচালনা করছেন।');
+        }
+
+        if ($vendorOrder->hasParcel()) {
+            return redirect()->route('vendor.orders.show', $vendorOrder)
+                ->with('error', 'এই অর্ডারের জন্য courier parcel আগে থেকেই তৈরি করা আছে।');
+        }
+
+        $data = $request->validate([
+            'courier_id'      => 'required|exists:couriers,id',
+            'pickup_point_id' => 'required|exists:vendor_pickup_points,id',
+            'parcel_note'     => 'nullable|string|max:500',
+        ], [
+            'courier_id.required'      => 'কুরিয়ার নির্বাচন করুন।',
+            'pickup_point_id.required' => 'পিকআপ পয়েন্ট নির্বাচন করুন।',
+        ]);
+
+        // Courier must be admin-approved (active + vendor_allowed).
+        $courier = Courier::vendorAllowed()->find($data['courier_id']);
+        if (! $courier) {
+            return redirect()->route('vendor.orders.show', $vendorOrder)
+                ->with('error', 'নির্বাচিত কুরিয়ার অনুমোদিত নয়।');
+        }
+
+        // Pickup point must belong to this vendor and be active.
+        $pickup = $this->vendor()->pickupPoints()->where('status', 'active')->find($data['pickup_point_id']);
+        if (! $pickup) {
+            return redirect()->route('vendor.orders.show', $vendorOrder)
+                ->with('error', 'সঠিক (সক্রিয়) পিকআপ পয়েন্ট নির্বাচন করুন।');
+        }
+
+        $note   = $data['parcel_note'] ?? null;
+        $userId = Auth::id();
+
+        $result = $settings->vendorCanCreateParcel()
+            ? $courierService->createVendorParcel($vendorOrder, $courier, $pickup, $note, 'vendor', $userId)
+            : $courierService->requestVendorParcel($vendorOrder, $courier, $pickup, $note, 'vendor', $userId);
+
+        return redirect()->route('vendor.orders.show', $vendorOrder)
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
     public function updateFulfillment(Request $request, VendorOrder $vendorOrder)
