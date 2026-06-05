@@ -8,12 +8,12 @@
         <p class="text-xs text-gray-500 mt-0.5">কুরিয়ার পার্সেল তৈরির আগে অন্তত একটি ডিফল্ট পিকআপ পয়েন্ট দরকার।</p>
     </div>
     <a href="{{ route('vendor.pickup-points.create') }}"
-       class="bg-[#4338ca] text-white text-sm px-4 py-2 rounded hover:bg-[#3730a3] transition-colors">
+       class="bg-[#4338ca] text-white text-sm px-4 py-2 rounded-lg hover:bg-[#3730a3] transition-colors">
         + নতুন পিকআপ পয়েন্ট
     </a>
 </div>
 
-<div class="bg-white rounded shadow overflow-x-auto">
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
     <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-200">
             <tr>

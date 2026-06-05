@@ -15,13 +15,13 @@
             </select>
         </form>
         <a href="{{ route('admin.vendor-pickup-points.create', ['vendor_id' => request('vendor_id')]) }}"
-           class="bg-[#14532d] text-white text-sm px-4 py-2 rounded hover:bg-[#0d3520] transition-colors whitespace-nowrap">
+           class="bg-[#14532d] text-white text-sm px-4 py-2 rounded-lg hover:bg-[#0d3520] transition-colors whitespace-nowrap">
             + নতুন
         </a>
     </div>
 </div>
 
-<div class="bg-white rounded shadow overflow-x-auto">
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
     <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-200">
             <tr>

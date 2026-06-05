@@ -35,6 +35,14 @@ class CourierOrderController extends Controller
         $orders   = $query->latest()->paginate(25)->withQueryString();
         $couriers = Courier::orderBy('name')->get();
 
+        // Top summary counts (whole dataset, not just current page).
+        $summary = [
+            'pending'   => Order::whereNotNull('selected_courier_id')->whereNull('sent_to_courier_at')->count(),
+            'sent'      => Order::where('courier_status', 'sent_to_courier')->count(),
+            'delivered' => Order::where('courier_status', 'delivered')->count(),
+            'returned'  => Order::where('courier_status', 'returned')->count(),
+        ];
+
         $courierStatuses = [
             'pending'          => 'অপেক্ষায়',
             'processing'       => 'প্রসেসিং',
@@ -48,6 +56,6 @@ class CourierOrderController extends Controller
             'failed_delivery'  => 'ডেলিভারি ব্যর্থ',
         ];
 
-        return view('admin.courier-orders.index', compact('orders', 'couriers', 'courierStatuses'));
+        return view('admin.courier-orders.index', compact('orders', 'couriers', 'courierStatuses', 'summary'));
     }
 }

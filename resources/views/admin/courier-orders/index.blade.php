@@ -2,10 +2,26 @@
 @section('title', 'পার্সেল / কুরিয়ার অর্ডার')
 
 @section('content')
-<h2 class="text-lg font-bold text-gray-800 mb-5">পার্সেল / কুরিয়ার অর্ডার</h2>
+<h2 class="text-lg font-bold text-gray-800 mb-4">পার্সেল / কুরিয়ার অর্ডার</h2>
+
+{{-- Summary stat cards --}}
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+    <a href="{{ route('admin.courier-orders.index') }}">
+        <x-ui.stat-card label="পেন্ডিং পার্সেল" :value="$summary['pending']" color="amber" class="hover:shadow transition-shadow" />
+    </a>
+    <a href="{{ route('admin.courier-orders.index', ['courier_status' => 'sent_to_courier']) }}">
+        <x-ui.stat-card label="কুরিয়ারে পাঠানো" :value="$summary['sent']" color="blue" class="hover:shadow transition-shadow" />
+    </a>
+    <a href="{{ route('admin.courier-orders.index', ['courier_status' => 'delivered']) }}">
+        <x-ui.stat-card label="ডেলিভারড" :value="$summary['delivered']" color="green" class="hover:shadow transition-shadow" />
+    </a>
+    <a href="{{ route('admin.courier-orders.index', ['courier_status' => 'returned']) }}">
+        <x-ui.stat-card label="ফেরত" :value="$summary['returned']" color="red" class="hover:shadow transition-shadow" />
+    </a>
+</div>
 
 {{-- Filters --}}
-<div class="bg-white rounded shadow p-4 mb-5">
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-5">
     <form method="GET" action="{{ route('admin.courier-orders.index') }}" class="flex flex-wrap gap-3 items-end">
         <div>
             <label class="block text-xs font-medium text-gray-500 mb-1">কুরিয়ার</label>
@@ -44,7 +60,7 @@
     </form>
 </div>
 
-<div class="bg-white rounded shadow overflow-x-auto">
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
     <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-200">
             <tr>

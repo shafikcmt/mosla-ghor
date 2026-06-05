@@ -433,20 +433,27 @@
     @endif
 
     {{-- ── Courier / Delivery Section ─────────────────────────────── --}}
-    <div class="no-print px-6 py-5 bg-blue-50">
-        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">কুরিয়ার / ডেলিভারি ম্যানেজমেন্ট</h3>
+    <div class="no-print px-6 py-5 bg-gray-50">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">কুরিয়ার / ডেলিভারি ম্যানেজমেন্ট</h3>
+            @if($order->courier_status)
+            <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ $csColors[$order->courier_status] ?? 'bg-gray-100 text-gray-600' }}">
+                {{ $courierStatuses[$order->courier_status] ?? $order->courier_status }}
+            </span>
+            @endif
+        </div>
 
         {{-- Current courier info --}}
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5 text-sm">
-            <div class="bg-white rounded p-3 shadow-sm">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5 text-sm">
+            <div class="bg-white rounded-lg border border-gray-100 p-3">
                 <div class="text-xs text-gray-400 mb-1">নির্বাচিত কুরিয়ার</div>
                 <div class="font-semibold text-gray-800">{{ $order->selectedCourier?->name ?? '—' }}</div>
             </div>
-            <div class="bg-white rounded p-3 shadow-sm">
+            <div class="bg-white rounded-lg border border-gray-100 p-3">
                 <div class="text-xs text-gray-400 mb-1">সাজেস্টেড কুরিয়ার</div>
                 <div class="font-semibold text-gray-600">{{ $order->suggestedCourier?->name ?? '—' }}</div>
             </div>
-            <div class="bg-white rounded p-3 shadow-sm">
+            <div class="bg-white rounded-lg border border-gray-100 p-3">
                 <div class="text-xs text-gray-400 mb-1">কুরিয়ার API স্ট্যাটাস</div>
                 <div class="font-semibold text-xs">
                     @php $sc = $order->selectedCourier; @endphp
@@ -461,7 +468,7 @@
                     @endif
                 </div>
             </div>
-            <div class="bg-white rounded p-3 shadow-sm">
+            <div class="bg-white rounded-lg border border-gray-100 p-3">
                 <div class="text-xs text-gray-400 mb-1">কুরিয়ার খরচ</div>
                 <div class="font-semibold text-gray-800">
                     ৳ {{ number_format((float) $order->courier_cost, 2) }}
@@ -470,7 +477,7 @@
                     </span>
                 </div>
             </div>
-            <div class="bg-white rounded p-3 shadow-sm">
+            <div class="bg-white rounded-lg border border-gray-100 p-3">
                 <div class="text-xs text-gray-400 mb-1">কুরিয়ার স্ট্যাটাস</div>
                 <div class="font-semibold text-gray-800">
                     @if($order->courier_status)
@@ -482,24 +489,24 @@
                     @endif
                 </div>
             </div>
-            <div class="bg-white rounded p-3 shadow-sm">
+            <div class="bg-white rounded-lg border border-gray-100 p-3">
                 <div class="text-xs text-gray-400 mb-1">ট্র্যাকিং আইডি</div>
                 <div class="font-mono text-xs text-gray-800">{{ $order->tracking_id ?: '—' }}</div>
             </div>
             @if($order->consignment_id)
-            <div class="bg-white rounded p-3 shadow-sm">
+            <div class="bg-white rounded-lg border border-gray-100 p-3">
                 <div class="text-xs text-gray-400 mb-1">Consignment আইডি</div>
                 <div class="font-mono text-xs text-gray-800">{{ $order->consignment_id }}</div>
             </div>
             @endif
             @if($order->sent_to_courier_at)
-            <div class="bg-white rounded p-3 shadow-sm">
+            <div class="bg-white rounded-lg border border-gray-100 p-3">
                 <div class="text-xs text-gray-400 mb-1">পাঠানোর তারিখ</div>
                 <div class="text-xs text-gray-800">{{ $order->sent_to_courier_at->format('d M Y, h:i A') }}</div>
             </div>
             @endif
             @if($order->delivered_at)
-            <div class="bg-white rounded p-3 shadow-sm">
+            <div class="bg-white rounded-lg border border-gray-100 p-3">
                 <div class="text-xs text-gray-400 mb-1">ডেলিভারির তারিখ</div>
                 <div class="text-xs text-gray-800">{{ $order->delivered_at->format('d M Y') }}</div>
             </div>
@@ -585,7 +592,7 @@
             </div>
             <div class="flex items-center gap-3">
                 <button type="submit"
-                        class="bg-[#14532d] text-white text-sm px-5 py-2 rounded hover:bg-[#0d3520] transition-colors">
+                        class="bg-[#14532d] text-white text-sm px-5 py-2 rounded-lg hover:bg-[#0d3520] transition-colors">
                     কুরিয়ার তথ্য আপডেট করুন
                 </button>
             </div>
@@ -602,7 +609,7 @@
         </form>
 
         {{-- Send to Courier (uses the SELECTED courier) --}}
-        <div class="mt-5 pt-4 border-t border-blue-200">
+        <div class="mt-5 pt-4 border-t border-gray-200">
             <h4 class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">কুরিয়ারে পাঠান</h4>
 
             @php $sc = $order->selectedCourier; @endphp
@@ -633,7 +640,7 @@
                             @csrf
                             <input type="hidden" name="resend" value="1">
                             <button type="submit"
-                                    class="bg-amber-600 text-white text-sm px-4 py-2 rounded hover:bg-amber-700 transition-colors">
+                                    class="bg-amber-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors">
                                 ↻ পুনরায় পাঠান
                             </button>
                         </form>
@@ -642,7 +649,7 @@
                               onsubmit="return confirm('{{ $sc->name }}-এ পাঠাবেন?')">
                             @csrf
                             <button type="submit" {{ $sc->status !== 'active' ? 'disabled' : '' }}
-                                    class="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                                    class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                                 📦 {{ $sc->name }}-এ পাঠান
                                 @if($sc->apiUsable())
                                     <span class="text-blue-200 text-xs">(API)</span>
@@ -661,7 +668,7 @@
                       onsubmit="return confirm('ডেলিভারড চিহ্নিত করবেন?')">
                     @csrf
                     <button type="submit"
-                            class="bg-green-600 text-white text-sm px-4 py-2 rounded hover:bg-green-700 transition-colors">
+                            class="bg-green-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
                         ✓ ডেলিভারড
                     </button>
                 </form>
@@ -671,7 +678,7 @@
                       onsubmit="return confirm('ফেরত চিহ্নিত করবেন?')">
                     @csrf
                     <button type="submit"
-                            class="bg-orange-600 text-white text-sm px-4 py-2 rounded hover:bg-orange-700 transition-colors">
+                            class="bg-orange-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
                         ↩ ফেরত
                     </button>
                 </form>
@@ -683,7 +690,7 @@
     <div class="no-print px-6 py-5 bg-emerald-50">
         <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">স্টক ম্যানেজমেন্ট</h3>
         <div class="flex flex-wrap items-start gap-4 text-sm">
-            <div class="bg-white rounded p-3 shadow-sm">
+            <div class="bg-white rounded-lg border border-gray-100 p-3">
                 <div class="text-xs text-gray-400 mb-1">স্টক স্ট্যাটাস</div>
                 @if($order->stock_restored_at)
                     <span class="px-2 py-1 rounded text-xs font-semibold bg-orange-100 text-orange-700">স্টক ফেরত দেওয়া হয়েছে</span>
@@ -694,13 +701,13 @@
                 @endif
             </div>
             @if($order->stock_deducted_at)
-            <div class="bg-white rounded p-3 shadow-sm">
+            <div class="bg-white rounded-lg border border-gray-100 p-3">
                 <div class="text-xs text-gray-400 mb-1">কাটার সময়</div>
                 <div class="text-xs text-gray-800">{{ $order->stock_deducted_at->format('d M Y, h:i A') }}</div>
             </div>
             @endif
             @if($order->stock_restored_at)
-            <div class="bg-white rounded p-3 shadow-sm">
+            <div class="bg-white rounded-lg border border-gray-100 p-3">
                 <div class="text-xs text-gray-400 mb-1">পুনরুদ্ধারের সময়</div>
                 <div class="text-xs text-gray-800">{{ $order->stock_restored_at->format('d M Y, h:i A') }}</div>
             </div>
