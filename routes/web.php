@@ -36,11 +36,13 @@ use App\Http\Controllers\Vendor\ProductController as VendorProductController;
 use App\Http\Controllers\Vendor\ComboController as VendorComboController;
 use App\Http\Controllers\Vendor\OrderController as VendorOrderController;
 use App\Http\Controllers\Vendor\PayoutController as VendorPayoutController;
+use App\Http\Controllers\Vendor\PickupPointController as VendorPickupPointController;
 use App\Http\Controllers\Vendor\ProfileController as VendorProfileController;
 use App\Http\Controllers\Admin\ReturnRequestController as AdminReturnRequestController;
 use App\Http\Controllers\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\Admin\VendorController as AdminVendorController;
 use App\Http\Controllers\Admin\VendorPayoutController as AdminVendorPayoutController;
+use App\Http\Controllers\Admin\VendorPickupPointController as AdminVendorPickupPointController;
 use App\Http\Controllers\Admin\WholesaleEnquiryController as AdminWholesaleEnquiryController;
 use App\Http\Controllers\Admin\WholesaleQuoteController as AdminWholesaleQuoteController;
 use App\Http\Controllers\Admin\WholesaleChatController as AdminWholesaleChatController;
@@ -163,6 +165,12 @@ Route::prefix('vendor')->name('vendor.')->middleware('vendor')->group(function (
     Route::get('payouts',  [VendorPayoutController::class, 'index'])->name('payouts.index');
     Route::post('payouts', [VendorPayoutController::class, 'store'])->name('payouts.store');
 
+    // ── Vendor pickup points ───────────────────────────────────────────────
+    Route::post('pickup-points/{pickupPoint}/default', [VendorPickupPointController::class, 'setDefault'])->name('pickup-points.default');
+    Route::resource('pickup-points', VendorPickupPointController::class)
+        ->parameters(['pickup-points' => 'pickupPoint'])
+        ->except(['show']);
+
     Route::get('profile',  [VendorProfileController::class, 'index'])->name('profile.index');
     Route::put('profile',  [VendorProfileController::class, 'update'])->name('profile.update');
 
@@ -268,6 +276,12 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::post('courier-api-settings/{courier}/test', [AdminCourierApiSettingController::class, 'test'])->name('courier-api-settings.test');
 
     Route::get('courier-orders', [AdminCourierOrderController::class, 'index'])->name('courier-orders.index');
+
+    // ── Vendor pickup points (admin oversight) ─────────────────────────────
+    Route::post('vendor-pickup-points/{vendorPickupPoint}/default', [AdminVendorPickupPointController::class, 'setDefault'])->name('vendor-pickup-points.default');
+    Route::resource('vendor-pickup-points', AdminVendorPickupPointController::class)
+        ->parameters(['vendor-pickup-points' => 'vendorPickupPoint'])
+        ->except(['show']);
 
     Route::resource('faqs', AdminFaqController::class);
     Route::post('faqs/{faq}/toggle', [AdminFaqController::class, 'toggle'])->name('faqs.toggle');
