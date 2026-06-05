@@ -9,16 +9,20 @@ class Courier extends Model
 {
     protected $fillable = [
         'name', 'slug', 'status', 'api_enabled', 'api_key', 'api_secret',
-        'base_url', 'is_default', 'notes',
+        'base_url', 'is_default', 'vendor_allowed', 'notes',
         'courier_api_last_checked_at', 'courier_api_last_status', 'courier_api_last_error',
         'courier_api_last_message',
     ];
 
     protected $casts = [
-        'api_enabled' => 'boolean',
-        'is_default'  => 'boolean',
+        'api_enabled'    => 'boolean',
+        'is_default'     => 'boolean',
+        'vendor_allowed' => 'boolean',
         'courier_api_last_checked_at' => 'datetime',
     ];
+
+    /** Default Steadfast API base URL. */
+    public const DEFAULT_STEADFAST_BASE_URL = 'https://portal.steadfast.com.bd/api/v1';
 
     /**
      * Never expose API credentials when the model is serialized (e.g. accidental
@@ -61,6 +65,41 @@ class Courier extends Model
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    /**
+     * May a vendor select this courier for their own parcels?
+     * Active + flagged available to vendors.
+     */
+    public function isAvailableForVendor(): bool
+    {
+        return $this->isActive() && (bool) $this->vendor_allowed;
+    }
+
+    /**
+     * Cleaned base URL (control chars / whitespace stripped), or the default
+     * Steadfast endpoint when none is set. Credentials are never included.
+     */
+    public function normalizedBaseUrl(): string
+    {
+        $raw = (string) ($this->base_url ?? '');
+        $clean = preg_replace('/[\x00-\x1F\x7F\x{200B}-\x{200D}\x{FEFF}]/u', '', $raw);
+        $clean = trim((string) $clean);
+
+        if ($clean === '') {
+            return self::DEFAULT_STEADFAST_BASE_URL;
+        }
+
+        if (! preg_match('~^https?://~i', $clean)) {
+            $clean = 'https://' . $clean;
+        }
+
+        return rtrim($clean, '/');
+    }
+
+    public static function vendorAllowed()
+    {
+        return static::where('status', 'active')->where('vendor_allowed', true);
     }
 
     public static function default(): ?self

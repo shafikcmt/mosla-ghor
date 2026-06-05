@@ -23,6 +23,7 @@ class Order extends Model
         'courier_status', 'tracking_id', 'consignment_id', 'courier_note',
         'sent_to_courier_at', 'delivered_at', 'returned_at',
         'delivery_charge_overridden', 'courier_cost_overridden', 'zone_overridden',
+        'pickup_point_id', 'parcel_created_by', 'parcel_created_by_user_id',
         'stock_deducted_at', 'stock_restored_at',
         // CRM
         'customer_id', 'accepts_marketing',
@@ -71,6 +72,22 @@ class Order extends Model
     public function suggestedCourier(): BelongsTo
     {
         return $this->belongsTo(Courier::class, 'suggested_courier_id');
+    }
+
+    public function pickupPoint(): BelongsTo
+    {
+        return $this->belongsTo(VendorPickupPoint::class, 'pickup_point_id');
+    }
+
+    /**
+     * True when this order already has a courier parcel (API or manual), so a
+     * second create must be blocked.
+     */
+    public function hasParcel(): bool
+    {
+        return ! empty($this->consignment_id)
+            || ! empty($this->tracking_id)
+            || ! empty($this->sent_to_courier_at);
     }
 
     public function zone(): BelongsTo

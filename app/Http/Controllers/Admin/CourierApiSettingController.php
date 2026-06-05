@@ -93,18 +93,24 @@ class CourierApiSettingController extends Controller
     public function saveSettings(Request $request)
     {
         $data = $request->validate([
-            'courier_selection_mode' => 'required|in:admin_only,vendor_suggest,vendor_select',
+            'vendor_courier_mode' => 'required|in:admin_only,vendor_can_request,vendor_can_parcel',
         ], [
-            'courier_selection_mode.required' => 'কুরিয়ার সিলেকশন মোড নির্বাচন করুন।',
-            'courier_selection_mode.in'       => 'কুরিয়ার সিলেকশন মোড সঠিক নয়।',
+            'vendor_courier_mode.required' => 'কুরিয়ার মোড নির্বাচন করুন।',
+            'vendor_courier_mode.in'       => 'কুরিয়ার মোড সঠিক নয়।',
         ]);
+
+        $mode = $data['vendor_courier_mode'];
 
         $settings = CourierSetting::current();
         $settings->update([
-            'courier_selection_mode'     => $data['courier_selection_mode'],
-            'vendor_can_select_courier'  => $request->boolean('vendor_can_select_courier'),
-            'vendor_can_update_tracking' => $request->boolean('vendor_can_update_tracking'),
-            'vendor_can_mark_handover'   => $request->boolean('vendor_can_mark_handover'),
+            'vendor_courier_mode'             => $mode,
+            // Keep the legacy column consistent so nothing reading it breaks.
+            'courier_selection_mode'          => CourierSetting::MODE_TO_LEGACY[$mode] ?? 'admin_only',
+            'vendor_can_select_courier'       => $request->boolean('vendor_can_select_courier'),
+            'vendor_can_update_tracking'      => $request->boolean('vendor_can_update_tracking'),
+            'vendor_can_mark_handover'        => $request->boolean('vendor_can_mark_handover'),
+            'vendor_can_setup_pickup_address' => $request->boolean('vendor_can_setup_pickup_address'),
+            'vendor_can_create_parcel'        => $request->boolean('vendor_can_create_parcel'),
         ]);
 
         return redirect()->route('admin.courier-api-settings.index')

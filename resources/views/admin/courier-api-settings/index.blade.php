@@ -15,18 +15,30 @@
         @csrf
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">কুরিয়ার সিলেকশন মোড</label>
-                <select name="courier_selection_mode" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
-                    @foreach(\App\Models\CourierSetting::SELECTION_MODES as $val => $label)
-                    <option value="{{ $val }}" {{ $settings->courier_selection_mode === $val ? 'selected' : '' }}>{{ $label }}</option>
+                <label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">ভেন্ডর কুরিয়ার মোড</label>
+                <select name="vendor_courier_mode" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+                    @foreach(\App\Models\CourierSetting::VENDOR_COURIER_MODES as $val => $label)
+                    <option value="{{ $val }}" {{ $settings->mode() === $val ? 'selected' : '' }}>{{ $label }}</option>
                     @endforeach
                 </select>
-                <p class="text-xs text-gray-400 mt-1">“শুধু অ্যাডমিন” হলে ভেন্ডর কোনো কুরিয়ার সিলেক্ট করতে পারবে না।</p>
+                <p class="text-xs text-gray-400 mt-1">
+                    <b>শুধু অ্যাডমিন</b>: ভেন্ডর পার্সেল করতে পারবে না।
+                    <b>রিকোয়েস্ট</b>: ভেন্ডর কুরিয়ার বেছে রিকোয়েস্ট দেবে, অ্যাডমিন পাঠাবে।
+                    <b>নিজে পার্সেল</b>: ভেন্ডর admin API দিয়ে নিজেই পার্সেল করবে (credential দেখা যাবে না)।
+                </p>
             </div>
             <div class="space-y-2.5 md:pt-5">
                 <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" name="vendor_can_setup_pickup_address" value="1" {{ $settings->vendor_can_setup_pickup_address ? 'checked' : '' }} class="w-4 h-4 accent-[#14532d]">
+                    ভেন্ডর নিজের পিকআপ অ্যাড্রেস সেটআপ করতে পারবে
+                </label>
+                <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input type="checkbox" name="vendor_can_select_courier" value="1" {{ $settings->vendor_can_select_courier ? 'checked' : '' }} class="w-4 h-4 accent-[#14532d]">
                     ভেন্ডর কুরিয়ার সিলেক্ট করতে পারবে
+                </label>
+                <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input type="checkbox" name="vendor_can_create_parcel" value="1" {{ $settings->vendor_can_create_parcel ? 'checked' : '' }} class="w-4 h-4 accent-[#14532d]">
+                    ভেন্ডর নিজে পার্সেল তৈরি করতে পারবে (মোড: নিজে পার্সেল)
                 </label>
                 <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                     <input type="checkbox" name="vendor_can_update_tracking" value="1" {{ $settings->vendor_can_update_tracking ? 'checked' : '' }} class="w-4 h-4 accent-[#14532d]">

@@ -22,21 +22,20 @@ class CourierController extends Controller
 
     public function store(Request $request)
     {
+        // Basic courier info only. API credentials/base URL live solely on the
+        // Courier API Settings page (single source of truth).
         $data = $request->validate([
-            'name'       => 'required|string|max:100',
-            'slug'       => 'nullable|string|max:100|unique:couriers,slug',
-            'status'     => 'required|in:active,inactive',
-            'api_enabled'=> 'boolean',
-            'api_key'    => ['nullable', 'string', 'max:255', $this->notLoginEmailRule()],
-            'api_secret' => ['nullable', 'string', 'max:255', $this->notLoginEmailRule()],
-            'base_url'   => 'nullable|string|max:255',
-            'is_default' => 'boolean',
-            'notes'      => 'nullable|string|max:1000',
+            'name'           => 'required|string|max:100',
+            'slug'           => 'nullable|string|max:100|unique:couriers,slug',
+            'status'         => 'required|in:active,inactive',
+            'is_default'     => 'boolean',
+            'vendor_allowed' => 'boolean',
+            'notes'          => 'nullable|string|max:1000',
         ]);
 
-        $data['slug']       = $data['slug'] ?: Str::slug($data['name']);
-        $data['api_enabled']= $request->boolean('api_enabled');
-        $data['is_default'] = $request->boolean('is_default');
+        $data['slug']           = $data['slug'] ?: Str::slug($data['name']);
+        $data['is_default']     = $request->boolean('is_default');
+        $data['vendor_allowed'] = $request->boolean('vendor_allowed');
 
         if ($data['is_default']) {
             Courier::where('is_default', true)->update(['is_default' => false]);
@@ -54,34 +53,21 @@ class CourierController extends Controller
 
     public function update(Request $request, Courier $courier)
     {
-        // Credentials are only touched when the admin explicitly opts in — blocks
-        // browser autofill from silently overwriting stored API keys.
-        $replace = $request->boolean('replace_api_credentials');
+        // Basic courier info only. API credentials/base URL are managed on the
+        // Courier API Settings page — never here — so there is nothing for browser
+        // autofill to overwrite on this form.
+        $data = $request->validate([
+            'name'           => 'required|string|max:100',
+            'slug'           => 'nullable|string|max:100|unique:couriers,slug,' . $courier->id,
+            'status'         => 'required|in:active,inactive',
+            'is_default'     => 'boolean',
+            'vendor_allowed' => 'boolean',
+            'notes'          => 'nullable|string|max:1000',
+        ]);
 
-        $rules = [
-            'name'       => 'required|string|max:100',
-            'slug'       => 'nullable|string|max:100|unique:couriers,slug,' . $courier->id,
-            'status'     => 'required|in:active,inactive',
-            'api_enabled'=> 'boolean',
-            'base_url'   => 'nullable|string|max:255',
-            'is_default' => 'boolean',
-            'notes'      => 'nullable|string|max:1000',
-        ];
-
-        if ($replace) {
-            $rules['api_key']    = ['nullable', 'string', 'max:255', $this->notLoginEmailRule()];
-            $rules['api_secret'] = ['nullable', 'string', 'max:255', $this->notLoginEmailRule()];
-        }
-
-        $data = $request->validate($rules);
-
-        $data['slug']       = $data['slug'] ?: Str::slug($data['name']);
-        $data['api_enabled']= $request->boolean('api_enabled');
-        $data['is_default'] = $request->boolean('is_default');
-
-        // Ignore credential fields unless the admin opted in; blank means "leave unchanged".
-        if (! $replace || blank($request->input('api_key')))    unset($data['api_key']);
-        if (! $replace || blank($request->input('api_secret'))) unset($data['api_secret']);
+        $data['slug']           = $data['slug'] ?: Str::slug($data['name']);
+        $data['is_default']     = $request->boolean('is_default');
+        $data['vendor_allowed'] = $request->boolean('vendor_allowed');
 
         if ($data['is_default']) {
             Courier::where('id', '!=', $courier->id)->where('is_default', true)->update(['is_default' => false]);

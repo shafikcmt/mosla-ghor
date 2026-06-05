@@ -47,6 +47,16 @@ class Vendor extends Model
         return $this->hasMany(VendorPayout::class);
     }
 
+    public function pickupPoints(): HasMany
+    {
+        return $this->hasMany(VendorPickupPoint::class);
+    }
+
+    public function defaultPickupPoint(): ?VendorPickupPoint
+    {
+        return VendorPickupPoint::defaultFor($this->id);
+    }
+
     public function wholesaleEnquiries(): HasMany
     {
         return $this->hasMany(WholesaleEnquiry::class);

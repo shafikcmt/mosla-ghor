@@ -7,14 +7,15 @@
 </div>
 
 <div class="bg-white rounded shadow p-6 max-w-2xl">
-    <h2 class="text-base font-bold text-gray-800 mb-5">নতুন কুরিয়ার যোগ করুন</h2>
+    <h2 class="text-base font-bold text-gray-800 mb-1">নতুন কুরিয়ার যোগ করুন</h2>
+    <p class="text-xs text-gray-400 mb-5">
+        কুরিয়ার তৈরির পর API Key / Secret / Base URL
+        <a href="{{ route('admin.courier-api-settings.index') }}" class="text-indigo-600 hover:underline">কুরিয়ার API সেটিং</a>
+        পেজ থেকে কনফিগার করুন।
+    </p>
 
-    <form method="POST" action="{{ route('admin.couriers.store') }}" class="space-y-4" autocomplete="off">
+    <form method="POST" action="{{ route('admin.couriers.store') }}" class="space-y-4">
         @csrf
-
-        {{-- Decoy fields: absorb browser autofill so login email/password never lands in API Key/Secret. --}}
-        <input type="text" name="fake_username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none">
-        <input type="password" name="fake_password" autocomplete="new-password" tabindex="-1" aria-hidden="true" style="display:none">
 
         <div class="grid grid-cols-2 gap-4">
             <div>
@@ -30,40 +31,19 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">স্ট্যাটাস</label>
-                <select name="status" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none">
-                    <option value="active" {{ old('status','active')==='active'?'selected':'' }}>সক্রিয়</option>
-                    <option value="inactive" {{ old('status')==='inactive'?'selected':'' }}>নিষ্ক্রিয়</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Base URL</label>
-                <input type="text" name="base_url" value="{{ old('base_url') }}"
-                       placeholder="https://..."
-                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-[#14532d] focus:outline-none">
-            </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-                <input type="text" name="api_key" value="{{ old('api_key') }}" autocomplete="new-password"
-                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-[#14532d] focus:outline-none">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">API Secret</label>
-                <input type="password" name="api_secret" autocomplete="new-password"
-                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-[#14532d] focus:outline-none">
-            </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">স্ট্যাটাস</label>
+            <select name="status" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none">
+                <option value="active" {{ old('status','active')==='active'?'selected':'' }}>সক্রিয়</option>
+                <option value="inactive" {{ old('status')==='inactive'?'selected':'' }}>নিষ্ক্রিয়</option>
+            </select>
         </div>
 
         <div class="flex items-center gap-6">
             <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                <input type="checkbox" name="api_enabled" value="1" {{ old('api_enabled') ? 'checked' : '' }}
+                <input type="checkbox" name="vendor_allowed" value="1" {{ old('vendor_allowed', true) ? 'checked' : '' }}
                        class="w-4 h-4 accent-[#14532d]">
-                API সক্রিয়
+                ভেন্ডরদের জন্য অনুমোদিত
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                 <input type="checkbox" name="is_default" value="1" {{ old('is_default') ? 'checked' : '' }}

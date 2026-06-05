@@ -17,7 +17,8 @@
                 <th class="text-left px-4 py-3 font-semibold text-gray-600">নাম</th>
                 <th class="text-left px-4 py-3 font-semibold text-gray-600">Slug</th>
                 <th class="text-center px-4 py-3 font-semibold text-gray-600">স্ট্যাটাস</th>
-                <th class="text-center px-4 py-3 font-semibold text-gray-600">API</th>
+                <th class="text-center px-4 py-3 font-semibold text-gray-600">টাইপ</th>
+                <th class="text-center px-4 py-3 font-semibold text-gray-600">ভেন্ডর</th>
                 <th class="text-center px-4 py-3 font-semibold text-gray-600">ডিফল্ট</th>
                 <th class="text-right px-4 py-3 font-semibold text-gray-600">অ্যাকশন</th>
             </tr>
@@ -33,9 +34,20 @@
                     </span>
                 </td>
                 <td class="px-4 py-3 text-center">
-                    <span class="px-2 py-1 rounded text-xs font-semibold {{ $courier->api_enabled ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400' }}">
-                        {{ $courier->api_enabled ? 'চালু' : 'বন্ধ' }}
-                    </span>
+                    @if($courier->supportsApi())
+                        <span class="px-2 py-1 rounded text-xs font-semibold {{ $courier->api_enabled ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400' }}">
+                            API {{ $courier->api_enabled ? 'চালু' : 'বন্ধ' }}
+                        </span>
+                    @else
+                        <span class="px-2 py-1 rounded text-xs font-semibold bg-amber-100 text-amber-700">ম্যানুয়াল</span>
+                    @endif
+                </td>
+                <td class="px-4 py-3 text-center">
+                    @if($courier->vendor_allowed)
+                        <span class="px-2 py-1 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">অনুমোদিত</span>
+                    @else
+                        <span class="px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-400">বন্ধ</span>
+                    @endif
                 </td>
                 <td class="px-4 py-3 text-center">
                     @if($courier->is_default)
@@ -48,6 +60,10 @@
                     <div class="flex items-center justify-end gap-2">
                         <a href="{{ route('admin.couriers.edit', $courier) }}"
                            class="text-xs text-blue-600 hover:underline">সম্পাদনা</a>
+                        @if($courier->supportsApi())
+                        <a href="{{ route('admin.courier-api-settings.index') }}"
+                           class="text-xs text-indigo-600 hover:underline">API সেটিং</a>
+                        @endif
                         <form method="POST" action="{{ route('admin.couriers.toggle', $courier) }}">
                             @csrf
                             <button class="text-xs {{ $courier->status === 'active' ? 'text-orange-500' : 'text-green-600' }} hover:underline">
@@ -64,7 +80,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="6" class="px-4 py-8 text-center text-gray-400">কোনো কুরিয়ার নেই।</td>
+                <td colspan="7" class="px-4 py-8 text-center text-gray-400">কোনো কুরিয়ার নেই।</td>
             </tr>
             @endforelse
         </tbody>

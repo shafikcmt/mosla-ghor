@@ -14,7 +14,10 @@ class VendorOrder extends Model
         'commission_type', 'commission_value_snapshot', 'commission_amount',
         'payable_amount', 'status',
         'fulfillment_status', 'courier_id', 'courier_name',
-        'tracking_number', 'vendor_note', 'ready_at', 'handed_to_courier_at',
+        'pickup_point_id', 'tracking_number', 'consignment_id',
+        'courier_status', 'courier_note',
+        'vendor_note', 'ready_at', 'handed_to_courier_at', 'sent_to_courier_at',
+        'parcel_created_by', 'parcel_created_by_user_id',
     ];
 
     protected $casts = [
@@ -24,6 +27,7 @@ class VendorOrder extends Model
         'payable_amount'            => 'decimal:2',
         'ready_at'                  => 'datetime',
         'handed_to_courier_at'      => 'datetime',
+        'sent_to_courier_at'        => 'datetime',
     ];
 
     public function order(): BelongsTo
@@ -45,6 +49,22 @@ class VendorOrder extends Model
     public function courier(): BelongsTo
     {
         return $this->belongsTo(Courier::class);
+    }
+
+    public function pickupPoint(): BelongsTo
+    {
+        return $this->belongsTo(VendorPickupPoint::class, 'pickup_point_id');
+    }
+
+    /**
+     * True when this vendor order already has a courier parcel, so a second
+     * create must be blocked.
+     */
+    public function hasParcel(): bool
+    {
+        return ! empty($this->consignment_id)
+            || ! empty($this->tracking_number)
+            || ! empty($this->sent_to_courier_at);
     }
 
     public static function fulfillmentStatuses(): array
