@@ -306,6 +306,18 @@ class VendorController extends Controller
             'vendor_product_auto_approve'  => WebsiteSetting::get('vendor_product_auto_approve', '0'),
             'default_commission_type'      => WebsiteSetting::get('default_commission_type', 'percentage'),
             'default_commission_value'     => WebsiteSetting::get('default_commission_value', '0'),
+            // Local-business workflow feature toggles
+            'vendor_can_add_product'       => WebsiteSetting::get('vendor_can_add_product', '1'),
+            'vendor_can_manage_stock'      => WebsiteSetting::get('vendor_can_manage_stock', '1'),
+            'vendor_can_create_customer'   => WebsiteSetting::get('vendor_can_create_customer', '1'),
+            'vendor_can_create_order'      => WebsiteSetting::get('vendor_can_create_order', '1'),
+            'vendor_can_share_whatsapp'    => WebsiteSetting::get('vendor_can_share_whatsapp', '1'),
+            'vendor_can_give_discount'     => WebsiteSetting::get('vendor_can_give_discount', '1'),
+            'vendor_can_allow_due'         => WebsiteSetting::get('vendor_can_allow_due', '1'),
+            'stock_negative_allowed'       => WebsiteSetting::get('stock_negative_allowed', '0'),
+            'vendor_max_discount_percent'  => WebsiteSetting::get('vendor_max_discount_percent', '100'),
+            'invoice_token_expiry_days'    => WebsiteSetting::get('invoice_token_expiry_days', '0'),
+            'whatsapp_invoice_template'    => \App\Support\VendorSettings::whatsappInvoiceTemplate(),
         ];
 
         return view('admin.vendors.settings', compact('settings'));
@@ -314,20 +326,41 @@ class VendorController extends Controller
     public function saveSettings(Request $request)
     {
         $request->validate([
-            'default_commission_type'  => 'required|in:percentage,fixed',
-            'default_commission_value' => 'required|numeric|min:0',
+            'default_commission_type'     => 'required|in:percentage,fixed',
+            'default_commission_value'    => 'required|numeric|min:0',
+            'vendor_max_discount_percent' => 'required|numeric|min:0|max:100',
+            'invoice_token_expiry_days'   => 'required|integer|min:0',
+            'whatsapp_invoice_template'   => 'nullable|string|max:2000',
         ]);
 
-        $keys = [
+        // Checkbox toggles (absent in POST = off → '0')
+        $boolKeys = [
             'vendor_registration_enabled',
             'vendor_auto_approve',
             'vendor_product_auto_approve',
+            'vendor_can_add_product',
+            'vendor_can_manage_stock',
+            'vendor_can_create_customer',
+            'vendor_can_create_order',
+            'vendor_can_share_whatsapp',
+            'vendor_can_give_discount',
+            'vendor_can_allow_due',
+            'stock_negative_allowed',
+        ];
+        foreach ($boolKeys as $key) {
+            WebsiteSetting::updateOrCreate(['key' => $key], ['value' => $request->boolean($key) ? '1' : '0']);
+        }
+
+        // Scalar / text values
+        $valueKeys = [
             'default_commission_type',
             'default_commission_value',
+            'vendor_max_discount_percent',
+            'invoice_token_expiry_days',
+            'whatsapp_invoice_template',
         ];
-
-        foreach ($keys as $key) {
-            WebsiteSetting::updateOrCreate(['key' => $key], ['value' => $request->input($key, '0')]);
+        foreach ($valueKeys as $key) {
+            WebsiteSetting::updateOrCreate(['key' => $key], ['value' => (string) $request->input($key, '')]);
         }
 
         return back()->with('success', 'মাল্টিভেন্ডর সেটিং আপডেট হয়েছে।');
