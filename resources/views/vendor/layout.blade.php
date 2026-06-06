@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'ভেন্ডর') — মসলা মার্ট</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @stack('styles')
     <style>
         #sidebar { transition: transform .2s ease; }
@@ -92,6 +93,46 @@
             </svg>
             আমার কম্বো
         </a>
+
+        @if(\App\Support\VendorSettings::vendorCanManageStock())
+        <a href="{{ route('vendor.stock.index') }}"
+           class="nav-link {{ $active('vendor.stock.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+            </svg>
+            স্টক ম্যানেজমেন্ট
+        </a>
+        @endif
+
+        <p class="nav-group-label">বিক্রয় ও কাস্টমার</p>
+
+        @if(\App\Support\VendorSettings::vendorCanCreateOrder())
+        <a href="{{ route('vendor.pos.create') }}"
+           class="nav-link {{ $active('vendor.pos.create') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            নতুন বিক্রয় (POS)
+        </a>
+
+        <a href="{{ route('vendor.pos.index') }}"
+           class="nav-link {{ $active('vendor.pos.index') || $active('vendor.pos.show') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            বিক্রয় তালিকা
+        </a>
+        @endif
+
+        @if(\App\Support\VendorSettings::vendorCanCreateCustomer())
+        <a href="{{ route('vendor.customers.index') }}"
+           class="nav-link {{ $active('vendor.customers.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 00-3-3.87"/>
+            </svg>
+            কাস্টমার
+        </a>
+        @endif
 
         <p class="nav-group-label">অর্ডার</p>
 
@@ -204,6 +245,7 @@
         </button>
         <h1 class="text-sm font-semibold text-gray-700 flex-1 truncate">@yield('title', 'ভেন্ডর প্যানেল')</h1>
         <div class="flex items-center gap-3 flex-shrink-0">
+            @include('partials.notification-bell', ['panel' => 'vendor'])
             <span class="hidden sm:inline-block text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded font-medium">ভেন্ডর</span>
         </div>
     </header>

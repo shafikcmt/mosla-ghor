@@ -180,6 +180,11 @@ class Order extends Model
         return $this->reorder_token ? url('/invoice/' . $this->invoice_token . '/reorder') : null;
     }
 
+    public function paymentUrl(): ?string
+    {
+        return $this->payment_link_token ? url('/invoice/' . $this->invoice_token . '/pay') : null;
+    }
+
     /** Invoice link is usable: token set, not admin-disabled, not expired. */
     public function isInvoiceActive(): bool
     {

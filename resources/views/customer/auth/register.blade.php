@@ -48,11 +48,13 @@
                        class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
             </div>
 
+            @if(\App\Support\AuthSettings::showEmailFieldOnRegister())
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">ইমেইল <span class="text-gray-400 font-normal">(ঐচ্ছিক)</span></label>
                 <input type="email" name="email" value="{{ old('email') }}" autocomplete="email"
                        class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
             </div>
+            @endif
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">পাসওয়ার্ড <span class="text-red-500">*</span></label>

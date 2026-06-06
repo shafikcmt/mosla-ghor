@@ -38,12 +38,21 @@ use App\Http\Controllers\Vendor\OrderController as VendorOrderController;
 use App\Http\Controllers\Vendor\PayoutController as VendorPayoutController;
 use App\Http\Controllers\Vendor\PickupPointController as VendorPickupPointController;
 use App\Http\Controllers\Vendor\ProfileController as VendorProfileController;
+use App\Http\Controllers\Vendor\StockController as VendorStockController;
+use App\Http\Controllers\Vendor\CustomerController as VendorCustomerController;
+use App\Http\Controllers\Vendor\PosOrderController as VendorPosOrderController;
+use App\Http\Controllers\Vendor\NotificationController as VendorNotificationController;
 use App\Http\Controllers\Admin\ReturnRequestController as AdminReturnRequestController;
 use App\Http\Controllers\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\Admin\VendorController as AdminVendorController;
 use App\Http\Controllers\Admin\VendorPayoutController as AdminVendorPayoutController;
 use App\Http\Controllers\Admin\VendorPickupPointController as AdminVendorPickupPointController;
 use App\Http\Controllers\Admin\VendorParcelController as AdminVendorParcelController;
+use App\Http\Controllers\Admin\VendorStockController as AdminVendorStockController;
+use App\Http\Controllers\Admin\VendorCustomerController as AdminVendorCustomerController;
+use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\VendorShopController;
 use App\Http\Controllers\Admin\WholesaleEnquiryController as AdminWholesaleEnquiryController;
 use App\Http\Controllers\Admin\WholesaleQuoteController as AdminWholesaleQuoteController;
 use App\Http\Controllers\Admin\WholesaleChatController as AdminWholesaleChatController;
@@ -69,6 +78,14 @@ Route::name('customer.')->group(function () {
     Route::post('register', [CustomerAuthController::class, 'register'])->name('register.post');
     Route::get('login',     [CustomerAuthController::class, 'showLogin'])->name('login');
     Route::post('login',    [CustomerAuthController::class, 'login'])->name('login.post');
+
+    // ── Passwordless OTP login ─────────────────────────────────────────────
+    Route::get('login/otp',         [CustomerAuthController::class, 'showOtpRequest'])->name('login.otp');
+    Route::post('login/otp',        [CustomerAuthController::class, 'sendOtp'])->name('login.otp.send');
+    Route::get('login/otp/verify',  [CustomerAuthController::class, 'showOtpVerify'])->name('login.otp.verify');
+    Route::post('login/otp/verify', [CustomerAuthController::class, 'verifyOtp'])->name('login.otp.verify.post');
+    Route::post('login/otp/resend', [CustomerAuthController::class, 'resendOtp'])->name('login.otp.resend');
+
     Route::post('logout',   [CustomerAuthController::class, 'logout'])->name('logout');
 
     // ── Authenticated account section ──────────────────────────────────────
@@ -141,12 +158,27 @@ Route::get('/address/unions/{upazila}', [AddressController::class, 'unions'])->n
 Route::post('/order', [OrderController::class, 'store'])->name('order.store');
 Route::get('/order/success/{orderNumber}', [OrderController::class, 'success'])->name('order.success');
 
+// ── Public token-addressed invoice (vendor POS orders) ──────────────────────
+Route::get('/invoice/{token}',          [InvoiceController::class, 'show'])->name('invoice.show');
+Route::get('/invoice/{token}/reorder',  [InvoiceController::class, 'reorder'])->name('invoice.reorder');
+Route::post('/invoice/{token}/reorder', [InvoiceController::class, 'reorderStore'])->name('invoice.reorder.store');
+Route::get('/invoice/{token}/pay',      [InvoiceController::class, 'pay'])->name('invoice.pay');
+Route::post('/invoice/{token}/pay',     [InvoiceController::class, 'payStore'])->name('invoice.pay.store');
+
 // ── Vendor public routes ───────────────────────────────────────────────────
 Route::prefix('vendor')->name('vendor.')->group(function () {
     Route::get('register',  [VendorAuthController::class, 'showRegister'])->name('register');
     Route::post('register', [VendorAuthController::class, 'register'])->name('register.post');
     Route::get('login',     [VendorAuthController::class, 'showLogin'])->name('login');
     Route::post('login',    [VendorAuthController::class, 'login'])->name('login.post');
+
+    // ── Passwordless OTP login ─────────────────────────────────────────────
+    Route::get('login/otp',         [VendorAuthController::class, 'showOtpRequest'])->name('login.otp');
+    Route::post('login/otp',        [VendorAuthController::class, 'sendOtp'])->name('login.otp.send');
+    Route::get('login/otp/verify',  [VendorAuthController::class, 'showOtpVerify'])->name('login.otp.verify');
+    Route::post('login/otp/verify', [VendorAuthController::class, 'verifyOtp'])->name('login.otp.verify.post');
+    Route::post('login/otp/resend', [VendorAuthController::class, 'resendOtp'])->name('login.otp.resend');
+
     Route::post('logout',   [VendorAuthController::class, 'logout'])->name('logout');
 });
 
@@ -155,6 +187,30 @@ Route::prefix('vendor')->name('vendor.')->middleware('vendor')->group(function (
     Route::get('dashboard', [VendorDashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('products', VendorProductController::class)->except(['show']);
+
+    // ── Stock management ───────────────────────────────────────────────────
+    Route::get('stock',          [VendorStockController::class, 'index'])->name('stock.index');
+    Route::get('stock/history',  [VendorStockController::class, 'history'])->name('stock.history');
+    Route::post('stock/adjust',  [VendorStockController::class, 'adjust'])->name('stock.adjust');
+
+    // ── Local customers ────────────────────────────────────────────────────
+    Route::resource('customers', VendorCustomerController::class)
+        ->parameters(['customers' => 'customer'])
+        ->except(['show']);
+
+    // ── POS / vendor-created orders ────────────────────────────────────────
+    Route::get('pos',         [VendorPosOrderController::class, 'index'])->name('pos.index');
+    Route::get('pos/create',  [VendorPosOrderController::class, 'create'])->name('pos.create');
+    Route::post('pos',        [VendorPosOrderController::class, 'store'])->name('pos.store');
+    Route::get('pos/{order}', [VendorPosOrderController::class, 'show'])->name('pos.show');
+    Route::post('pos/{order}/whatsapp',         [VendorPosOrderController::class, 'whatsapp'])->name('pos.whatsapp');
+    Route::post('pos/{order}/invoice-toggle',   [VendorPosOrderController::class, 'invoiceToggle'])->name('pos.invoice-toggle');
+    Route::post('pos/{order}/collect-payment',  [VendorPosOrderController::class, 'collectPayment'])->name('pos.collect-payment');
+
+    // ── Notifications ──────────────────────────────────────────────────────
+    Route::get('notifications',           [VendorNotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/{id}/read', [VendorNotificationController::class, 'read'])->name('notifications.read');
+    Route::post('notifications/read-all', [VendorNotificationController::class, 'readAll'])->name('notifications.readAll');
 
     Route::resource('combos', VendorComboController::class)->except(['show']);
     Route::post('combos/{combo}/toggle', [VendorComboController::class, 'toggle'])->name('combos.toggle');
@@ -283,6 +339,21 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::post('courier-api-settings/{courier}/diagnose', [AdminCourierApiSettingController::class, 'diagnose'])->name('courier-api-settings.diagnose');
 
     Route::get('courier-orders', [AdminCourierOrderController::class, 'index'])->name('courier-orders.index');
+
+    // ── Vendor stock (admin oversight) ─────────────────────────────────────
+    Route::get('vendor-stock',         [AdminVendorStockController::class, 'index'])->name('vendor-stock.index');
+    Route::post('vendor-stock/adjust', [AdminVendorStockController::class, 'adjust'])->name('vendor-stock.adjust');
+
+    // ── Vendor local customers (admin oversight) ───────────────────────────
+    Route::get('vendor-customers',                          [AdminVendorCustomerController::class, 'index'])->name('vendor-customers.index');
+    Route::get('vendor-customers/{vendorCustomer}',         [AdminVendorCustomerController::class, 'show'])->name('vendor-customers.show');
+    Route::post('vendor-customers/{vendorCustomer}/toggle', [AdminVendorCustomerController::class, 'toggleStatus'])->name('vendor-customers.toggle');
+    Route::post('vendor-orders/{order}/settle',            [AdminVendorCustomerController::class, 'settleOrder'])->name('vendor-orders.settle');
+
+    // ── Notifications ──────────────────────────────────────────────────────
+    Route::get('notifications',           [AdminNotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/{id}/read', [AdminNotificationController::class, 'read'])->name('notifications.read');
+    Route::post('notifications/read-all', [AdminNotificationController::class, 'readAll'])->name('notifications.readAll');
 
     // ── Vendor pickup points (admin oversight) ─────────────────────────────
     Route::post('vendor-pickup-points/{vendorPickupPoint}/default', [AdminVendorPickupPointController::class, 'setDefault'])->name('vendor-pickup-points.default');

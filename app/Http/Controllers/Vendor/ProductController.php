@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductPrice;
 use App\Models\ProductVariant;
 use App\Models\WebsiteSetting;
+use App\Support\VendorSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -26,6 +27,14 @@ class ProductController extends Controller
         }
     }
 
+    private function requireCanAddProduct()
+    {
+        $this->requireApproved();
+        if (! VendorSettings::vendorCanAddProduct()) {
+            abort(403, 'পণ্য যোগ করার অনুমতি বন্ধ আছে।');
+        }
+    }
+
     public function index()
     {
         $vendor   = $this->vendor();
@@ -39,14 +48,14 @@ class ProductController extends Controller
 
     public function create()
     {
-        $this->requireApproved();
+        $this->requireCanAddProduct();
 
         return view('vendor.products.create', ['vendor' => $this->vendor()]);
     }
 
     public function store(Request $request)
     {
-        $this->requireApproved();
+        $this->requireCanAddProduct();
         $vendor = $this->vendor();
 
         $data    = $this->productData($request);
@@ -138,6 +147,13 @@ class ProductController extends Controller
             'retail_price_1kg'    => 'required|numeric|min:0.01',
             'wholesale_price_1kg' => 'nullable|numeric|min:0',
             'stock'               => 'required|integer|min:0',
+            'sku'                 => 'nullable|string|max:100',
+            'category'            => 'nullable|string|max:100',
+            'brand'               => 'nullable|string|max:100',
+            'unit'                => ['nullable', Rule::in(\App\Models\Product::UNITS)],
+            'purchase_price'      => 'nullable|numeric|min:0',
+            'selling_price'       => 'nullable|numeric|min:0',
+            'low_stock_threshold' => 'nullable|numeric|min:0',
             'main_image_file'     => 'nullable|file|mimes:jpg,jpeg,png,webp|max:5120',
             'gallery_images.*'    => 'nullable|file|mimes:jpg,jpeg,png,webp|max:5120',
             'video_file'          => 'nullable|file|mimes:mp4,webm,mov|max:51200',
@@ -153,6 +169,13 @@ class ProductController extends Controller
             'retail_price_1kg'    => $request->retail_price_1kg,
             'wholesale_price_1kg' => $request->wholesale_price_1kg ?: null,
             'stock'               => $request->stock,
+            'sku'                 => $request->sku ?: null,
+            'category'            => $request->category ?: null,
+            'brand'               => $request->brand ?: null,
+            'unit'                => $request->unit ?: 'kg',
+            'purchase_price'      => $request->purchase_price !== null && $request->purchase_price !== '' ? $request->purchase_price : null,
+            'selling_price'       => $request->selling_price !== null && $request->selling_price !== '' ? $request->selling_price : null,
+            'low_stock_threshold' => $request->low_stock_threshold !== null && $request->low_stock_threshold !== '' ? $request->low_stock_threshold : 0,
             'is_active'           => $request->boolean('is_active'),
         ];
     }

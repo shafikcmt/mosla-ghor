@@ -44,6 +44,55 @@
         <label class="block text-sm font-medium text-gray-700 mb-1">স্টক (কেজি) <span class="text-red-500">*</span></label>
         <input type="number" name="stock" value="{{ old('stock', $product?->stock ?? 0) }}" min="0" required
                class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+        <p class="text-xs text-gray-400 mt-1">ওজনভিত্তিক (মসলা) পণ্যের প্রধান স্টক।</p>
+    </div>
+
+    {{-- ── Inventory / stock metadata (optional) ──────────────────────────── --}}
+    <div class="md:col-span-2 mt-1 pt-4 border-t border-gray-100">
+        <p class="text-xs font-bold uppercase tracking-wide text-indigo-500 mb-3">ইনভেন্টরি তথ্য (ঐচ্ছিক)</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                <input type="text" name="sku" value="{{ old('sku', $product?->sku) }}"
+                       class="w-full border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">ক্যাটাগরি</label>
+                <input type="text" name="category" value="{{ old('category', $product?->category) }}"
+                       class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">ব্র্যান্ড</label>
+                <input type="text" name="brand" value="{{ old('brand', $product?->brand) }}"
+                       class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">একক (Unit)</label>
+                @php $curUnit = old('unit', $product?->unit ?? 'kg'); @endphp
+                <select name="unit" class="w-full border rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                    @foreach(\App\Models\Product::UNITS as $u)
+                        <option value="{{ $u }}" {{ $curUnit === $u ? 'selected' : '' }}>{{ $u }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">ক্রয় মূল্য (৳)</label>
+                <input type="number" name="purchase_price" value="{{ old('purchase_price', $product?->purchase_price) }}" step="0.01" min="0"
+                       class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">বিক্রয় মূল্য (৳)</label>
+                <input type="number" name="selling_price" value="{{ old('selling_price', $product?->selling_price) }}" step="0.01" min="0"
+                       class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                <p class="text-xs text-gray-400 mt-1">POS অর্ডারে ডিফল্ট দাম।</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">লো-স্টক সীমা</label>
+                <input type="number" name="low_stock_threshold" value="{{ old('low_stock_threshold', $product?->low_stock_threshold ?? 0) }}" step="0.001" min="0"
+                       class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+                <p class="text-xs text-gray-400 mt-1">এর নিচে নামলে অ্যালার্ট।</p>
+            </div>
+        </div>
     </div>
 
     <div class="flex items-center gap-3 pt-5">

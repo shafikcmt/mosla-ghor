@@ -33,8 +33,9 @@
             @csrf
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">ইমেইল</label>
-                <input type="email" name="email" value="{{ old('email') }}" required autofocus
+                <label class="block text-sm font-medium text-gray-700 mb-1">ফোন নম্বর বা ইমেইল</label>
+                <input type="text" name="identifier" value="{{ old('identifier') }}" required autofocus
+                       placeholder="০১XXXXXXXXX" autocomplete="username"
                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
 
@@ -54,6 +55,15 @@
                 লগইন করুন
             </button>
         </form>
+
+        @if(\App\Support\AuthSettings::vendorOtpLogin() && \App\Support\AuthSettings::enabledChannels() !== [])
+        <div class="mt-4 pt-4 border-t border-gray-100">
+            <a href="{{ route('vendor.login.otp') }}"
+               class="block text-center w-full border border-indigo-700 text-indigo-700 hover:bg-indigo-700 hover:text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
+                OTP দিয়ে লগইন করুন
+            </a>
+        </div>
+        @endif
     </div>
 
     <p class="text-center text-sm text-gray-500 mt-5">

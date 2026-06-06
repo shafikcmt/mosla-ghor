@@ -44,8 +44,8 @@ class VendorSettings
 
     public static function whatsappInvoiceTemplate(): string
     {
-        $tpl = WebsiteSetting::get('whatsapp_invoice_template', null);
-        return $tpl !== null && trim($tpl) !== '' ? $tpl : self::DEFAULT_WHATSAPP_TEMPLATE;
+        $tpl = WebsiteSetting::get('whatsapp_invoice_template', '');
+        return trim($tpl) !== '' ? $tpl : self::DEFAULT_WHATSAPP_TEMPLATE;
     }
 
     /** All keys managed by the admin settings form (for bulk save). */

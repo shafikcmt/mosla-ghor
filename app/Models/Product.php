@@ -198,6 +198,33 @@ class Product extends Model
         return $this->stockStatus() === 'low_stock';
     }
 
+    /** On-hand at/below threshold but still > 0 (works for both stock columns). */
+    public function scopeLowStock($query)
+    {
+        return $query->where('low_stock_threshold', '>', 0)->where(function ($w) {
+            $w->where(function ($a) {
+                $a->whereNotNull('stock_qty')
+                  ->whereColumn('stock_qty', '<=', 'low_stock_threshold')
+                  ->where('stock_qty', '>', 0);
+            })->orWhere(function ($b) {
+                $b->whereNull('stock_qty')
+                  ->whereColumn('stock', '<=', 'low_stock_threshold')
+                  ->where('stock', '>', 0);
+            });
+        });
+    }
+
+    public function scopeOutOfStock($query)
+    {
+        return $query->where(function ($w) {
+            $w->where(function ($a) {
+                $a->whereNotNull('stock_qty')->where('stock_qty', '<=', 0);
+            })->orWhere(function ($b) {
+                $b->whereNull('stock_qty')->where('stock', '<=', 0);
+            });
+        });
+    }
+
     // Create or refresh all standard pack-size rows in product_prices.
     // Rows with is_manual_override = true keep their final_price untouched.
     public function syncPrices(): void

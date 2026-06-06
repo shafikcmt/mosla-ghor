@@ -51,7 +51,9 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">ফোন নম্বর <span class="text-red-500">*</span></label>
                     <input type="text" name="phone" value="{{ old('phone') }}" required
+                           placeholder="০১XXXXXXXXX" inputmode="tel"
                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <p class="text-xs text-gray-400 mt-1">এই নম্বর দিয়েই লগইন করবেন</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">ব্যবসার ধরন</label>
@@ -61,8 +63,8 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">ইমেইল <span class="text-red-500">*</span></label>
-                <input type="email" name="email" value="{{ old('email') }}" required
+                <label class="block text-sm font-medium text-gray-700 mb-1">ইমেইল <span class="text-gray-400">(ঐচ্ছিক)</span></label>
+                <input type="email" name="email" value="{{ old('email') }}"
                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
 

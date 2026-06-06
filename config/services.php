@@ -35,4 +35,18 @@ return [
         ],
     ],
 
+    // ── OTP delivery gateways (set in .env to go live) ──────────────────────
+    // Leave blank locally: OTP falls back to the log channel for development.
+    'sms' => [
+        'endpoint' => env('SMS_API_URL'),       // e.g. https://api.gateway.com/send
+        'key'      => env('SMS_API_KEY'),
+        'sender'   => env('SMS_SENDER_ID'),
+    ],
+
+    'whatsapp' => [
+        'endpoint' => env('WHATSAPP_API_URL'),  // e.g. WhatsApp Cloud API messages URL
+        'token'    => env('WHATSAPP_API_TOKEN'),
+        'from'     => env('WHATSAPP_FROM'),
+    ],
+
 ];

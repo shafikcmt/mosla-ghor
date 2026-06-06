@@ -146,6 +146,22 @@
             ভেন্ডর পিকআপ
         </a>
 
+        <a href="{{ route('admin.vendor-stock.index') }}"
+           class="nav-link {{ $active('admin.vendor-stock.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+            </svg>
+            ভেন্ডর স্টক
+        </a>
+
+        <a href="{{ route('admin.vendor-customers.index') }}"
+           class="nav-link {{ $active('admin.vendor-customers.*') ? 'active' : '' }}">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 00-3-3.87"/>
+            </svg>
+            ভেন্ডর কাস্টমার
+        </a>
+
         {{-- Settings --}}
         <p class="nav-group-label">Settings</p>
 
@@ -370,6 +386,7 @@
 
         {{-- Right side --}}
         <div class="flex items-center gap-3 flex-shrink-0">
+            @include('partials.notification-bell', ['panel' => 'admin'])
             <span class="hidden sm:inline-block text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">Admin</span>
             <a href="{{ url('/') }}" target="_blank"
                class="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
