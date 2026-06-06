@@ -36,7 +36,14 @@
         </div>
         @endif
 
-        <form method="POST" action="{{ route('customer.login.post') }}" class="space-y-4">
+        @php $redirectParam = $redirectParam ?? ''; @endphp
+        @if($redirectParam && str_contains($redirectParam, '#products'))
+        <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-amber-800 text-sm text-center">
+            পাইকারি দাম জানতে প্রথমে লগইন করুন। লগইন করার পরেই enquiry পাঠাতে পারবেন।
+        </div>
+        @endif
+
+        <form method="POST" action="{{ route('customer.login.post') }}{{ $redirectParam ? '?redirect='.urlencode($redirectParam) : '' }}" class="space-y-4">
             @csrf
 
             <div>
@@ -53,8 +60,8 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <input type="checkbox" name="remember" id="remember" value="1" class="rounded border-gray-300 text-[#14532d]">
-                <label for="remember" class="text-sm text-gray-600">লগইন মনে রাখুন</label>
+                <input type="checkbox" name="remember" id="remember" value="1" checked class="rounded border-gray-300 text-[#14532d]">
+                <label for="remember" class="text-sm text-gray-600 cursor-pointer">লগইন মনে রাখুন <span class="text-xs text-gray-400">(৯০ দিন)</span></label>
             </div>
 
             <button type="submit"

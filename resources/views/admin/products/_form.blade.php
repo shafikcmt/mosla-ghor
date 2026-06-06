@@ -2,6 +2,13 @@
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
+    {{-- category --}}
+    @include('partials.category-select', [
+        'categories' => $categories ?? [],
+        'selected'   => $product?->category_id,
+        'ring'       => 'focus:ring-blue-400',
+    ])
+
     {{-- name_bn --}}
     <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">

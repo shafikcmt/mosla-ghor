@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Vendor;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductPrice;
 use App\Models\ProductVariant;
@@ -11,6 +12,7 @@ use App\Support\VendorSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
@@ -46,11 +48,24 @@ class ProductController extends Controller
         return view('vendor.products.index', compact('vendor', 'products'));
     }
 
+    /** Active top-level categories with their children, for the product form select. */
+    private function categoryOptions()
+    {
+        return Category::whereNull('parent_id')
+            ->with(['children' => fn($q) => $q->where('is_active', true)->orderBy('sort_order')])
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+    }
+
     public function create()
     {
         $this->requireCanAddProduct();
 
-        return view('vendor.products.create', ['vendor' => $this->vendor()]);
+        return view('vendor.products.create', [
+            'vendor'     => $this->vendor(),
+            'categories' => $this->categoryOptions(),
+        ]);
     }
 
     public function store(Request $request)
@@ -91,7 +106,9 @@ class ProductController extends Controller
             ->orderBy('sort_order')
             ->get();
 
-        return view('vendor.products.edit', compact('product', 'retailPrices', 'wholesalePrices', 'variants'));
+        $categories = $this->categoryOptions();
+
+        return view('vendor.products.edit', compact('product', 'retailPrices', 'wholesalePrices', 'variants', 'categories'));
     }
 
     public function update(Request $request, Product $product)
@@ -140,8 +157,9 @@ class ProductController extends Controller
         $request->validate([
             'name_bn'             => 'required|string|max:255',
             'name_en'             => 'nullable|string|max:255',
-            'slug'                => ['required', 'string', 'max:255',
+            'slug'                => ['nullable', 'string', 'max:255',
                                       Rule::unique('products', 'slug')->ignore($ignoreId)],
+            'category_id'         => ['nullable', 'integer', Rule::exists('categories', 'id')],
             'short_description'   => 'nullable|string|max:500',
             'description'         => 'nullable|string',
             'retail_price_1kg'    => 'required|numeric|min:0.01',
@@ -162,7 +180,8 @@ class ProductController extends Controller
         return [
             'name_bn'             => $request->name_bn,
             'name_en'             => $request->name_en,
-            'slug'                => $request->slug,
+            'slug'                => $this->resolveSlug($request, $ignoreId),
+            'category_id'         => $request->category_id ?: null,
             'video_url'           => $request->video_url ?: null,
             'short_description'   => $request->short_description ?: null,
             'description'         => $request->description ?: null,
@@ -178,6 +197,47 @@ class ProductController extends Controller
             'low_stock_threshold' => $request->low_stock_threshold !== null && $request->low_stock_threshold !== '' ? $request->low_stock_threshold : 0,
             'is_active'           => $request->boolean('is_active'),
         ];
+    }
+
+    /**
+     * Build a unique slug: prefer name_en, fall back to a transliterated
+     * name_bn, then a timestamp. Mirrors the client-side generator so a
+     * vendor who never opens the advanced panel still gets a valid slug.
+     */
+    private function resolveSlug(Request $request, ?int $ignoreId): string
+    {
+        $slug = $request->slug ? Str::slug($request->slug) : Str::slug($request->name_en ?: '');
+        if ($slug === '') {
+            $slug = Str::slug($this->transliterateBn($request->name_bn ?? ''));
+        }
+        if ($slug === '') {
+            $slug = 'product-' . now()->timestamp;
+        }
+
+        $base = $slug;
+        $i = 2;
+        while (Product::where('slug', $slug)
+            ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
+            ->exists()) {
+            $slug = $base . '-' . $i++;
+        }
+
+        return $slug;
+    }
+
+    private function transliterateBn(string $str): string
+    {
+        static $map = [
+            'অ'=>'o','আ'=>'a','ই'=>'i','ঈ'=>'i','উ'=>'u','ঊ'=>'u','ঋ'=>'ri','এ'=>'e','ঐ'=>'oi','ও'=>'o','ঔ'=>'ou',
+            'ক'=>'k','খ'=>'kh','গ'=>'g','ঘ'=>'gh','ঙ'=>'ng','চ'=>'ch','ছ'=>'chh','জ'=>'j','ঝ'=>'jh','ঞ'=>'n',
+            'ট'=>'t','ঠ'=>'th','ড'=>'d','ঢ'=>'dh','ণ'=>'n','ত'=>'t','থ'=>'th','দ'=>'d','ধ'=>'dh','ন'=>'n',
+            'প'=>'p','ফ'=>'ph','ব'=>'b','ভ'=>'bh','ম'=>'m','য'=>'j','র'=>'r','ল'=>'l',
+            'শ'=>'sh','ষ'=>'sh','স'=>'s','হ'=>'h','ড়'=>'r','ঢ়'=>'rh','য়'=>'y','ৎ'=>'t','ং'=>'ng','ঃ'=>'h','ঁ'=>'',
+            'া'=>'a','ি'=>'i','ী'=>'i','ু'=>'u','ূ'=>'u','ৃ'=>'ri','ে'=>'e','ৈ'=>'oi','ো'=>'o','ৌ'=>'ou','্'=>'',
+            '০'=>'0','১'=>'1','২'=>'2','৩'=>'3','৪'=>'4','৫'=>'5','৬'=>'6','৭'=>'7','৮'=>'8','৯'=>'9',
+        ];
+
+        return strtr($str, $map);
     }
 
     private function processFileUploads(Request $request, Product $product): array

@@ -88,7 +88,7 @@ class CustomerAuthController extends Controller
             ]);
         }
 
-        return view('customer.auth.login');
+        return view('customer.auth.login', ['redirectParam' => request()->query('redirect', '')]);
     }
 
     public function login(Request $request)
@@ -119,8 +119,14 @@ class CustomerAuthController extends Controller
                 ->withInput();
         }
 
-        Auth::login($user, $request->boolean('remember'));
+        Auth::login($user, true); // Always remember customers — reduces friction
         $request->session()->regenerate();
+
+        // Honor ?redirect= query param (used by wholesale enquiry flow)
+        $redirectTo = $request->query('redirect');
+        if ($redirectTo && str_starts_with($redirectTo, '/')) {
+            return redirect($redirectTo);
+        }
 
         return redirect()->intended(route('customer.account'));
     }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\ComboController as AdminComboController;
 use App\Http\Controllers\Admin\CourierController as AdminCourierController;
 use App\Http\Controllers\Admin\CourierApiSettingController as AdminCourierApiSettingController;
@@ -62,6 +63,7 @@ use App\Http\Controllers\Vendor\WholesaleEnquiryController as VendorWholesaleEnq
 use App\Http\Controllers\Vendor\WholesaleQuoteController as VendorWholesaleQuoteController;
 use App\Http\Controllers\Vendor\WholesaleChatController as VendorWholesaleChatController;
 use App\Http\Controllers\Vendor\WholesaleEarningsController as VendorWholesaleEarningsController;
+use App\Http\Controllers\Customer\WholesaleProductController as CustomerWholesaleProductController;
 use App\Http\Controllers\Customer\WholesaleEnquiryController as CustomerWholesaleEnquiryController;
 use App\Http\Controllers\Customer\WholesaleQuoteController as CustomerWholesaleQuoteController;
 use App\Http\Controllers\Customer\WholesaleChatController as CustomerWholesaleChatController;
@@ -87,6 +89,11 @@ Route::name('customer.')->group(function () {
     Route::post('login/otp/resend', [CustomerAuthController::class, 'resendOtp'])->name('login.otp.resend');
 
     Route::post('logout',   [CustomerAuthController::class, 'logout'])->name('logout');
+
+    // ── Wholesale product detail (customer-facing storefront) ───────────────
+    Route::get('wholesale/products/{product:slug}', [CustomerWholesaleProductController::class, 'show'])
+        ->middleware('customer-auth')
+        ->name('wholesale.products.show');
 
     // ── Authenticated account section ──────────────────────────────────────
     Route::prefix('account')->middleware('customer-auth')->group(function () {
@@ -272,6 +279,8 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
 
     Route::get('website-settings', [AdminWebsiteSettingController::class, 'index'])->name('website-settings.index');
     Route::post('website-settings', [AdminWebsiteSettingController::class, 'update'])->name('website-settings.update');
+
+    Route::resource('categories', AdminCategoryController::class);
 
     Route::resource('products', AdminProductController::class);
 

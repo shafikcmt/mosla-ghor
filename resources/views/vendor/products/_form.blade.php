@@ -2,6 +2,13 @@
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
+    {{-- category --}}
+    @include('partials.category-select', [
+        'categories' => $categories ?? [],
+        'selected'   => $product?->category_id,
+        'ring'       => 'focus:ring-indigo-400',
+    ])
+
     <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">বাংলা নাম <span class="text-red-500">*</span></label>
         <input type="text" name="name_bn" id="name_bn" value="{{ old('name_bn', $product?->name_bn) }}" required autofocus
@@ -10,20 +17,29 @@
     </div>
 
     <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">English Name</label>
+        <label class="block text-sm font-medium text-gray-400 mb-1">English Name <span class="font-normal">(ঐচ্ছিক)</span></label>
         <input type="text" name="name_en" id="name_en" value="{{ old('name_en', $product?->name_en) }}"
                class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
+        <p class="text-xs text-gray-400 mt-1">ঐচ্ছিক — ইংরেজি নাম না জানলে খালি রাখুন।</p>
     </div>
 
+    {{-- slug: advanced/optional, auto-generated from name --}}
     <div class="md:col-span-2">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Slug (URL) <span class="text-red-500">*</span></label>
-        <div class="flex gap-2">
-            <input type="text" name="slug" id="slug" value="{{ old('slug', $product?->slug) }}" required
-                   class="flex-1 border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400 @error('slug') border-red-400 @enderror">
-            <button type="button" id="btn-gen-slug"
-                    class="text-xs bg-gray-100 hover:bg-gray-200 border px-3 py-2 rounded text-gray-600 whitespace-nowrap">Auto</button>
-        </div>
-        @error('slug')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+        <details {{ $errors->has('slug') ? 'open' : '' }} class="border border-gray-200 rounded bg-gray-50/60">
+            <summary class="cursor-pointer select-none px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700">
+                উন্নত বিকল্প (Slug/URL)
+            </summary>
+            <div class="px-3 pb-3 pt-1">
+                <div class="flex gap-2">
+                    <input type="text" name="slug" id="slug" value="{{ old('slug', $product?->slug) }}"
+                           class="flex-1 border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400 @error('slug') border-red-400 @enderror">
+                    <button type="button" id="btn-gen-slug"
+                            class="text-xs bg-gray-100 hover:bg-gray-200 border px-3 py-2 rounded text-gray-600 whitespace-nowrap">Auto</button>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">নাম থেকে স্বয়ংক্রিয়ভাবে তৈরি হয়। সাধারণত পরিবর্তনের দরকার নেই।</p>
+                @error('slug')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+            </div>
+        </details>
     </div>
 
     <div>
@@ -183,21 +199,47 @@
 <script>
 (function () {
     const nameEn = document.getElementById('name_en');
+    const nameBn = document.getElementById('name_bn');
     const slugEl = document.getElementById('slug');
     const btnGen = document.getElementById('btn-gen-slug');
+
+    // Minimal Bangla → latin map so a Bangla-only name still yields a usable slug.
+    const bnMap = {
+        'অ':'o','আ':'a','ই':'i','ঈ':'i','উ':'u','ঊ':'u','ঋ':'ri','এ':'e','ঐ':'oi','ও':'o','ঔ':'ou',
+        'ক':'k','খ':'kh','গ':'g','ঘ':'gh','ঙ':'ng','চ':'ch','ছ':'chh','জ':'j','ঝ':'jh','ঞ':'n',
+        'ট':'t','ঠ':'th','ড':'d','ঢ':'dh','ণ':'n','ত':'t','থ':'th','দ':'d','ধ':'dh','ন':'n',
+        'প':'p','ফ':'ph','ব':'b','ভ':'bh','ম':'m','য':'j','র':'r','ল':'l',
+        'শ':'sh','ষ':'sh','স':'s','হ':'h','ড়':'r','ঢ়':'rh','য়':'y','ৎ':'t','ং':'ng','ঃ':'h','ঁ':'',
+        'া':'a','ি':'i','ী':'i','ু':'u','ূ':'u','ৃ':'ri','ে':'e','ৈ':'oi','ো':'o','ৌ':'ou','্':'',
+        '০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9'
+    };
+    function translit(str) {
+        let out = '';
+        for (const ch of (str || '')) out += (bnMap[ch] !== undefined ? bnMap[ch] : ch);
+        return out;
+    }
     function toSlug(str) {
-        return str.toLowerCase().replace(/[^\w\s-]/g,'').trim().replace(/[\s_]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+        return (str || '').toLowerCase().replace(/[^\w\s-]/g,'').trim().replace(/[\s_]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
     }
-    if (nameEn && slugEl) {
-        nameEn.addEventListener('input', function() {
-            if (!slugEl.dataset.edited && this.value) slugEl.value = toSlug(this.value);
-        });
-        slugEl.addEventListener('input', function() { this.dataset.edited = '1'; });
+    // Primary source = English name; fall back to a transliterated Bangla name.
+    function genSlug() {
+        const en = nameEn ? nameEn.value.trim() : '';
+        const base = en !== '' ? en : translit(nameBn ? nameBn.value : '');
+        let s = toSlug(base);
+        if (!s && nameBn && nameBn.value.trim() !== '') s = 'product-' + Date.now();
+        return s;
     }
+    function autofill() {
+        if (slugEl && !slugEl.dataset.edited) slugEl.value = genSlug();
+    }
+    if (nameEn) nameEn.addEventListener('input', autofill);
+    if (nameBn) nameBn.addEventListener('input', autofill);
+    if (slugEl) slugEl.addEventListener('input', function () { this.dataset.edited = '1'; });
     if (btnGen && slugEl) {
-        btnGen.addEventListener('click', function() {
-            const src = (nameEn?.value) || (document.getElementById('name_bn')?.value ?? '');
-            if (src) { slugEl.value = toSlug(src); slugEl.dataset.edited = ''; }
+        btnGen.addEventListener('click', function () {
+            slugEl.value = genSlug();
+            slugEl.dataset.edited = '';
+            const d = slugEl.closest('details'); if (d) d.open = true; // reveal the generated slug
         });
     }
 })();

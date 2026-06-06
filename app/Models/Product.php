@@ -15,6 +15,7 @@ class Product extends Model
         'name_bn',
         'name_en',
         'slug',
+        'category_id',
         'sku',
         'category',
         'brand',
@@ -55,6 +56,25 @@ class Product extends Model
     public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
+    }
+
+    // Structured category (parent/child). NOTE: the legacy free-text `category`
+    // string column shadows attribute access, so `$product->category` returns
+    // that string. Use eager loading (with('category')) for this relation and
+    // the `cat` accessor below to read the related Category model in views.
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /** Null-safe Category model accessor (works whether eager-loaded or not). */
+    public function getCatAttribute(): ?Category
+    {
+        if ($this->relationLoaded('category')) {
+            return $this->getRelation('category');
+        }
+
+        return $this->category_id ? $this->category()->first() : null;
     }
 
     public function scopeActive($query)

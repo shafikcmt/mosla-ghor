@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductPrice;
 use App\Models\ProductVariant;
@@ -19,9 +20,19 @@ class ProductController extends Controller
         return view('admin.products.index', compact('products'));
     }
 
+    /** Active top-level categories with their children, for the product form select. */
+    private function categoryOptions()
+    {
+        return Category::whereNull('parent_id')
+            ->with(['children' => fn($q) => $q->where('is_active', true)->orderBy('sort_order')])
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
+    }
+
     public function create()
     {
-        return view('admin.products.create');
+        return view('admin.products.create', ['categories' => $this->categoryOptions()]);
     }
 
     public function store(Request $request)
@@ -53,7 +64,9 @@ class ProductController extends Controller
         $wholesalePrices = $product->prices()->whereNull('product_variant_id')->where('sell_type', 'wholesale')->get();
         $variants        = $product->variants()->with(['prices' => fn($q) => $q->orderBy('sell_type')->orderBy('sort_order')->orderBy('quantity_gram')])->orderBy('sort_order')->get();
 
-        return view('admin.products.edit', compact('product', 'retailPrices', 'wholesalePrices', 'variants'));
+        $categories = $this->categoryOptions();
+
+        return view('admin.products.edit', compact('product', 'retailPrices', 'wholesalePrices', 'variants', 'categories'));
     }
 
     public function update(Request $request, Product $product)
@@ -94,6 +107,7 @@ class ProductController extends Controller
             'name_en'             => 'nullable|string|max:255',
             'slug'                => ['required', 'string', 'max:255',
                                       Rule::unique('products', 'slug')->ignore($ignoreId)],
+            'category_id'         => ['nullable', 'integer', Rule::exists('categories', 'id')],
             'main_image'          => 'nullable|string|max:500',
             'video_url'           => 'nullable|string|max:500',
             'short_description'   => 'nullable|string|max:500',
@@ -110,6 +124,7 @@ class ProductController extends Controller
             'name_bn'             => $request->name_bn,
             'name_en'             => $request->name_en,
             'slug'                => $request->slug,
+            'category_id'         => $request->category_id ?: null,
             'main_image'          => $request->main_image ?: null,
             'video_url'           => $request->video_url ?: null,
             'short_description'   => $request->short_description ?: null,

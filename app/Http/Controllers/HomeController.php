@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BdDistrict;
 use App\Models\BdDivision;
 use App\Models\BdUpazila;
+use App\Models\Category;
 use App\Models\Combo;
 use App\Models\Faq;
 use App\Models\Review;
@@ -18,13 +19,34 @@ class HomeController extends Controller
 {
     public function __invoke()
     {
-        $products = Product::active()
+        // Category filter bar (top-level, active).
+        $navCategories    = Category::whereNull('parent_id')->where('is_active', true)
+            ->orderBy('sort_order')->orderBy('name_bn')->get(['id', 'name_bn', 'slug']);
+        $selectedCategory = request('category')
+            ? $navCategories->firstWhere('slug', request('category'))
+            : null;
+
+        $productsQuery = Product::active()
             ->with([
+                'category',
                 'activePrices'              => fn($q) => $q->orderBy('sell_type')->orderBy('quantity_gram'),
                 'activeVariants',
                 'activeVariants.activePrices' => fn($q) => $q->orderBy('sell_type')->orderBy('sort_order')->orderBy('quantity_gram'),
-            ])
-            ->get();
+            ]);
+
+        if ($selectedCategory) {
+            // Match the category itself and any of its sub-categories.
+            $catIds = collect([$selectedCategory->id])
+                ->merge(Category::where('parent_id', $selectedCategory->id)->pluck('id'))
+                ->all();
+            $productsQuery->whereIn('category_id', $catIds);
+        }
+
+        $products = $productsQuery->get();
+
+        // Featured strip: newest active products (independent of the active filter).
+        $featuredProducts = Product::active()->with('category')
+            ->orderByDesc('id')->limit(8)->get();
 
         $priceSetting    = PriceSetting::current();
         $packagingCost   = $priceSetting->default_packaging_cost;
@@ -85,7 +107,8 @@ class HomeController extends Controller
             'products', 'packagingCost', 'minOrderAmount', 'paymentSettings',
             'activeZones', 'zonesForJs', 'fixedCombos', 'fixedCombosForJs',
             'bdDivisions', 'bdDistricts', 'bdUpazilas',
-            'faqs', 'reviews', 'ws'
+            'faqs', 'reviews', 'ws',
+            'navCategories', 'selectedCategory', 'featuredProducts'
         ));
     }
 }

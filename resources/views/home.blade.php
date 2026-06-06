@@ -400,6 +400,24 @@ $productsForJs = $products->map(function ($p) {
             </div>
         </div>
 
+        {{-- ══ Category filter pills ══ --}}
+        @if($navCategories->isNotEmpty())
+        <div class="flex flex-wrap items-center gap-2 mb-8">
+            <a href="{{ url()->current() }}#products"
+               class="px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors
+                      {{ empty($selectedCategory) ? 'bg-[#14532d] text-white border-[#14532d]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#14532d] hover:text-[#14532d]' }}">
+                সব পণ্য
+            </a>
+            @foreach($navCategories as $navCat)
+            <a href="{{ url()->current() }}?category={{ $navCat->slug }}#products"
+               class="px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors
+                      {{ (!empty($selectedCategory) && $selectedCategory->id === $navCat->id) ? 'bg-[#14532d] text-white border-[#14532d]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#14532d] hover:text-[#14532d]' }}">
+                {{ $navCat->name_bn }}
+            </a>
+            @endforeach
+        </div>
+        @endif
+
         @if($products->isEmpty())
             <div class="text-center py-24 text-gray-400">
                 <p class="text-5xl mb-4">🌿</p>
@@ -416,7 +434,7 @@ $productsForJs = $products->map(function ($p) {
                     ? $directRetail
                     : ($product->activeVariants->first()?->activePrices->where('sell_type', 'retail') ?? collect());
             @endphp
-            <article data-card-product="{{ $product->id }}" class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col">
+            <article data-card-product="{{ $product->id }}" class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
 
                 {{-- Image slideshow / placeholder --}}
                 @php
@@ -424,6 +442,7 @@ $productsForJs = $products->map(function ($p) {
                         ->merge($product->gallery_images ?? [])
                         ->filter()->values();
                 @endphp
+                <a href="{{ route('customer.wholesale.products.show', $product->slug) }}" class="block">
                 <div class="relative h-52 overflow-hidden flex-shrink-0" data-slideshow="{{ $product->id }}">
                     @if($cardSlides->isNotEmpty())
                         @foreach($cardSlides as $si => $slide)
@@ -448,7 +467,6 @@ $productsForJs = $products->map(function ($p) {
                             </div>
                             <div class="z-10 text-center px-4">
                                 <div class="text-[#c9a227] font-serif-bn text-2xl font-bold leading-tight">{{ $product->name_bn }}</div>
-                                <div class="text-green-300 text-xs mt-1 tracking-widest uppercase">{{ $product->name_en }}</div>
                             </div>
                         </div>
                     @endif
@@ -456,12 +474,19 @@ $productsForJs = $products->map(function ($p) {
                         {{ $product->isInStock() ? 'bg-[#c9a227] text-[#0f3d22]' : 'bg-red-500 text-white' }}">
                         {{ $product->isInStock() ? 'স্টকে আছে' : 'স্টক শেষ' }}
                     </span>
+                    @if($product->cat)
+                    <span class="absolute top-3 right-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/90 text-[#14532d] shadow">
+                        {{ $product->cat->name_bn }}
+                    </span>
+                    @endif
                 </div>
+                </a>
 
                 {{-- Body --}}
                 <div class="p-5 flex flex-col flex-1">
-                    <h3 class="font-serif-bn text-[#14532d] text-xl font-bold leading-snug">{{ $product->name_bn }}</h3>
-                    <p class="text-gray-400 text-[11px] tracking-widest uppercase mt-0.5">{{ $product->name_en }}</p>
+                    <a href="{{ route('customer.wholesale.products.show', $product->slug) }}" class="hover:underline">
+                        <h3 class="font-serif-bn text-[#14532d] text-xl font-bold leading-snug">{{ $product->name_bn }}</h3>
+                    </a>
 
                     @if($product->short_description)
                         <p class="text-gray-500 text-sm mt-2 leading-relaxed line-clamp-2">{{ $product->short_description }}</p>
@@ -492,10 +517,7 @@ $productsForJs = $products->map(function ($p) {
 
                     {{-- Wholesale CTA (hidden in retail mode) --}}
                     <div id="card-wholesale-ui-{{ $product->id }}" style="display:none;" class="mt-3">
-                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-                            <p class="text-amber-800 font-semibold text-xs">পাইকারি মূল্য জানতে enquiry পাঠান</p>
-                            <p class="text-gray-500 text-[11px] mt-0.5 leading-relaxed">Wholesale price available on request. Bulk quantity অনুযায়ী price change হতে পারে।</p>
-                        </div>
+                        {{-- wholesale prices shown in modal, nothing extra on card --}}
                     </div>
 
                     <div class="flex-1 min-h-3"></div>
@@ -508,19 +530,15 @@ $productsForJs = $products->map(function ($p) {
                         </button>
                         <button onclick="goToCombo({{ $product->id }})"
                                 class="flex-1 border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                            কম্বো
+                            বাক্সে যোগ
                         </button>
                     </div>
 
                     {{-- Wholesale mode buttons (hidden in retail mode) --}}
-                    <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4 space-y-2">
-                        <button onclick="openWholesaleEnquiry({{ $product->id }}, false)"
-                                class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2.5 rounded-xl text-xs font-semibold transition-colors shadow-sm">
-                            Send Enquiry / দাম জানুন
-                        </button>
-                        <button onclick="openWholesaleEnquiry({{ $product->id }}, true)"
-                                class="w-full border border-amber-600 text-amber-700 hover:bg-amber-600 hover:text-white py-2 rounded-xl text-xs font-semibold transition-colors">
-                            Contact Supplier
+                    <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4">
+                        <button onclick="openModal({{ $product->id }})"
+                                class="w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
+                            বিস্তারিত দেখুন
                         </button>
                     </div>
                 </div>
@@ -562,7 +580,6 @@ $productsForJs = $products->map(function ($p) {
                     <div class="flex-1 min-w-0">
                         <div class="flex flex-wrap items-baseline gap-2">
                             <h3 class="font-serif-bn text-[#14532d] font-bold text-lg leading-tight">{{ $product->name_bn }}</h3>
-                            <span class="text-gray-400 text-xs uppercase tracking-wider">{{ $product->name_en }}</span>
                         </div>
                         @if($product->short_description)
                             <p class="text-gray-500 text-sm mt-0.5 line-clamp-1">{{ $product->short_description }}</p>
@@ -594,7 +611,7 @@ $productsForJs = $products->map(function ($p) {
                             </button>
                             <button onclick="goToCombo({{ $product->id }})"
                                     class="border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
-                                কম্বো
+                                বাক্সে যোগ
                             </button>
                         </div>
                     </div>
@@ -617,10 +634,10 @@ $productsForJs = $products->map(function ($p) {
         <div class="text-center mb-10">
             <div class="flex items-center justify-center gap-4 mb-3">
                 <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
-                <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">Ready Packs</span>
+                <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">প্রস্তুত প্যাক</span>
                 <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
             </div>
-            <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">ফিক্সড কম্বো প্যাক</h2>
+            <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">রেডি মশলার বাক্স</h2>
             <p class="text-gray-400 text-sm mt-2 max-w-md mx-auto leading-relaxed">
                 রেডি-মেড মশলার সেট — এক ক্লিকে অর্ডার করুন।
             </p>
@@ -683,17 +700,17 @@ $productsForJs = $products->map(function ($p) {
         <div class="text-center mb-8">
             <div class="flex items-center justify-center gap-4 mb-3">
                 <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
-                <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">Build Your Own</span>
+                <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">আপনার পছন্দে তৈরি</span>
                 <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
             </div>
             <div class="inline-flex bg-white rounded-xl border border-green-200 overflow-hidden shadow-sm mt-4">
                 <button id="combo-tab-retail" onclick="switchComboTab('retail')"
                         class="px-6 py-2.5 text-sm font-semibold transition-colors bg-[#14532d] text-[#c9a227]">
-                    Retail Combo
+                    নিজের বাক্স
                 </button>
                 <button id="combo-tab-paykari" onclick="switchComboTab('paykari')"
                         class="px-6 py-2.5 text-sm font-semibold transition-colors text-gray-600 hover:bg-amber-50">
-                    পাইকারি Combo
+                    পাইকারি অর্ডার
                 </button>
             </div>
         </div>
@@ -701,7 +718,7 @@ $productsForJs = $products->map(function ($p) {
         {{-- ══════════  RETAIL COMBO  ══════════ --}}
         <div id="combo-retail-section">
             <div class="text-center mb-8">
-                <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">নিজের কম্বো বানান</h2>
+                <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">নিজের মশলার বাক্স বানান</h2>
                 <p class="text-gray-400 text-sm mt-2 max-w-md mx-auto leading-relaxed">
                     আপনার পছন্দের মশলা বেছে নিন, পরিমাণ ঠিক করুন — আমরা পৌঁছে দেব।
                 </p>
@@ -736,7 +753,6 @@ $productsForJs = $products->map(function ($p) {
                         {{-- Name --}}
                         <div class="flex-1 min-w-0 sm:min-w-[130px]">
                             <div class="font-serif-bn text-[#14532d] font-bold text-sm sm:text-base leading-tight">{{ $product->name_bn }}</div>
-                            <div class="text-gray-400 text-[11px] uppercase tracking-wider">{{ $product->name_en }}</div>
                         </div>
 
                         {{-- Variant selector (only for products with variants) --}}
@@ -784,7 +800,7 @@ $productsForJs = $products->map(function ($p) {
 
                     {{-- Header --}}
                     <div class="bg-[#14532d] px-5 py-4 flex items-center justify-between">
-                        <h3 class="font-serif-bn text-[#c9a227] text-lg font-bold">আপনার কম্বো</h3>
+                        <h3 class="font-serif-bn text-[#c9a227] text-lg font-bold">আপনার বাক্স</h3>
                         <span id="combo-count-badge"
                               class="bg-[#c9a227] text-[#0f3d22] text-xs font-bold px-2.5 py-1 rounded-full"
                               style="display:none;">0</span>
@@ -845,7 +861,7 @@ $productsForJs = $products->map(function ($p) {
         {{-- ══════════  PAYKARI COMBO  ══════════ --}}
         <div id="combo-paykari-section" style="display:none;">
             <div class="text-center mb-8">
-                <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">পাইকারি কম্বো তৈরি করুন</h2>
+                <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">পাইকারি অর্ডার তৈরি করুন</h2>
                 <p class="text-gray-500 text-sm mt-2 max-w-lg mx-auto leading-relaxed">
                     আপনার প্রয়োজন অনুযায়ী একাধিক মসলা ও quantity নির্বাচন করুন। MoslaMart আপনাকে best wholesale quote পাঠাবে।
                 </p>
@@ -870,7 +886,6 @@ $productsForJs = $products->map(function ($p) {
                         {{-- Name --}}
                         <div class="flex-1 min-w-0">
                             <div class="font-serif-bn text-[#14532d] font-bold text-sm sm:text-base leading-tight">{{ $product->name_bn }}</div>
-                            <div class="text-gray-400 text-[11px] uppercase tracking-wider">{{ $product->name_en }}</div>
                         </div>
                         {{-- KG Input --}}
                         <div class="flex items-center gap-1.5 flex-shrink-0">
@@ -920,7 +935,7 @@ $productsForJs = $products->map(function ($p) {
                             <button type="button" id="paykari-enquiry-btn"
                                     onclick="openPaykariEnquiryForm()"
                                     class="w-full bg-amber-500 text-white font-bold py-3 rounded-xl text-sm shadow-lg opacity-40 cursor-not-allowed pointer-events-none transition-all">
-                                Bulk Combo Enquiry পাঠান
+                                পাইকারি অর্ডার পাঠান
                             </button>
                             <p class="text-amber-700 text-[10px] text-center mt-2 leading-relaxed">
                                 পণ্য যোগ করুন · তারপর enquiry পাঠান
@@ -1153,7 +1168,7 @@ $productsForJs = $products->map(function ($p) {
             {{-- Header --}}
             <div class="bg-amber-700 px-6 py-4 flex items-center justify-between">
                 <div>
-                    <h2 class="font-serif-bn text-white text-xl font-bold">পাইকারি কম্বো Enquiry</h2>
+                    <h2 class="font-serif-bn text-white text-xl font-bold">পাইকারি অর্ডার Enquiry</h2>
                     <p class="text-amber-200 text-xs mt-0.5">Bulk Combo Wholesale Enquiry</p>
                 </div>
                 <button onclick="closePaykariEnquiryForm()"
@@ -1313,7 +1328,6 @@ $productsForJs = $products->map(function ($p) {
                     </div>
                     <div class="z-10 text-center">
                         <div id="modal-ph-bn" class="text-[#c9a227] font-serif-bn text-4xl font-bold"></div>
-                        <div id="modal-ph-en" class="text-green-300 text-sm mt-1 tracking-widest uppercase"></div>
                     </div>
                 </div>
 
@@ -1342,7 +1356,6 @@ $productsForJs = $products->map(function ($p) {
                 <div class="flex items-start justify-between gap-3 mb-3">
                     <div>
                         <h2 id="modal-name-bn" class="font-serif-bn text-[#14532d] text-2xl sm:text-3xl font-bold leading-tight"></h2>
-                        <p id="modal-name-en" class="text-gray-400 text-xs tracking-widest uppercase mt-0.5"></p>
                     </div>
                     <span id="modal-stock-badge" class="flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full mt-1"></span>
                 </div>
@@ -1403,7 +1416,7 @@ $productsForJs = $products->map(function ($p) {
                 <div id="modal-retail-actions" class="flex gap-3 mt-6">
                     <button onclick="addToComboFromModal()"
                             class="flex-1 border-2 border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] py-3 rounded-xl text-sm font-bold transition-colors">
-                        + কম্বোতে যোগ করুন
+                        + বাক্সে যোগ করুন
                     </button>
                     <button onclick="orderSingleProduct()"
                             class="flex-1 bg-[#14532d] hover:bg-[#166534] text-[#fef9ee] py-3 rounded-xl text-sm font-bold transition-colors shadow">
@@ -1457,7 +1470,7 @@ $productsForJs = $products->map(function ($p) {
 
             {{-- Combo summary (read-only) --}}
             <div class="bg-[#f0faf4] px-6 py-4 border-b border-green-100">
-                <h4 class="text-[#14532d] text-[11px] font-bold uppercase tracking-wider mb-2">আপনার কম্বো</h4>
+                <h4 class="text-[#14532d] text-[11px] font-bold uppercase tracking-wider mb-2">আপনার বাক্স</h4>
                 <div id="order-items-preview" class="space-y-1.5 text-sm max-h-32 overflow-y-auto"></div>
                 <div class="mt-2.5 border-t border-green-200 pt-2 space-y-1">
                     <div class="flex justify-between text-xs text-gray-500">
@@ -1936,7 +1949,7 @@ $productsForJs = $products->map(function ($p) {
             </div>
             <a href="#combo-builder"
                class="flex-shrink-0 bg-[#c9a227] hover:bg-[#e2bb45] text-[#0f3d22] font-bold text-sm px-5 py-2.5 rounded-xl whitespace-nowrap transition-colors shadow">
-                কম্বো দেখুন →
+                বাক্স দেখুন →
             </a>
         </div>
     </div>
@@ -1946,6 +1959,9 @@ $productsForJs = $products->map(function ($p) {
 <script>
 // ── Product data (server-rendered JSON, keyed by id) ──────────────────────
 const PRODUCTS          = @json($productsForJs);
+const IS_CUSTOMER_LOGGED_IN = @json(Auth::check() && Auth::user()->role === 'customer');
+const LOGIN_URL = @json(route('customer.login'));
+const REGISTER_URL = @json(route('customer.register'));
 const PACKAGING_COST    = {{ (int) $packagingCost }};
 const MIN_ORDER_AMOUNT  = {{ (int) $minOrderAmount }};
 const PAYMENT_SETTINGS  = {
@@ -2063,11 +2079,12 @@ function refreshCardsForTab() {
         const wholeBtns  = document.getElementById('card-wholesale-btns-' + p.id);
 
         if (isWholesale) {
-            if (wrap)       wrap.style.display       = 'none';
+            // Show same card UI as retail — details open in modal
+            if (wrap)       wrap.style.display       = 'none'; // hide price chips on card
             if (cc)         cc.style.display          = 'none';
-            if (wUI)        wUI.style.display         = '';
+            if (wUI)        wUI.style.display         = 'none'; // nothing extra on card
             if (retailBtns) retailBtns.style.display  = 'none';
-            if (wholeBtns)  wholeBtns.style.display   = '';
+            if (wholeBtns)  wholeBtns.style.display   = ''; // show "বিস্তারিত দেখুন" button
         } else {
             if (wrap) wrap.style.display = prices.length ? '' : 'none';
             if (cc)   cc.style.display   = '';
@@ -2144,6 +2161,14 @@ let enquiryProductId = null;
 function openWholesaleEnquiry(productId, goToChat) {
     const p = PRODUCTS[productId];
     if (!p) return;
+
+    // Guest users: redirect to login page with return URL
+    if (!IS_CUSTOMER_LOGGED_IN) {
+        const returnUrl = LOGIN_URL + '?redirect=' + encodeURIComponent(window.location.pathname + window.location.hash);
+        window.location.href = returnUrl;
+        return;
+    }
+
     enquiryProductId = productId;
 
     // Sync the always-present hidden inputs
@@ -2357,9 +2382,7 @@ function closeModal() {
 function fillModal(p) {
     // Names
     document.getElementById('modal-name-bn').textContent = p.name_bn;
-    document.getElementById('modal-name-en').textContent = p.name_en;
     document.getElementById('modal-ph-bn').textContent   = p.name_bn;
-    document.getElementById('modal-ph-en').textContent   = p.name_en;
 
     // Media elements
     const imgEl      = document.getElementById('modal-img');
