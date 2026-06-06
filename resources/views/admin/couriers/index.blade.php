@@ -85,7 +85,7 @@
                     </td>
                     <td class="px-4 py-3">
                         <div class="flex items-center justify-end gap-1.5">
-                            <button @click='openEdit(@json([
+                            <button @click='openEdit({!! json_encode([
                                         "id" => $courier->id,
                                         "name" => $courier->name,
                                         "slug" => $courier->slug,
@@ -94,7 +94,7 @@
                                         "is_default" => (bool) $courier->is_default,
                                         "notes" => $courier->notes,
                                         "update_url" => route("admin.couriers.update", $courier),
-                                    ], JSON_HEX_APOS))'
+                                    ], JSON_HEX_APOS) !!})'
                                     class="text-xs px-2 py-1 rounded border border-gray-200 text-blue-600 hover:bg-blue-50">সম্পাদনা</button>
                             @if($courier->supportsApi())
                             <a href="{{ route('admin.courier-api-settings.index') }}"
