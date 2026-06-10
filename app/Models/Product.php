@@ -35,19 +35,28 @@ class Product extends Model
         'low_stock_threshold',
         'sort_order',
         'is_active',
+        'is_wholesale',
+        'wholesale_enquiry_enabled',
+        'min_order_quantity',
+        'min_order_unit',
+        'delivery_time',
+        'payment_terms',
     ];
 
     protected $casts = [
-        'gallery_images'      => 'array',
-        'retail_price_1kg'    => 'decimal:2',
-        'wholesale_price_1kg' => 'decimal:2',
-        'purchase_price'      => 'decimal:2',
-        'selling_price'       => 'decimal:2',
-        'stock'               => 'integer',
-        'stock_qty'           => 'decimal:3',
-        'low_stock_threshold' => 'decimal:3',
-        'sort_order'          => 'integer',
-        'is_active'           => 'boolean',
+        'gallery_images'            => 'array',
+        'retail_price_1kg'          => 'decimal:2',
+        'wholesale_price_1kg'       => 'decimal:2',
+        'purchase_price'            => 'decimal:2',
+        'selling_price'             => 'decimal:2',
+        'stock'                     => 'integer',
+        'stock_qty'                 => 'decimal:3',
+        'low_stock_threshold'       => 'decimal:3',
+        'sort_order'                => 'integer',
+        'is_active'                 => 'boolean',
+        'is_wholesale'              => 'boolean',
+        'wholesale_enquiry_enabled' => 'boolean',
+        'min_order_quantity'        => 'decimal:2',
     ];
 
     /** Units a vendor can pick for unit-managed products. */
@@ -172,6 +181,25 @@ class Product extends Model
     public function getDisplayNameAttribute(): string
     {
         return $this->name_bn ?: $this->name_en;
+    }
+
+    // ── Wholesale (Paykari) ───────────────────────────────────────────────────
+    /** A wholesale product hides its price publicly and is enquiry-only. */
+    public function isWholesale(): bool
+    {
+        return (bool) $this->is_wholesale;
+    }
+
+    /** Human MOQ label, e.g. "৫০ kg" — null when no MOQ is configured. */
+    public function moqLabel(): ?string
+    {
+        if ($this->min_order_quantity === null || (float) $this->min_order_quantity <= 0) {
+            return null;
+        }
+
+        $qty = rtrim(rtrim(number_format((float) $this->min_order_quantity, 2, '.', ''), '0'), '.');
+
+        return $qty . ' ' . ($this->min_order_unit ?: 'kg');
     }
 
     // Price per gram (base for automation logic)

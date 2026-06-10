@@ -48,6 +48,16 @@ class WholesaleEnquiryController extends Controller
         $customer = Auth::user()->customer ?? abort(403);
         $product  = Product::findOrFail($validated['product_id']);
 
+        // Enforce the product's Minimum Order Quantity, if set.
+        if ($product->min_order_quantity && (float) $validated['quantity_kg'] < (float) $product->min_order_quantity) {
+            $unit = $product->min_order_unit ?: 'kg';
+            $qty  = rtrim(rtrim(number_format((float) $product->min_order_quantity, 2, '.', ''), '0'), '.');
+
+            return back()
+                ->withInput()
+                ->withErrors(['quantity_kg' => "এই পণ্যের জন্য সর্বনিম্ন অর্ডার পরিমাণ {$qty} {$unit}।"]);
+        }
+
         $enquiry = WholesaleEnquiry::create([
             'customer_id'       => $customer->id,
             'product_id'        => $product->id,

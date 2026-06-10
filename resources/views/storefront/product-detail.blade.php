@@ -18,12 +18,20 @@
 
     $cat = $product->cat; // Category model (null-safe accessor)
 
+    // Paykari/wholesale products NEVER show price — enquiry only.
+    $isWholesale = $product->isWholesale();
+
     // Direct (non-variant) pack prices drive the on-page purchase / enquiry UI.
     $retailPacks    = $retailPrices->whereNull('product_variant_id')->values();
     $wholesalePacks = $wholesalePrices->whereNull('product_variant_id')->values();
-    $hasRetail      = $retailPacks->isNotEmpty();
+    // A wholesale product hides its retail price entirely, regardless of price rows.
+    $hasRetail      = ! $isWholesale && $retailPacks->isNotEmpty();
     $hasWholesale   = $wholesalePacks->isNotEmpty();
+    // Show the enquiry block for any flagged wholesale product (gated by toggle) or
+    // any product that simply has wholesale price rows.
+    $showWholesale  = $isWholesale ? (bool) $product->wholesale_enquiry_enabled : $hasWholesale;
     $lowestRetail   = $hasRetail ? (float) $retailPacks->min('final_price') : null;
+    $moqLabel       = $product->moqLabel();
 
     $isCustomer = auth()->check() && auth()->user()->role === 'customer';
     $authName   = $isCustomer ? (auth()->user()->name ?? '') : '';
@@ -160,7 +168,7 @@
             @if($cat)
                 <span class="text-xs font-medium text-[#14532d] bg-green-50 px-2.5 py-1 rounded-full">{{ $cat->name_bn }}</span>
             @endif
-            @if($hasWholesale)
+            @if($isWholesale || $hasWholesale)
                 <span class="text-xs font-semibold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full">পাইকারি</span>
             @endif
             @if($hasRetail)
@@ -236,27 +244,59 @@
         </div>
         @endif
 
-        {{-- ── (d) WHOLESALE enquiry block ────────────────────────────────── --}}
-        @if($hasWholesale)
+        {{-- ── (d) WHOLESALE / PAYKARI enquiry block (price never shown) ──── --}}
+        @if($showWholesale)
         <div id="enquiry" class="mt-6 rounded-xl border border-orange-100 bg-orange-50/40 p-4">
             <h2 class="text-sm font-bold text-orange-800 mb-1">পাইকারি / Wholesale</h2>
             <p class="text-sm text-gray-700">পাইকারি মূল্য অর্ডারের পরিমাণ অনুযায়ী জানানো হবে।</p>
             <p class="text-xs text-gray-500 mt-1">Wholesale price available on request. Bulk quantity অনুযায়ী price change হতে পারে।</p>
 
+            {{-- MOQ / delivery / payment info --}}
+            @if($moqLabel || $product->delivery_time || $product->payment_terms)
+            <dl class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+                @if($moqLabel)
+                <div class="bg-white rounded-lg border border-orange-100 px-3 py-2">
+                    <dt class="text-[11px] text-gray-400">Minimum Order Quantity</dt>
+                    <dd class="font-semibold text-gray-800">{{ $moqLabel }}</dd>
+                </div>
+                @endif
+                @if($product->delivery_time)
+                <div class="bg-white rounded-lg border border-orange-100 px-3 py-2">
+                    <dt class="text-[11px] text-gray-400">ডেলিভারি সময়</dt>
+                    <dd class="font-semibold text-gray-800">{{ $product->delivery_time }}</dd>
+                </div>
+                @endif
+                @if($product->payment_terms)
+                <div class="bg-white rounded-lg border border-orange-100 px-3 py-2">
+                    <dt class="text-[11px] text-gray-400">পেমেন্ট শর্ত (নমুনা)</dt>
+                    <dd class="font-semibold text-gray-800">{{ $product->payment_terms }}</dd>
+                </div>
+                @endif
+            </dl>
+            @endif
+
             <div class="flex flex-wrap gap-3 mt-3">
                 @if($isCustomer)
-                    <button type="button" onclick="pdToggleEnquiry()"
-                            class="bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
-                        Send Enquiry / দাম জানুন
+                    <button type="button" onclick="pdToggleEnquiry(true)"
+                            class="btn-gold text-[#0f3d22] font-bold text-sm px-5 py-2.5 rounded-xl">
+                        Get Best Price
                     </button>
-                    <button type="button" onclick="pdToggleEnquiry()"
+                    <button type="button" onclick="pdToggleEnquiry(true)"
+                            class="bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
+                        Enquiry Now
+                    </button>
+                    <button type="button" onclick="pdToggleEnquiry(true)"
                             class="border border-[#14532d] text-[#14532d] hover:bg-green-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
                         Contact Supplier
                     </button>
                 @else
                     <a href="{{ $loginUrl }}"
+                       class="btn-gold text-[#0f3d22] font-bold text-sm px-5 py-2.5 rounded-xl">
+                        Get Best Price
+                    </a>
+                    <a href="{{ $loginUrl }}"
                        class="bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
-                        Send Enquiry / দাম জানুন
+                        Enquiry Now
                     </a>
                     <a href="{{ $loginUrl }}"
                        class="border border-[#14532d] text-[#14532d] hover:bg-green-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
@@ -264,6 +304,12 @@
                     </a>
                 @endif
             </div>
+
+            {{-- Protected-communication warning (always visible) --}}
+            <p class="text-[11px] text-orange-800 bg-white border border-orange-200 rounded-lg px-3 py-2 mt-3 leading-relaxed">
+                আপনার তথ্য, quote এবং payment record নিরাপদ রাখার জন্য মসলা ঘর-এর chatbox এবং order process ব্যবহার করুন।
+                Phone, WhatsApp, external link বা website-এর বাইরে payment/deal করা যাবে না।
+            </p>
 
             @if($isCustomer)
             {{-- In-page enquiry form (slide section, NOT a popup) --}}
@@ -274,9 +320,11 @@
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs text-gray-500 mb-1">পরিমাণ (কেজি/কার্টন/বস্তা) <span class="text-red-500">*</span></label>
-                            <input type="number" name="quantity_kg" min="1" step="0.01" value="{{ old('quantity_kg', 1) }}" required
+                            <label class="block text-xs text-gray-500 mb-1">পরিমাণ ({{ $product->min_order_unit ?: 'kg' }}) <span class="text-red-500">*</span></label>
+                            <input type="number" name="quantity_kg" min="{{ $product->min_order_quantity ?: 1 }}" step="0.01"
+                                   value="{{ old('quantity_kg', $product->min_order_quantity ?: 1) }}" required
                                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+                            @if($moqLabel)<p class="text-[11px] text-gray-400 mt-1">সর্বনিম্ন: {{ $moqLabel }}</p>@endif
                         </div>
                         <div>
                             <label class="block text-xs text-gray-500 mb-1">ব্যবসার ধরন <span class="text-red-500">*</span></label>
@@ -316,10 +364,6 @@
                         <textarea name="message" rows="2" placeholder="delivery সময়, পরিমাণ বিস্তারিত, বিশেষ প্রয়োজনীয়তা..."
                                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] resize-none">{{ old('message') }}</textarea>
                     </div>
-
-                    <p class="text-[11px] text-gray-500 bg-white border border-orange-100 rounded-lg px-3 py-2 leading-relaxed">
-                        আপনার তথ্য, quote এবং payment record নিরাপদ রাখার জন্য মসলা ঘর-এর chatbox এবং order process ব্যবহার করুন।
-                    </p>
 
                     <button type="submit"
                             class="w-full bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm py-3 rounded-xl transition-colors">
@@ -464,13 +508,13 @@
                 class="flex-1 border-2 border-[#14532d] text-[#14532d] font-semibold text-sm py-2.5 rounded-xl disabled:opacity-40">কার্টে যোগ</button>
         <button type="button" onclick="pdAddToCart(true)" {{ $product->isInStock() ? '' : 'disabled' }}
                 class="flex-1 btn-gold text-[#0f3d22] font-bold text-sm py-2.5 rounded-xl disabled:opacity-40">এখনই কিনুন</button>
-    @elseif($hasWholesale)
+    @elseif($showWholesale)
         @if($isCustomer)
             <button type="button" onclick="pdToggleEnquiry(true)"
-                    class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl">Send Enquiry / দাম জানুন</button>
+                    class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl">Get Best Price / Enquiry</button>
         @else
             <a href="{{ $loginUrl }}"
-               class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl text-center">Send Enquiry / দাম জানুন</a>
+               class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl text-center">Get Best Price / Enquiry</a>
         @endif
     @endif
 </div>

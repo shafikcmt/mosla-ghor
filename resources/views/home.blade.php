@@ -28,6 +28,7 @@ $productsForJs = $products->map(function ($p) {
         'video_url'         => $p->video_url,
         'video_path'        => ($p->video_path ?? null) ? asset($p->video_path) : null,
         'stock'             => (int) $p->stock,
+        'is_wholesale'      => (bool) $p->is_wholesale,
         'retail_prices'     => $directPrices->where('sell_type', 'retail')->map($mapPrice)->values()->all(),
         'wholesale_prices'  => $directPrices->where('sell_type', 'wholesale')->map($mapPrice)->values()->all(),
         'variants'          => $variants,
@@ -442,7 +443,7 @@ $productsForJs = $products->map(function ($p) {
                         ->merge($product->gallery_images ?? [])
                         ->filter()->values();
                 @endphp
-                <a href="{{ route('customer.wholesale.products.show', $product->slug) }}" class="block">
+                <a href="{{ route('products.show', $product->slug) }}" class="block">
                 <div class="relative h-52 overflow-hidden flex-shrink-0" data-slideshow="{{ $product->id }}">
                     @if($cardSlides->isNotEmpty())
                         @foreach($cardSlides as $si => $slide)
@@ -484,7 +485,7 @@ $productsForJs = $products->map(function ($p) {
 
                 {{-- Body --}}
                 <div class="p-5 flex flex-col flex-1">
-                    <a href="{{ route('customer.wholesale.products.show', $product->slug) }}" class="hover:underline">
+                    <a href="{{ route('products.show', $product->slug) }}" class="hover:underline">
                         <h3 class="font-serif-bn text-[#14532d] text-xl font-bold leading-snug">{{ $product->name_bn }}</h3>
                     </a>
 
@@ -492,6 +493,19 @@ $productsForJs = $products->map(function ($p) {
                         <p class="text-gray-500 text-sm mt-2 leading-relaxed line-clamp-2">{{ $product->short_description }}</p>
                     @endif
 
+                    @if($product->is_wholesale)
+                    {{-- Paykari product: price hidden on card, enquiry-only --}}
+                    <div class="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full self-start">
+                        পাইকারি — দাম জানতে enquiry
+                    </div>
+                    <div class="flex-1 min-h-3"></div>
+                    <div class="mt-4">
+                        <a href="{{ route('products.show', $product->slug) }}"
+                           class="block w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
+                            বিস্তারিত দেখুন
+                        </a>
+                    </div>
+                    @else
                     <div id="card-price-wrap-{{ $product->id }}" class="mt-3 flex items-baseline gap-1.5"
                          style="{{ $initRetailPrices->isEmpty() ? 'display:none;' : '' }}">
                         <span id="card-from-{{ $product->id }}" class="text-[#c9a227] font-serif-bn text-2xl font-bold">
@@ -541,6 +555,7 @@ $productsForJs = $products->map(function ($p) {
                             বিস্তারিত দেখুন
                         </a>
                     </div>
+                    @endif
                 </div>
             </article>
             @endforeach
@@ -585,6 +600,11 @@ $productsForJs = $products->map(function ($p) {
                             <p class="text-gray-500 text-sm mt-0.5 line-clamp-1">{{ $product->short_description }}</p>
                         @endif
 
+                        @if($product->is_wholesale)
+                        <div class="mt-2">
+                            <span class="text-[11px] font-semibold text-orange-700 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full">পাইকারি — দাম জানতে enquiry</span>
+                        </div>
+                        @else
                         <div id="list-prices-{{ $product->id }}" class="mt-2 flex flex-wrap gap-1">
                             @foreach($initRetailPrices as $price)
                                 <span class="text-[11px] bg-green-50 border border-green-100 text-[#14532d] px-2 py-0.5 rounded-full whitespace-nowrap">
@@ -592,11 +612,12 @@ $productsForJs = $products->map(function ($p) {
                                 </span>
                             @endforeach
                         </div>
+                        @endif
                     </div>
 
                     {{-- Price + buttons --}}
                     <div class="flex sm:flex-col items-center sm:items-end justify-between gap-2 flex-shrink-0">
-                        @if($product->activePrices->isNotEmpty())
+                        @if($product->activePrices->isNotEmpty() && ! $product->is_wholesale)
                             <div class="text-right">
                                 <div id="list-from-{{ $product->id }}" class="text-[#c9a227] font-bold text-xl font-serif-bn">
                                     {{ $initRetailPrices->isNotEmpty() ? '৳' . number_format($initRetailPrices->first()->final_price, 0) : '' }}
@@ -609,10 +630,12 @@ $productsForJs = $products->map(function ($p) {
                                class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
                                 বিস্তারিত
                             </a>
+                            @unless($product->is_wholesale)
                             <button onclick="goToCombo({{ $product->id }})"
                                     class="border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
                                 বাক্সে যোগ
                             </button>
+                            @endunless
                         </div>
                     </div>
                 </div>
@@ -738,7 +761,8 @@ $productsForJs = $products->map(function ($p) {
                             : $product->activePrices->filter(fn($pr) => is_null($pr->product_variant_id))->where('sell_type', 'retail');
                         $hasAnyRetail = $pickerRetailPrices->isNotEmpty()
                             || (!$hasVariants && $product->activePrices->filter(fn($pr) => is_null($pr->product_variant_id))->where('sell_type', 'wholesale')->isNotEmpty());
-                        $showRow = $product->activePrices->isNotEmpty() || $hasVariants;
+                        // Wholesale (Paykari) products are enquiry-only — never orderable via the box.
+                        $showRow = ($product->activePrices->isNotEmpty() || $hasVariants) && ! $product->is_wholesale;
                     @endphp
                     @if($showRow)
                     <div id="picker-row-{{ $product->id }}"
@@ -2072,6 +2096,7 @@ function setTab(tab) {
 function refreshCardsForTab() {
     const isWholesale = activeTab === 'wholesale';
     Object.values(PRODUCTS).forEach(function(p) {
+        if (p.is_wholesale) return; // Paykari cards are static (no price/box toggling)
         const prices     = activeTabPrices(p);
         const fp         = document.getElementById('card-from-' + p.id);
         const wrap       = document.getElementById('card-price-wrap-' + p.id);
@@ -2107,6 +2132,7 @@ function refreshCardsForTab() {
 
 function refreshListViewForTab() {
     Object.values(PRODUCTS).forEach(function(p) {
+        if (p.is_wholesale) return; // Paykari rows are static (no price chips)
         const prices = activeTabPrices(p);
         const pc = document.getElementById('list-prices-' + p.id);
         const lf = document.getElementById('list-from-' + p.id);
@@ -2119,6 +2145,7 @@ function refreshListViewForTab() {
 
 function refreshPickerForTab() {
     Object.values(PRODUCTS).forEach(function(p) {
+        if (p.is_wholesale) return; // Paykari products are not orderable via the box
         const row = document.getElementById('picker-row-' + p.id);
         if (!row) return;
 

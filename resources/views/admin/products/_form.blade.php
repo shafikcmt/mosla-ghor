@@ -106,6 +106,60 @@
         </label>
     </div>
 
+    {{-- ── পাইকারি / Wholesale settings ──────────────────────────────────── --}}
+    <div class="md:col-span-2 border border-amber-200 bg-amber-50/50 rounded-lg p-4 space-y-4">
+        <h3 class="text-sm font-bold text-amber-800">পাইকারি / Wholesale সেটিংস</h3>
+
+        <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" name="is_wholesale" id="is_wholesale" value="1"
+                   {{ old('is_wholesale', $product?->is_wholesale ?? false) ? 'checked' : '' }}
+                   class="w-4 h-4 rounded cursor-pointer mt-0.5">
+            <span class="text-sm text-gray-700">
+                এই পণ্যটি পাইকারি (Paykari)
+                <span class="block text-xs text-gray-400 font-normal">দাম পাবলিক পেজে লুকানো থাকবে — গ্রাহক শুধু enquiry পাঠাবে, supplier/admin quote দেবে।</span>
+            </span>
+        </label>
+
+        <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" name="wholesale_enquiry_enabled" id="wholesale_enquiry_enabled" value="1"
+                   {{ old('wholesale_enquiry_enabled', $product?->wholesale_enquiry_enabled ?? true) ? 'checked' : '' }}
+                   class="w-4 h-4 rounded cursor-pointer">
+            <span class="text-sm text-gray-700">পাইকারি enquiry চালু (Enquiry form দেখাবে)</span>
+        </label>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">সর্বনিম্ন অর্ডার পরিমাণ (MOQ)</label>
+                <div class="flex gap-2">
+                    <input type="number" name="min_order_quantity" step="0.01" min="0"
+                           value="{{ old('min_order_quantity', $product?->min_order_quantity) }}"
+                           placeholder="যেমন: 50"
+                           class="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400">
+                    <select name="min_order_unit"
+                            class="border rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-amber-400">
+                        @foreach(['kg','gram','bag','carton','piece','packet'] as $u)
+                            <option value="{{ $u }}" {{ old('min_order_unit', $product?->min_order_unit ?? 'kg') === $u ? 'selected' : '' }}>{{ $u }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">ডেলিভারি সময়</label>
+                <input type="text" name="delivery_time"
+                       value="{{ old('delivery_time', $product?->delivery_time) }}"
+                       placeholder="যেমন: ৩-৫ দিন"
+                       class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400">
+            </div>
+            <div class="sm:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">পেমেন্ট শর্ত (নমুনা)</label>
+                <input type="text" name="payment_terms"
+                       value="{{ old('payment_terms', $product?->payment_terms) }}"
+                       placeholder="যেমন: ৩০% অগ্রিম, বাকি ডেলিভারিতে"
+                       class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400">
+            </div>
+        </div>
+    </div>
+
     {{-- main_image URL (manual / legacy) --}}
     <div class="md:col-span-2">
         <label class="block text-sm font-medium text-gray-700 mb-1">মূল ছবির URL (বাহ্যিক লিংক)</label>
