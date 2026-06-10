@@ -1,4 +1,4 @@
-@extends('customer.layouts.app')
+@extends('customer.layout')
 
 @section('title', 'পাইকারি কম্বো Enquiry #' . $enquiry->id)
 
