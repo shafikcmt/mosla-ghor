@@ -146,6 +146,28 @@ class Product extends Model
             ->limit(1);
     }
 
+    // ── Reviews ──────────────────────────────────────────────────────────────
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class)->latest();
+    }
+
+    public function approvedReviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class)->where('is_approved', true)->latest();
+    }
+
+    /** Average approved rating (0 when none), rounded to 1 decimal. */
+    public function averageRating(): float
+    {
+        return round((float) $this->approvedReviews()->avg('rating'), 1);
+    }
+
+    public function reviewsCount(): int
+    {
+        return $this->approvedReviews()->count();
+    }
+
     // Display name: prefer Bangla, fall back to English
     public function getDisplayNameAttribute(): string
     {

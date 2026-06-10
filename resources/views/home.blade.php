@@ -524,10 +524,10 @@ $productsForJs = $products->map(function ($p) {
 
                     {{-- Retail mode buttons --}}
                     <div id="card-retail-btns-{{ $product->id }}" class="mt-4 flex gap-2">
-                        <button onclick="openModal({{ $product->id }})"
-                                class="flex-1 bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
+                        <a href="{{ route('products.show', $product->slug) }}"
+                           class="flex-1 bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
                             বিস্তারিত দেখুন
-                        </button>
+                        </a>
                         <button onclick="goToCombo({{ $product->id }})"
                                 class="flex-1 border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] py-2.5 rounded-xl text-sm font-semibold transition-colors">
                             বাক্সে যোগ
@@ -536,10 +536,10 @@ $productsForJs = $products->map(function ($p) {
 
                     {{-- Wholesale mode buttons (hidden in retail mode) --}}
                     <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4">
-                        <button onclick="openModal({{ $product->id }})"
-                                class="w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
+                        <a href="{{ route('products.show', $product->slug) }}"
+                           class="block w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
                             বিস্তারিত দেখুন
-                        </button>
+                        </a>
                     </div>
                 </div>
             </article>
@@ -605,10 +605,10 @@ $productsForJs = $products->map(function ($p) {
                             </div>
                         @endif
                         <div class="flex gap-2">
-                            <button onclick="openModal({{ $product->id }})"
-                                    class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
+                            <a href="{{ route('products.show', $product->slug) }}"
+                               class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
                                 বিস্তারিত
-                            </button>
+                            </a>
                             <button onclick="goToCombo({{ $product->id }})"
                                     class="border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
                                 বাক্সে যোগ
@@ -953,7 +953,9 @@ $productsForJs = $products->map(function ($p) {
 <div class="gold-rule"></div>
 
 {{-- ━━━━━━━━━━━━━━━━  REVIEWS  ━━━━━━━━━━━━━━━━ --}}
-@if($reviews->isNotEmpty())
+{{-- Homepage testimonials intentionally hidden — customer reviews now live on each
+     product detail page (/products/{slug}#reviews). Admin Review CRUD remains intact. --}}
+@if(false)
 <section id="reviews" class="py-16 md:py-20 px-5 bg-[#fef9ee]">
     <div class="max-w-5xl mx-auto">
         <div class="text-center mb-12">
@@ -3632,6 +3634,36 @@ function zoomNav(dir) {
     zoomCurIdx = ((zoomCurIdx + dir) % zoomImages.length + zoomImages.length) % zoomImages.length;
     zoomShowImage();
 }
+
+// ── Product-detail "Add to Cart / Buy Now" handoff ────────────────────────
+// The product detail page (/products/{slug}) stashes a pending pack here, then
+// redirects to "/". We add it to the box via the existing picker + addToCombo.
+(function () {
+    let pending;
+    try { pending = JSON.parse(localStorage.getItem('ms_pending_box_item') || 'null'); } catch (e) { pending = null; }
+    if (!pending) return;
+    try { localStorage.removeItem('ms_pending_box_item'); } catch (e) {}
+
+    const p = (typeof PRODUCTS !== 'undefined') ? PRODUCTS[pending.productId] : null;
+    if (!p) return;
+
+    if (typeof setTab === 'function') setTab(pending.sellType || 'retail');
+
+    // Select the requested pack in the product's picker row, then add it.
+    const qs = document.getElementById('picker-qty-' + pending.productId);
+    if (qs && pending.priceId) {
+        qs.value = String(pending.priceId);
+        if (typeof pickerPriceUpdate === 'function') pickerPriceUpdate(pending.productId);
+    }
+    if (typeof addToCombo === 'function') addToCombo(pending.productId);
+
+    // Buy Now → straight to the order form; Add to Cart → highlight the box.
+    if (pending.buyNow && typeof openOrderForm === 'function') {
+        openOrderForm();
+    } else if (typeof goToCombo === 'function') {
+        goToCombo(pending.productId);
+    }
+})();
 
 // ── Card slideshow auto-cycle ─────────────────────────────────────────────
 (function () {

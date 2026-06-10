@@ -29,6 +29,8 @@ use App\Http\Controllers\CustomerReturnController;
 use App\Http\Controllers\CustomerSupportController;
 use App\Http\Controllers\CustomerWishlistController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\Admin\ProductReviewController as AdminProductReviewController;
 use App\Http\Controllers\TrackOrderController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\Vendor\AuthController as VendorAuthController;
@@ -73,6 +75,10 @@ use App\Http\Controllers\Vendor\PaykariComboEnquiryController as VendorPaykariCo
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class);
+
+// ── Public product detail (SEO-friendly) ───────────────────────────────────
+Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
+Route::post('/products/{product:slug}/reviews', [ProductController::class, 'storeReview'])->name('products.reviews.store');
 
 // ── Customer / User auth ───────────────────────────────────────────────────
 Route::name('customer.')->group(function () {
@@ -375,6 +381,12 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
 
     Route::resource('reviews', AdminReviewController::class);
     Route::post('reviews/{review}/toggle', [AdminReviewController::class, 'toggle'])->name('reviews.toggle');
+
+    // ── Product reviews (customer reviews on product detail pages) ──────────
+    Route::get('product-reviews',                          [AdminProductReviewController::class, 'index'])->name('product-reviews.index');
+    Route::post('product-reviews/{productReview}/approve', [AdminProductReviewController::class, 'approve'])->name('product-reviews.approve');
+    Route::post('product-reviews/{productReview}/pending', [AdminProductReviewController::class, 'pending'])->name('product-reviews.pending');
+    Route::delete('product-reviews/{productReview}',       [AdminProductReviewController::class, 'destroy'])->name('product-reviews.destroy');
 
     // ── Vendor management ──────────────────────────────────────────────────
     Route::prefix('vendors')->name('vendors.')->group(function () {
