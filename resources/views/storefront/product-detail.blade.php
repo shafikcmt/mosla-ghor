@@ -312,12 +312,18 @@
                         class="border border-[#14532d] text-[#14532d] hover:bg-green-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
                     Contact Supplier
                 </button>
+                <button type="button" id="pd-add-bag"
+                        data-id="{{ $product->id }}" data-slug="{{ $product->slug }}"
+                        data-name="{{ $product->display_name }}" data-image="{{ $main }}"
+                        data-qty="{{ $product->min_order_quantity ?: 1 }}" data-unit="{{ $product->min_order_unit ?: 'kg' }}"
+                        class="border border-amber-500 text-amber-700 hover:bg-amber-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
+                    🛍️ Enquiry Bag-এ যোগ
+                </button>
             </div>
 
-            {{-- Protected-communication warning (always visible) --}}
-            <p class="text-[11px] text-orange-800 bg-white border border-orange-200 rounded-lg px-3 py-2 mt-3 leading-relaxed">
-                আপনার তথ্য, quote এবং payment record নিরাপদ রাখার জন্য মসলা ঘর-এর chatbox এবং order process ব্যবহার করুন।
-                Phone, WhatsApp, external link বা website-এর বাইরে payment/deal করা যাবে না।
+            {{-- Friendly public note (no strict warning on the public page) --}}
+            <p class="text-xs text-gray-500 mt-3">
+                পাইকারি মূল্য জানতে enquiry পাঠান। MoslaMart team আপনাকে quote জানাবে।
             </p>
 
             {{-- In-page enquiry form (slide section, NOT a popup) — guest + logged-in --}}
@@ -503,19 +509,18 @@
 {{-- ── (f) Related products ───────────────────────────────────────────────── --}}
 @if($relatedProducts->isNotEmpty())
 <div class="mt-8">
-    <h2 class="text-lg font-bold text-gray-800 mb-3">একই ক্যাটাগরির পণ্য</h2>
+    <h2 class="text-lg font-bold text-gray-800 mb-3">{{ $relatedWholesale ? 'আরও পাইকারি পণ্য' : 'সম্পর্কিত পণ্য' }}</h2>
     <div class="flex gap-4 overflow-x-auto pb-3" style="scroll-snap-type: x mandatory;">
         @foreach($relatedProducts as $rp)
         @php
             $rpImg = $rp->main_image
                 ? (\Illuminate\Support\Str::startsWith($rp->main_image, 'http') ? $rp->main_image : asset($rp->main_image))
                 : 'https://placehold.co/300x300/f1f5f3/14532d?text=' . urlencode($rp->display_name);
-            // Wholesale view → keep related products in the wholesale route. Also any
-            // wholesale-flagged product always links to its wholesale page.
-            $rpWholesale = $wholesaleView || $rp->is_wholesale;
-            $rpUrl = $rpWholesale
+            $rpUrl = $relatedWholesale
                 ? route('customer.wholesale.products.show', $rp->slug)
                 : route('products.show', $rp->slug);
+            // For retail related cards, show the cheapest active retail pack price.
+            $rpPrice = $relatedWholesale ? null : $rp->activeRetailPrices->min('final_price');
         @endphp
         <a href="{{ $rpUrl }}"
            class="flex-shrink-0 w-40 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
@@ -525,8 +530,11 @@
             </div>
             <div class="p-2.5">
                 <p class="text-sm font-medium text-gray-800 truncate">{{ $rp->name_bn }}</p>
-                <p class="text-xs {{ $rpWholesale ? 'text-orange-700' : 'text-[#14532d]' }} mt-1 font-semibold">
-                    {{ $rpWholesale ? 'Get Best Price →' : 'বিস্তারিত দেখুন →' }}
+                @if(! $relatedWholesale && $rpPrice)
+                    <p class="text-sm text-[#c9a227] font-bold font-serif-bn mt-0.5">৳{{ number_format($rpPrice, 0) }} <span class="text-gray-400 text-[10px] font-sans">থেকে</span></p>
+                @endif
+                <p class="text-xs {{ $relatedWholesale ? 'text-orange-700' : 'text-[#14532d]' }} mt-1 font-semibold">
+                    {{ $relatedWholesale ? 'Get Best Price →' : 'বিস্তারিত দেখুন →' }}
                 </p>
             </div>
         </a>
@@ -621,5 +629,14 @@
         });
     }
     pdSetStars(5);
+
+    // ── Add to Enquiry Bag (uses shared msBagAdd from the layout) ─────────
+    (function () {
+        const b = document.getElementById('pd-add-bag');
+        if (b) b.addEventListener('click', function () {
+            msBagAdd(parseInt(b.dataset.id, 10), b.dataset.slug, b.dataset.name, b.dataset.image,
+                     parseFloat(b.dataset.qty) || 1, b.dataset.unit || 'kg');
+        });
+    })();
 </script>
 @endsection

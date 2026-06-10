@@ -6,6 +6,12 @@
     <a href="{{ route('customer.wholesale.enquiry.index') }}" class="text-gray-500 hover:text-gray-700 text-sm">← Enquiry তালিকা</a>
 </div>
 
+{{-- Protected-communication policy (shown inside the logged-in enquiry area) --}}
+<div class="mb-5 text-[12px] text-orange-800 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 leading-relaxed">
+    আপনার তথ্য, quote এবং payment record নিরাপদ রাখার জন্য মসলা ঘর-এর chatbox এবং order process ব্যবহার করুন।
+    Phone, WhatsApp, external link বা website-এর বাইরে payment/deal করা যাবে না।
+</div>
+
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
     {{-- Left: Enquiry details --}}

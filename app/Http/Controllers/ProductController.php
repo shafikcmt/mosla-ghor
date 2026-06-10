@@ -43,14 +43,25 @@ class ProductController extends Controller
         $retailPrices    = $product->activeRetailPrices;
         $wholesalePrices = $product->activeWholesalePrices;
 
-        $relatedProducts = collect();
-        if ($product->category_id) {
-            $relatedProducts = Product::active()
-                ->where('category_id', $product->category_id)
+        // Related products: same category first, then fall back to the latest.
+        // Wholesale view is URL-driven, so any product can be shown as wholesale —
+        // we only exclude wholesale-only products from the RETAIL related list.
+        $relatedWholesale = $wholesaleView || $product->isWholesale();
+        $relatedBase = function () use ($product, $relatedWholesale) {
+            $q = Product::active()
                 ->where('id', '!=', $product->id)
-                ->with('category')
-                ->limit(4)
-                ->get();
+                ->with(['category', 'activeRetailPrices']);
+            if (! $relatedWholesale) {
+                $q->where('is_wholesale', false); // retail page: only retail-capable products
+            }
+            return $q;
+        };
+
+        $relatedProducts = $product->category_id
+            ? $relatedBase()->where('category_id', $product->category_id)->limit(8)->get()
+            : collect();
+        if ($relatedProducts->isEmpty()) {
+            $relatedProducts = $relatedBase()->latest('id')->limit(8)->get();
         }
 
         $reviews     = $product->approvedReviews()->get();
@@ -58,9 +69,15 @@ class ProductController extends Controller
         $reviewCount = $reviews->count();
 
         return view('storefront.product-detail', compact(
-            'product', 'retailPrices', 'wholesalePrices', 'relatedProducts',
+            'product', 'retailPrices', 'wholesalePrices', 'relatedProducts', 'relatedWholesale',
             'reviews', 'avgRating', 'reviewCount', 'wholesaleView'
         ));
+    }
+
+    /** Public wholesale enquiry bag — manage multiple products and submit one enquiry. */
+    public function enquiryBag()
+    {
+        return view('storefront.enquiry-bag');
     }
 
     /** Public review submission — guest or logged-in. Starts as pending. */

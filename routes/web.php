@@ -90,6 +90,9 @@ Route::post('/paykari-combo/enquiry', [\App\Http\Controllers\Customer\PaykariCom
     ->middleware('throttle:10,1')
     ->name('paykari-combo.enquiry.store');
 
+// Public wholesale enquiry bag (manage multiple products + submit). Guest allowed.
+Route::get('/wholesale/enquiry-bag', [ProductController::class, 'enquiryBag'])->name('wholesale.enquiry-bag');
+
 // ── Customer / User auth ───────────────────────────────────────────────────
 Route::name('customer.')->group(function () {
     Route::get('register',  [CustomerAuthController::class, 'showRegister'])->name('register');
