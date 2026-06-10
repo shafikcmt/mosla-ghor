@@ -18,8 +18,11 @@
 
     $cat = $product->cat; // Category model (null-safe accessor)
 
+    // Wholesale view: either the product is flagged wholesale, OR we are on the
+    // dedicated /wholesale/products/{slug} URL (passed from the controller).
+    $wholesaleView = $wholesaleView ?? false;
     // Paykari/wholesale products NEVER show price — enquiry only.
-    $isWholesale = $product->isWholesale();
+    $isWholesale = $product->isWholesale() || $wholesaleView;
 
     // Direct (non-variant) pack prices drive the on-page purchase / enquiry UI.
     $retailPacks    = $retailPrices->whereNull('product_variant_id')->values();
@@ -33,10 +36,12 @@
     $lowestRetail   = $hasRetail ? (float) $retailPacks->min('final_price') : null;
     $moqLabel       = $product->moqLabel();
 
-    $isCustomer = auth()->check() && auth()->user()->role === 'customer';
-    $authName   = $isCustomer ? (auth()->user()->name ?? '') : '';
-    $authPhone  = $isCustomer ? (auth()->user()->phone ?? '') : '';
-    $loginUrl   = route('customer.login') . '?redirect=' . urlencode(url()->current() . '#enquiry');
+    // Enquiry is public (guest allowed). Autofill from the logged-in customer profile.
+    $isCustomer   = auth()->check() && auth()->user()->role === 'customer';
+    $authCustomer = $isCustomer ? auth()->user()->customer : null;
+    $authName     = $authCustomer->name ?? (auth()->user()->name ?? '');
+    $authPhone    = $authCustomer->mobile_number ?? '';
+    $authAddress  = $authCustomer->last_full_address ?? '';
 
     $metaDesc   = \Illuminate\Support\Str::limit(strip_tags($product->short_description ?: $product->description ?: $product->display_name), 155);
     $canonical  = route('products.show', $product->slug);
@@ -101,20 +106,39 @@
 
 @section('content')
 
-{{-- Breadcrumb --}}
-<nav class="text-xs text-gray-400 mb-4 flex flex-wrap items-center gap-1.5">
-    <a href="/" class="hover:text-[#14532d]">হোম</a>
-    <span>/</span>
-    @if($cat)
-        @if($cat->parent)
-            <a href="/?category={{ $cat->parent->slug }}" class="hover:text-[#14532d]">{{ $cat->parent->name_bn }}</a>
+{{-- Breadcrumb + easy retail/wholesale navigation --}}
+<div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+    <nav class="text-xs text-gray-400 flex flex-wrap items-center gap-1.5">
+        <a href="/" class="hover:text-[#14532d]">হোম</a>
+        <span>/</span>
+        @if($wholesaleView)
+            <a href="/?tab=wholesale" class="hover:text-[#14532d]">পাইকারি পণ্য</a>
             <span>/</span>
         @endif
-        <a href="/?category={{ $cat->slug }}" class="hover:text-[#14532d]">{{ $cat->name_bn }}</a>
-        <span>/</span>
-    @endif
-    <span class="text-gray-700 font-medium">{{ $product->display_name }}</span>
-</nav>
+        @if($cat)
+            @if($cat->parent)
+                <a href="/?category={{ $cat->parent->slug }}" class="hover:text-[#14532d]">{{ $cat->parent->name_bn }}</a>
+                <span>/</span>
+            @endif
+            <a href="/?category={{ $cat->slug }}" class="hover:text-[#14532d]">{{ $cat->name_bn }}</a>
+            <span>/</span>
+        @endif
+        <span class="text-gray-700 font-medium">{{ $product->display_name }}</span>
+    </nav>
+    <div class="flex items-center gap-2 text-xs">
+        <a href="/" class="text-gray-500 hover:text-[#14532d]">← সব পণ্য</a>
+        {{-- Switch between retail and wholesale view of the same product (only when not a wholesale-only product) --}}
+        @unless($product->isWholesale())
+            @if($wholesaleView)
+                <a href="{{ route('products.show', $product->slug) }}"
+                   class="font-semibold text-[#14532d] bg-green-50 px-2.5 py-1 rounded-full">খুচরা হিসেবে দেখুন</a>
+            @else
+                <a href="{{ route('customer.wholesale.products.show', $product->slug) }}"
+                   class="font-semibold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full">পাইকারি হিসেবে দেখুন</a>
+            @endif
+        @endunless
+    </div>
+</div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-7">
 
@@ -276,33 +300,18 @@
             @endif
 
             <div class="flex flex-wrap gap-3 mt-3">
-                @if($isCustomer)
-                    <button type="button" onclick="pdToggleEnquiry(true)"
-                            class="btn-gold text-[#0f3d22] font-bold text-sm px-5 py-2.5 rounded-xl">
-                        Get Best Price
-                    </button>
-                    <button type="button" onclick="pdToggleEnquiry(true)"
-                            class="bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
-                        Enquiry Now
-                    </button>
-                    <button type="button" onclick="pdToggleEnquiry(true)"
-                            class="border border-[#14532d] text-[#14532d] hover:bg-green-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
-                        Contact Supplier
-                    </button>
-                @else
-                    <a href="{{ $loginUrl }}"
-                       class="btn-gold text-[#0f3d22] font-bold text-sm px-5 py-2.5 rounded-xl">
-                        Get Best Price
-                    </a>
-                    <a href="{{ $loginUrl }}"
-                       class="bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
-                        Enquiry Now
-                    </a>
-                    <a href="{{ $loginUrl }}"
-                       class="border border-[#14532d] text-[#14532d] hover:bg-green-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
-                        Contact Supplier
-                    </a>
-                @endif
+                <button type="button" onclick="pdToggleEnquiry(true)"
+                        class="btn-gold text-[#0f3d22] font-bold text-sm px-5 py-2.5 rounded-xl">
+                    Get Best Price
+                </button>
+                <button type="button" onclick="pdToggleEnquiry(true)"
+                        class="bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
+                    Enquiry Now
+                </button>
+                <button type="button" onclick="pdToggleEnquiry(true)"
+                        class="border border-[#14532d] text-[#14532d] hover:bg-green-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
+                    Contact Supplier
+                </button>
             </div>
 
             {{-- Protected-communication warning (always visible) --}}
@@ -311,24 +320,59 @@
                 Phone, WhatsApp, external link বা website-এর বাইরে payment/deal করা যাবে না।
             </p>
 
-            @if($isCustomer)
-            {{-- In-page enquiry form (slide section, NOT a popup) --}}
-            <div id="pd-enquiry-form" class="hidden mt-4">
-                <form action="{{ route('customer.wholesale.enquiry.store') }}" method="POST" class="space-y-3">
+            {{-- In-page enquiry form (slide section, NOT a popup) — guest + logged-in --}}
+            <div id="pd-enquiry-form" class="{{ $errors->any() && old('quantity_kg') ? '' : 'hidden' }} mt-4">
+                <form action="{{ route('products.enquiry.store', $product->slug) }}" method="POST" class="space-y-3">
                     @csrf
-                    <input type="hidden" name="product_id" value="{{ $product->id }}">
+                    @if($wholesaleView)<input type="hidden" name="from_wholesale" value="1">@endif
 
+                    {{-- Quantity + unit (required) --}}
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs text-gray-500 mb-1">পরিমাণ ({{ $product->min_order_unit ?: 'kg' }}) <span class="text-red-500">*</span></label>
-                            <input type="number" name="quantity_kg" min="{{ $product->min_order_quantity ?: 1 }}" step="0.01"
-                                   value="{{ old('quantity_kg', $product->min_order_quantity ?: 1) }}" required
+                            <label class="block text-xs text-gray-500 mb-1">পরিমাণ <span class="text-red-500">*</span></label>
+                            <input type="number" name="quantity_kg" min="{{ $product->min_order_quantity ?: 0.01 }}" step="0.01"
+                                   value="{{ old('quantity_kg', $product->min_order_quantity ?: '') }}" required placeholder="যেমন: 50"
                                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
                             @if($moqLabel)<p class="text-[11px] text-gray-400 mt-1">সর্বনিম্ন: {{ $moqLabel }}</p>@endif
                         </div>
                         <div>
-                            <label class="block text-xs text-gray-500 mb-1">ব্যবসার ধরন <span class="text-red-500">*</span></label>
-                            <select name="business_type" required
+                            <label class="block text-xs text-gray-500 mb-1">একক <span class="text-red-500">*</span></label>
+                            <select name="quantity_unit"
+                                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+                                @php $defUnit = old('quantity_unit', $product->min_order_unit ?: 'kg'); @endphp
+                                @foreach(['kg' => 'কেজি (kg)', 'bag' => 'বস্তা (bag)', 'carton' => 'কার্টন (carton)', 'piece' => 'পিস (piece)'] as $val => $lbl)
+                                    <option value="{{ $val }}" {{ $defUnit === $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    {{-- Name + phone (required; autofilled for logged-in customers) --}}
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">নাম <span class="text-red-500">*</span></label>
+                            <input type="text" name="customer_name" value="{{ old('customer_name', $authName) }}" required
+                                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">ফোন / WhatsApp <span class="text-red-500">*</span></label>
+                            <input type="text" name="customer_phone" value="{{ old('customer_phone', $authPhone) }}" required placeholder="01XXXXXXXXX"
+                                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+                        </div>
+                    </div>
+
+                    {{-- Delivery location (required; autofilled if available) --}}
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">ডেলিভারি ঠিকানা / এলাকা <span class="text-red-500">*</span></label>
+                        <input type="text" name="delivery_location" value="{{ old('delivery_location', $authAddress) }}" required placeholder="যেমন: ঢাকা, চট্টগ্রাম"
+                               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+                    </div>
+
+                    {{-- Optional --}}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">ব্যবসার ধরন <span class="text-gray-300">(ঐচ্ছিক)</span></label>
+                            <select name="business_type"
                                     class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#14532d]">
                                 <option value="">— বেছে নিন —</option>
                                 <option value="shop" @selected(old('business_type')==='shop')>শপ / দোকান</option>
@@ -338,40 +382,22 @@
                                 <option value="other" @selected(old('business_type')==='other')>অন্যান্য</option>
                             </select>
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">ডেলিভারি এলাকা <span class="text-red-500">*</span></label>
-                        <input type="text" name="delivery_location" value="{{ old('delivery_location') }}" required placeholder="যেমন: ঢাকা, চট্টগ্রাম"
-                               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs text-gray-500 mb-1">নাম <span class="text-red-500">*</span></label>
-                            <input type="text" name="customer_name" value="{{ old('customer_name', $authName) }}" required
+                            <label class="block text-xs text-gray-500 mb-1">বার্তা <span class="text-gray-300">(ঐচ্ছিক)</span></label>
+                            <input type="text" name="message" value="{{ old('message') }}" placeholder="বিশেষ প্রয়োজনীয়তা..."
                                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
                         </div>
-                        <div>
-                            <label class="block text-xs text-gray-500 mb-1">ফোন / WhatsApp <span class="text-red-500">*</span></label>
-                            <input type="text" name="customer_phone" value="{{ old('customer_phone', $authPhone) }}" required
-                                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">বার্তা (ঐচ্ছিক)</label>
-                        <textarea name="message" rows="2" placeholder="delivery সময়, পরিমাণ বিস্তারিত, বিশেষ প্রয়োজনীয়তা..."
-                                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] resize-none">{{ old('message') }}</textarea>
                     </div>
 
                     <button type="submit"
                             class="w-full bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm py-3 rounded-xl transition-colors">
                         Send Enquiry / দাম জানুন
                     </button>
+                    @guest
+                    <p class="text-[11px] text-gray-400 text-center">লগইন ছাড়াই enquiry পাঠাতে পারবেন। পরে একই ফোন নম্বরে account তৈরি করে status দেখতে পারবেন।</p>
+                    @endguest
                 </form>
             </div>
-            @endif
         </div>
         @endif
     </div>
@@ -484,8 +510,14 @@
             $rpImg = $rp->main_image
                 ? (\Illuminate\Support\Str::startsWith($rp->main_image, 'http') ? $rp->main_image : asset($rp->main_image))
                 : 'https://placehold.co/300x300/f1f5f3/14532d?text=' . urlencode($rp->display_name);
+            // Wholesale view → keep related products in the wholesale route. Also any
+            // wholesale-flagged product always links to its wholesale page.
+            $rpWholesale = $wholesaleView || $rp->is_wholesale;
+            $rpUrl = $rpWholesale
+                ? route('customer.wholesale.products.show', $rp->slug)
+                : route('products.show', $rp->slug);
         @endphp
-        <a href="{{ route('products.show', $rp->slug) }}"
+        <a href="{{ $rpUrl }}"
            class="flex-shrink-0 w-40 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
            style="scroll-snap-align: start;">
             <div class="aspect-square rounded-t-xl overflow-hidden bg-gray-50">
@@ -493,7 +525,9 @@
             </div>
             <div class="p-2.5">
                 <p class="text-sm font-medium text-gray-800 truncate">{{ $rp->name_bn }}</p>
-                <p class="text-xs text-[#14532d] mt-1 font-semibold">বিস্তারিত দেখুন →</p>
+                <p class="text-xs {{ $rpWholesale ? 'text-orange-700' : 'text-[#14532d]' }} mt-1 font-semibold">
+                    {{ $rpWholesale ? 'Get Best Price →' : 'বিস্তারিত দেখুন →' }}
+                </p>
             </div>
         </a>
         @endforeach
@@ -509,13 +543,8 @@
         <button type="button" onclick="pdAddToCart(true)" {{ $product->isInStock() ? '' : 'disabled' }}
                 class="flex-1 btn-gold text-[#0f3d22] font-bold text-sm py-2.5 rounded-xl disabled:opacity-40">এখনই কিনুন</button>
     @elseif($showWholesale)
-        @if($isCustomer)
-            <button type="button" onclick="pdToggleEnquiry(true)"
-                    class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl">Get Best Price / Enquiry</button>
-        @else
-            <a href="{{ $loginUrl }}"
-               class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl text-center">Get Best Price / Enquiry</a>
-        @endif
+        <button type="button" onclick="pdToggleEnquiry(true)"
+                class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl">Get Best Price / Enquiry</button>
     @endif
 </div>
 <div class="lg:hidden h-16"></div>{{-- spacer so sticky bar never covers content --}}

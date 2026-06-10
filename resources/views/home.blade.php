@@ -130,6 +130,18 @@ $productsForJs = $products->map(function ($p) {
 </head>
 <body class="min-h-screen">
 
+{{-- Flash messages (e.g. guest Paykari enquiry confirmation) --}}
+@if(session('success'))
+<div id="flash-success" class="fixed top-4 left-1/2 -translate-x-1/2 z-[200] max-w-md w-[92%] bg-green-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg">
+    {{ session('success') }}
+    <button onclick="document.getElementById('flash-success')?.remove()" class="float-right font-bold ml-2">&times;</button>
+</div>
+<script>setTimeout(function(){ document.getElementById('flash-success')?.remove(); }, 8000);</script>
+@endif
+@if(session('error'))
+<div class="fixed top-4 left-1/2 -translate-x-1/2 z-[200] max-w-md w-[92%] bg-red-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg">{{ session('error') }}</div>
+@endif
+
 {{-- ━━━━━━━━━━━━━━━━  ANNOUNCEMENT BAR  ━━━━━━━━━━━━━━━━ --}}
 <div class="bg-[#c9a227] text-[#0f3d22] py-2 overflow-hidden text-sm font-semibold">
     <p class="marquee-text">
@@ -434,6 +446,10 @@ $productsForJs = $products->map(function ($p) {
                 $initRetailPrices = $directRetail->isNotEmpty()
                     ? $directRetail
                     : ($product->activeVariants->first()?->activePrices->where('sell_type', 'retail') ?? collect());
+                // Wholesale products link to the wholesale detail page; others to retail.
+                $detailUrl = $product->is_wholesale
+                    ? route('customer.wholesale.products.show', $product->slug)
+                    : route('products.show', $product->slug);
             @endphp
             <article data-card-product="{{ $product->id }}" class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
 
@@ -443,7 +459,7 @@ $productsForJs = $products->map(function ($p) {
                         ->merge($product->gallery_images ?? [])
                         ->filter()->values();
                 @endphp
-                <a href="{{ route('products.show', $product->slug) }}" class="block">
+                <a href="{{ $detailUrl }}" class="block">
                 <div class="relative h-52 overflow-hidden flex-shrink-0" data-slideshow="{{ $product->id }}">
                     @if($cardSlides->isNotEmpty())
                         @foreach($cardSlides as $si => $slide)
@@ -485,7 +501,7 @@ $productsForJs = $products->map(function ($p) {
 
                 {{-- Body --}}
                 <div class="p-5 flex flex-col flex-1">
-                    <a href="{{ route('products.show', $product->slug) }}" class="hover:underline">
+                    <a href="{{ $detailUrl }}" class="hover:underline">
                         <h3 class="font-serif-bn text-[#14532d] text-xl font-bold leading-snug">{{ $product->name_bn }}</h3>
                     </a>
 
@@ -500,7 +516,7 @@ $productsForJs = $products->map(function ($p) {
                     </div>
                     <div class="flex-1 min-h-3"></div>
                     <div class="mt-4">
-                        <a href="{{ route('products.show', $product->slug) }}"
+                        <a href="{{ $detailUrl }}"
                            class="block w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
                             বিস্তারিত দেখুন
                         </a>
@@ -548,9 +564,9 @@ $productsForJs = $products->map(function ($p) {
                         </button>
                     </div>
 
-                    {{-- Wholesale mode buttons (hidden in retail mode) --}}
+                    {{-- Wholesale mode buttons (hidden in retail mode) → wholesale detail page --}}
                     <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4">
-                        <a href="{{ route('products.show', $product->slug) }}"
+                        <a href="{{ route('customer.wholesale.products.show', $product->slug) }}"
                            class="block w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
                             বিস্তারিত দেখুন
                         </a>
@@ -569,6 +585,9 @@ $productsForJs = $products->map(function ($p) {
                 $initRetailPrices = $directRetail->isNotEmpty()
                     ? $directRetail
                     : ($product->activeVariants->first()?->activePrices->where('sell_type', 'retail') ?? collect());
+                $detailUrl = $product->is_wholesale
+                    ? route('customer.wholesale.products.show', $product->slug)
+                    : route('products.show', $product->slug);
             @endphp
             <article class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
 
@@ -626,7 +645,7 @@ $productsForJs = $products->map(function ($p) {
                             </div>
                         @endif
                         <div class="flex gap-2">
-                            <a href="{{ route('products.show', $product->slug) }}"
+                            <a href="{{ $detailUrl }}"
                                class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
                                 বিস্তারিত
                             </a>
@@ -1207,11 +1226,15 @@ $productsForJs = $products->map(function ($p) {
                 <div id="paykari-form-items-preview" class="space-y-1 text-sm max-h-32 overflow-y-auto"></div>
             </div>
 
-            @auth
-            @if(Auth::user()->role === 'customer')
-            {{-- Logged-in customer form --}}
+            {{-- Combo enquiry — guest + logged-in (no forced login) --}}
+            @php
+                $pcCustomer = auth()->check() && auth()->user()->role === 'customer' ? auth()->user()->customer : null;
+                $pcName  = $pcCustomer->name ?? (auth()->check() ? auth()->user()->name : '');
+                $pcPhone = $pcCustomer->mobile_number ?? '';
+                $pcAddr  = $pcCustomer->last_full_address ?? '';
+            @endphp
             <form id="paykari-enquiry-form"
-                  action="{{ route('customer.paykari-combo.store') }}"
+                  action="{{ route('paykari-combo.enquiry.store') }}"
                   method="POST">
                 @csrf
                 <div id="paykari-form-items-hidden"></div>
@@ -1222,14 +1245,14 @@ $productsForJs = $products->map(function ($p) {
                         <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
                             ডেলিভারি লোকেশন <span class="text-red-400">*</span>
                         </label>
-                        <input type="text" name="delivery_location"
+                        <input type="text" name="delivery_location" value="{{ old('delivery_location', $pcAddr) }}"
                                placeholder="বিভাগ, জেলা, উপজেলা / শহর..."
                                class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
                     </div>
 
                     <div>
                         <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">
-                            ব্যবসার ধরন <span class="text-red-400">*</span>
+                            ব্যবসার ধরন <span class="text-gray-400 font-normal normal-case">(ঐচ্ছিক)</span>
                         </label>
                         <select name="business_type"
                                 class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
@@ -1248,7 +1271,7 @@ $productsForJs = $products->map(function ($p) {
                                 নাম <span class="text-red-400">*</span>
                             </label>
                             <input type="text" name="customer_name"
-                                   value="{{ Auth::user()->name }}"
+                                   value="{{ old('customer_name', $pcName) }}"
                                    class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
                         </div>
                         <div>
@@ -1256,7 +1279,7 @@ $productsForJs = $products->map(function ($p) {
                                 ফোন / WhatsApp <span class="text-red-400">*</span>
                             </label>
                             <input type="tel" name="customer_phone"
-                                   value="{{ Auth::user()->phone }}"
+                                   value="{{ old('customer_phone', $pcPhone) }}"
                                    class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white">
                         </div>
                     </div>
@@ -1283,33 +1306,16 @@ $productsForJs = $products->map(function ($p) {
                             class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl text-sm shadow-lg transition-colors">
                         Enquiry পাঠান →
                     </button>
+                    @guest
+                    <p class="text-gray-400 text-[10px] text-center leading-relaxed">
+                        লগইন ছাড়াই enquiry পাঠাতে পারবেন। পরে একই ফোন নম্বরে account তৈরি করে status দেখতে পারবেন।
+                    </p>
+                    @endguest
                     <p class="text-gray-400 text-[10px] text-center leading-relaxed">
                         Enquiry submit করার পরে MoslaMart team / supplier আপনাকে quote পাঠাবে।
                     </p>
                 </div>
             </form>
-            @else
-            <div class="px-6 py-8 text-center">
-                <p class="text-gray-600 mb-1 text-sm">পাইকারি enquiry submit করতে customer account-এ login করুন।</p>
-                <a href="{{ route('customer.login') }}"
-                   class="inline-block mt-4 bg-amber-600 text-white font-semibold px-8 py-2.5 rounded-xl text-sm hover:bg-amber-700 transition-colors">
-                    Login করুন
-                </a>
-            </div>
-            @endif
-            @else
-            <div class="px-6 py-8 text-center">
-                <p class="text-gray-600 text-sm mb-1">পাইকারি enquiry submit করতে login করুন।</p>
-                <p class="text-gray-400 text-xs mb-4">
-                    account নেই?
-                    <a href="{{ route('customer.register') }}" class="text-amber-600 font-semibold hover:underline">Register করুন</a>
-                </p>
-                <a href="{{ route('customer.login') }}"
-                   class="inline-block bg-amber-600 text-white font-semibold px-8 py-2.5 rounded-xl text-sm hover:bg-amber-700 transition-colors">
-                    Login করুন
-                </a>
-            </div>
-            @endauth
 
         </div>
     </div>

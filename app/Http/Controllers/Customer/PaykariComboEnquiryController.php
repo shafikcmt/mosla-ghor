@@ -34,27 +34,32 @@ class PaykariComboEnquiryController extends Controller
 
     public function store(Request $request)
     {
-        $customer = Auth::user()->customer ?? abort(403);
+        // Public: guest or logged-in. No forced login.
+        $customer = (Auth::check() && Auth::user()->role === 'customer')
+            ? Auth::user()->customer
+            : null;
 
         $validated = $request->validate([
             'items'                  => ['required', 'array', 'min:1', 'max:20'],
             'items.*.product_id'     => ['required', 'exists:products,id'],
             'items.*.quantity_kg'    => ['required', 'numeric', 'min:0.1'],
             'delivery_location'      => ['required', 'string', 'max:255'],
-            'business_type'          => ['required', 'in:shop,restaurant,dealer,retailer,other'],
+            'business_type'          => ['nullable', 'in:shop,restaurant,dealer,retailer,other'],
             'customer_name'          => ['required', 'string', 'max:100'],
-            'customer_phone'         => ['required', 'string', 'max:20'],
+            'customer_phone'         => ['required', 'string', 'max:20', 'regex:/^[0-9+\-\s]{6,20}$/'],
             'customer_whatsapp'      => ['nullable', 'string', 'max:20'],
             'message'                => ['nullable', 'string', 'max:1000'],
+        ], [
+            'customer_phone.regex' => 'সঠিক ফোন নম্বর দিন।',
         ]);
 
         $enquiry = PaykariComboEnquiry::create([
-            'customer_id'       => $customer->id,
+            'customer_id'       => $customer?->id,
             'customer_name'     => $validated['customer_name'],
             'customer_phone'    => $validated['customer_phone'],
             'customer_whatsapp' => $validated['customer_whatsapp'] ?? null,
             'delivery_location' => $validated['delivery_location'],
-            'business_type'     => $validated['business_type'],
+            'business_type'     => $validated['business_type'] ?? 'other',
             'message'           => $validated['message'] ?? null,
             'status'            => 'pending',
         ]);
@@ -68,8 +73,14 @@ class PaykariComboEnquiryController extends Controller
             ]);
         }
 
-        return redirect()->route('customer.paykari-combo.index')
-            ->with('success', 'আপনার পাইকারি কম্বো enquiry successfully submit হয়েছে। MoslaMart team / supplier quote পাঠাবে।');
+        $msg = 'আপনার পাইকারি কম্বো enquiry successfully submit হয়েছে। MoslaMart team / supplier quote পাঠাবে।';
+
+        // Logged-in customers land on their enquiry list; guests return home with the flash.
+        if ($customer) {
+            return redirect()->route('customer.paykari-combo.index')->with('success', $msg);
+        }
+
+        return redirect('/')->with('success', $msg . ' আপনি চাইলে পরে একই ফোন নম্বরে account তৈরি করে status দেখতে পারবেন।');
     }
 
     public function cancel(PaykariComboEnquiry $enquiry)

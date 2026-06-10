@@ -11,7 +11,7 @@ class WholesaleEnquiry extends Model
 {
     protected $fillable = [
         'customer_id', 'product_id', 'vendor_id',
-        'quantity_kg', 'delivery_location', 'business_type', 'message',
+        'quantity_kg', 'quantity_unit', 'delivery_location', 'business_type', 'message',
         'customer_name', 'customer_phone', 'customer_whatsapp',
         'product_name', 'status', 'vendor_note', 'admin_note',
     ];

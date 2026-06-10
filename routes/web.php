@@ -80,6 +80,16 @@ Route::get('/', HomeController::class);
 Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
 Route::post('/products/{product:slug}/reviews', [ProductController::class, 'storeReview'])->name('products.reviews.store');
 
+// Public wholesale enquiry (guest or logged-in). Rate-limited for abuse safety.
+Route::post('/products/{product:slug}/enquiry', [ProductController::class, 'storeEnquiry'])
+    ->middleware('throttle:10,1')
+    ->name('products.enquiry.store');
+
+// Public Paykari combo (bulk) enquiry — guest or logged-in.
+Route::post('/paykari-combo/enquiry', [\App\Http\Controllers\Customer\PaykariComboEnquiryController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('paykari-combo.enquiry.store');
+
 // ── Customer / User auth ───────────────────────────────────────────────────
 Route::name('customer.')->group(function () {
     Route::get('register',  [CustomerAuthController::class, 'showRegister'])->name('register');
@@ -96,9 +106,8 @@ Route::name('customer.')->group(function () {
 
     Route::post('logout',   [CustomerAuthController::class, 'logout'])->name('logout');
 
-    // ── Wholesale product detail (customer-facing storefront) ───────────────
-    Route::get('wholesale/products/{product:slug}', [CustomerWholesaleProductController::class, 'show'])
-        ->middleware('customer-auth')
+    // ── Wholesale product detail (PUBLIC — no login, stays on this URL) ─────
+    Route::get('wholesale/products/{product:slug}', [ProductController::class, 'showWholesale'])
         ->name('wholesale.products.show');
 
     // ── Authenticated account section ──────────────────────────────────────

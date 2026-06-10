@@ -4,13 +4,26 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductReview;
+use App\Models\WholesaleEnquiry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
-    /** Public, SEO-friendly product detail page. */
+    /** Public, SEO-friendly RETAIL product detail page (/products/{slug}). */
     public function show(Product $product)
+    {
+        return $this->renderDetail($product, false);
+    }
+
+    /** Public WHOLESALE product detail page (/wholesale/products/{slug}) — price hidden, enquiry-only. */
+    public function showWholesale(Product $product)
+    {
+        return $this->renderDetail($product, true);
+    }
+
+    /** Shared detail renderer. $wholesaleView forces the price-hidden, enquiry-only layout. */
+    protected function renderDetail(Product $product, bool $wholesaleView)
     {
         // Only active products are visible; vendor products must be approved.
         abort_unless(
@@ -46,7 +59,7 @@ class ProductController extends Controller
 
         return view('storefront.product-detail', compact(
             'product', 'retailPrices', 'wholesalePrices', 'relatedProducts',
-            'reviews', 'avgRating', 'reviewCount'
+            'reviews', 'avgRating', 'reviewCount', 'wholesaleView'
         ));
     }
 
@@ -89,5 +102,71 @@ class ProductController extends Controller
         return redirect()
             ->to(route('products.show', $product->slug) . '#reviews')
             ->with('success', 'আপনার রিভিউ জমা হয়েছে। অনুমোদনের পর প্রকাশিত হবে। ধন্যবাদ!');
+    }
+
+    /**
+     * Public wholesale enquiry — guest or logged-in. No forced login.
+     * Customer contact stays admin-only (vendors never see phone). Reuses the
+     * existing enquiry → quote → chat → admin-approval system unchanged.
+     */
+    public function storeEnquiry(Request $request, Product $product)
+    {
+        abort_unless($product->is_active, 404);
+
+        $validated = $request->validate([
+            'customer_name'     => ['required', 'string', 'max:100'],
+            'customer_phone'    => ['required', 'string', 'max:20', 'regex:/^[0-9+\-\s]{6,20}$/'],
+            'delivery_location' => ['required', 'string', 'max:255'],
+            'quantity_kg'       => ['required', 'numeric', 'min:0.01'],
+            'quantity_unit'     => ['nullable', 'in:kg,gram,bag,carton,piece,packet,ton'],
+            'business_type'     => ['nullable', 'in:shop,restaurant,dealer,retailer,other'],
+            'customer_whatsapp' => ['nullable', 'string', 'max:20'],
+            'message'           => ['nullable', 'string', 'max:1000'],
+        ], [
+            'customer_phone.regex' => 'সঠিক ফোন নম্বর দিন।',
+        ]);
+
+        // Enforce the product's Minimum Order Quantity, if set.
+        if ($product->min_order_quantity && (float) $validated['quantity_kg'] < (float) $product->min_order_quantity) {
+            $unit = $product->min_order_unit ?: 'kg';
+            $qty  = rtrim(rtrim(number_format((float) $product->min_order_quantity, 2, '.', ''), '0'), '.');
+
+            return back()
+                ->withInput()
+                ->withErrors(['quantity_kg' => "এই পণ্যের জন্য সর্বনিম্ন অর্ডার পরিমাণ {$qty} {$unit}।"]);
+        }
+
+        // Link to the customer record when logged in; null for guests.
+        $customer = (Auth::check() && Auth::user()->role === 'customer')
+            ? Auth::user()->customer
+            : null;
+
+        WholesaleEnquiry::create([
+            'customer_id'       => $customer?->id,
+            'product_id'        => $product->id,
+            'vendor_id'         => $product->vendor_id,
+            'quantity_kg'       => $validated['quantity_kg'],
+            'quantity_unit'     => $validated['quantity_unit'] ?? ($product->min_order_unit ?: 'kg'),
+            'delivery_location' => $validated['delivery_location'],
+            'business_type'     => $validated['business_type'] ?? 'other',
+            'message'           => $validated['message'] ?? null,
+            'customer_name'     => $validated['customer_name'],
+            'customer_phone'    => $validated['customer_phone'],
+            'customer_whatsapp' => $validated['customer_whatsapp'] ?? null,
+            'product_name'      => $product->name_bn ?: $product->name_en,
+            'status'            => 'pending',
+        ]);
+
+        $msg = 'আপনার enquiry successfully submit হয়েছে। MoslaMart team/supplier quote দিয়ে জানাবে।';
+        if (! $customer) {
+            $msg .= ' আপনি চাইলে পরে enquiry status দেখতে account তৈরি করতে পারেন।';
+        }
+
+        // Return to whichever page the enquiry was sent from (wholesale stays on its URL).
+        $backRoute = $request->boolean('from_wholesale') ? 'customer.wholesale.products.show' : 'products.show';
+
+        return redirect()
+            ->to(route($backRoute, $product->slug) . '#enquiry')
+            ->with('success', $msg);
     }
 }
