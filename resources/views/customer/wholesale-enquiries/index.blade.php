@@ -30,16 +30,29 @@
                     @else bg-red-100 text-red-700 @endif">
                     {{ $enquiry->statusLabel() }}
                 </span>
+                @if($enquiry->customerVisibleQuote && $enquiry->customerVisibleQuote->status === 'sent_to_customer')
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">নতুন quote</span>
+                @endif
+                @if($enquiry->unread_count > 0)
+                <span class="text-xs bg-red-500 text-white font-bold rounded-full px-2 py-0.5">{{ $enquiry->unread_count }} বার্তা</span>
+                @endif
             </div>
-            <p class="text-gray-500 text-sm">{{ $enquiry->quantity_kg }} kg · {{ $enquiry->delivery_location }} · {{ $enquiry->businessTypeLabel() }}</p>
+            <p class="text-gray-500 text-sm">{{ rtrim(rtrim(number_format((float)$enquiry->quantity_kg,2),'0'),'.') }} {{ $enquiry->quantity_unit ?: 'kg' }} · {{ $enquiry->delivery_location }} · {{ $enquiry->businessTypeLabel() }}</p>
             <p class="text-gray-400 text-xs mt-1">{{ $enquiry->created_at->format('d M Y') }}</p>
         </div>
         <div class="flex gap-2 flex-shrink-0">
+            @if($enquiry->customerVisibleQuote && $enquiry->customerVisibleQuote->status === 'sent_to_customer')
+            <a href="{{ route('customer.wholesale.enquiry.show', $enquiry->id) }}"
+               class="text-sm bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl transition-colors font-semibold">
+                Quote দেখুন / Confirm
+            </a>
+            @else
             <a href="{{ route('customer.wholesale.enquiry.show', $enquiry->id) }}"
                class="text-sm bg-[#14532d] hover:bg-[#166534] text-white px-4 py-2 rounded-xl transition-colors font-semibold">
                 বিস্তারিত
             </a>
-            @if(in_array($enquiry->status, ['pending', 'quoted']))
+            @endif
+            @if(in_array($enquiry->status, ['pending', 'quoted', 'accepted']))
             <a href="{{ route('customer.wholesale.chat.show', $enquiry->id) }}"
                class="text-sm border border-amber-500 text-amber-700 hover:bg-amber-50 px-4 py-2 rounded-xl transition-colors font-semibold">
                 Chat

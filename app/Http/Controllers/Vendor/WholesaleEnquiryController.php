@@ -21,7 +21,8 @@ class WholesaleEnquiryController extends Controller
 
         $enquiries = WholesaleEnquiry::where('vendor_id', $vendor->id)
             ->when($status, fn($q) => $q->where('status', $status))
-            ->with(['product'])
+            ->with(['product', 'latestQuote'])
+            ->withCount(['chatMessages as unread_count' => fn($q) => $q->where('sender_type', '!=', 'vendor')->where('is_read_by_vendor', false)])
             ->latest()
             ->paginate(20);
 

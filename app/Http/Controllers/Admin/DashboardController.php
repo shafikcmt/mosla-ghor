@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Combo;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\WholesaleChatMessage;
+use App\Models\WholesaleEnquiry;
+use App\Models\WholesaleQuote;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -34,8 +37,15 @@ class DashboardController extends Controller
             'active_combos'   => Combo::where('is_active', true)->count(),
         ];
 
+        $enquiryStats = [
+            'new_enquiries'   => WholesaleEnquiry::where('status', 'pending')->count(),
+            'new_quotes'      => WholesaleQuote::where('status', 'sent_to_customer')->count(),
+            'new_messages'    => WholesaleChatMessage::where('sender_type', '!=', 'admin')->where('is_read_by_admin', false)->count(),
+            'confirmed_orders'=> WholesaleQuote::where('status', 'converted_to_order')->count(),
+        ];
+
         $recentOrders = Order::latest()->take(10)->get();
 
-        return view('admin.dashboard', compact('stats', 'recentOrders'));
+        return view('admin.dashboard', compact('stats', 'enquiryStats', 'recentOrders'));
     }
 }

@@ -70,6 +70,7 @@ use App\Http\Controllers\Customer\WholesaleEnquiryController as CustomerWholesal
 use App\Http\Controllers\Customer\WholesaleQuoteController as CustomerWholesaleQuoteController;
 use App\Http\Controllers\Customer\WholesaleChatController as CustomerWholesaleChatController;
 use App\Http\Controllers\Customer\PaykariComboEnquiryController as CustomerPaykariComboEnquiryController;
+use App\Http\Controllers\Customer\NotificationController as CustomerNotificationController;
 use App\Http\Controllers\Admin\PaykariComboEnquiryController as AdminPaykariComboEnquiryController;
 use App\Http\Controllers\Vendor\PaykariComboEnquiryController as VendorPaykariComboEnquiryController;
 use Illuminate\Support\Facades\Route;
@@ -123,6 +124,10 @@ Route::name('customer.')->group(function () {
         Route::get('/profile',                            [CustomerProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile',                            [CustomerProfileController::class, 'update'])->name('profile.update');
 
+        Route::get('/notifications',                      [CustomerNotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/{id}/read',            [CustomerNotificationController::class, 'read'])->name('notifications.read');
+        Route::post('/notifications/read-all',            [CustomerNotificationController::class, 'readAll'])->name('notifications.readAll');
+
         Route::get('/addresses',                          [CustomerAddressController::class, 'index'])->name('addresses.index');
         Route::get('/addresses/create',                   [CustomerAddressController::class, 'create'])->name('addresses.create');
         Route::post('/addresses',                         [CustomerAddressController::class, 'store'])->name('addresses.store');
@@ -164,7 +169,7 @@ Route::name('customer.')->group(function () {
 
             Route::get('quotes',                              [CustomerWholesaleQuoteController::class, 'index'])->name('quote.index');
             Route::get('quotes/{quote}',                      [CustomerWholesaleQuoteController::class, 'show'])->name('quote.show');
-            Route::post('quotes/{quote}/accept',              [CustomerWholesaleQuoteController::class, 'accept'])->name('quote.accept');
+            Route::post('quotes/{quote}/confirm',             [CustomerWholesaleQuoteController::class, 'confirmOrder'])->name('quote.confirm');
             Route::post('quotes/{quote}/reject',              [CustomerWholesaleQuoteController::class, 'reject'])->name('quote.reject');
 
             Route::get('chat/{enquiry}',                      [CustomerWholesaleChatController::class, 'show'])->name('chat.show');
@@ -445,11 +450,12 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::get('enquiries',                   [AdminWholesaleEnquiryController::class, 'index'])->name('enquiry.index');
         Route::get('enquiries/{enquiry}',          [AdminWholesaleEnquiryController::class, 'show'])->name('enquiry.show');
         Route::post('enquiries/{enquiry}/status',  [AdminWholesaleEnquiryController::class, 'updateStatus'])->name('enquiry.status');
+        Route::post('enquiries/{enquiry}/assign',  [AdminWholesaleEnquiryController::class, 'assign'])->name('enquiry.assign');
 
+        Route::get('enquiries/{enquiry}/quote',    [AdminWholesaleQuoteController::class, 'create'])->name('quote.create');
+        Route::post('enquiries/{enquiry}/quote',   [AdminWholesaleQuoteController::class, 'store'])->name('quote.store');
         Route::get('quotes',                      [AdminWholesaleQuoteController::class, 'index'])->name('quote.index');
         Route::get('quotes/{quote}',               [AdminWholesaleQuoteController::class, 'show'])->name('quote.show');
-        Route::post('quotes/{quote}/approve',      [AdminWholesaleQuoteController::class, 'approve'])->name('quote.approve');
-        Route::post('quotes/{quote}/reject',       [AdminWholesaleQuoteController::class, 'reject'])->name('quote.reject');
 
         Route::get('chat',                        [AdminWholesaleChatController::class, 'index'])->name('chat.index');
         Route::get('chat/{enquiry}',               [AdminWholesaleChatController::class, 'show'])->name('chat.show');

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\WholesaleEnquiry;
 use App\Models\WholesaleQuote;
 use App\Models\WholesaleChatMessage;
+use App\Notifications\QuoteSubmittedNotification;
+use App\Support\Notify;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -32,49 +34,24 @@ class WholesaleQuoteController extends Controller
         $vendor = $this->vendor();
         abort_unless($enquiry->vendor_id === $vendor->id, 403);
 
-        $validated = $request->validate([
-            'unit_price'       => ['required', 'numeric', 'min:0'],
-            'quantity'         => ['required', 'numeric', 'min:0.5'],
-            'quantity_unit'    => ['required', 'string', 'in:kg,ton,piece,bag'],
-            'delivery_charge'  => ['required', 'numeric', 'min:0'],
-            'advance_required' => ['nullable', 'numeric', 'min:0'],
-            'payment_options'  => ['nullable', 'array'],
-            'payment_options.*'=> ['in:online,manual,cod,partial'],
-            'note'             => ['nullable', 'string', 'max:1000'],
-            'valid_until'      => ['nullable', 'date', 'after:today'],
-        ]);
-
-        $subtotal = round($validated['unit_price'] * $validated['quantity'], 2);
-
-        WholesaleQuote::create([
-            'enquiry_id'       => $enquiry->id,
-            'vendor_id'        => $vendor->id,
-            'customer_id'      => $enquiry->customer_id,
-            'unit_price'       => $validated['unit_price'],
-            'quantity'         => $validated['quantity'],
-            'quantity_unit'    => $validated['quantity_unit'],
-            'subtotal'         => $subtotal,
-            'delivery_charge'  => $validated['delivery_charge'],
-            'advance_required' => $validated['advance_required'] ?? 0,
-            'payment_options'  => $validated['payment_options'] ?? [],
-            'note'             => $validated['note'] ?? null,
-            'valid_until'      => $validated['valid_until'] ?? null,
-            'status'           => 'pending', // awaiting admin approval
-            'admin_approved'   => false,
-        ]);
+        $quote = WholesaleQuote::createFromRequest($request, $enquiry, $vendor->id);
 
         $enquiry->update(['status' => 'quoted']);
 
-        // Post a system chat message notifying customer that a quote has been sent
+        // System chat line — customer sees the quote immediately (no admin approval).
         WholesaleChatMessage::create([
             'enquiry_id'  => $enquiry->id,
+            'quote_id'    => $quote->id,
             'sender_type' => 'vendor',
             'sender_id'   => $vendor->id,
-            'message'     => 'নতুন কোটেশন পাঠানো হয়েছে। Admin অনুমোদনের পরে আপনি দেখতে পারবেন।',
+            'message'     => 'নতুন কোটেশন পাঠানো হয়েছে — দেখে order confirm করতে পারেন।',
         ]);
 
+        Notify::customer($enquiry->customer, new QuoteSubmittedNotification($quote, 'customer'));
+        Notify::admins(new QuoteSubmittedNotification($quote, 'admin'));
+
         return redirect()->route('vendor.wholesale.enquiry.show', $enquiry->id)
-            ->with('success', 'কোটেশন পাঠানো হয়েছে। Admin অনুমোদনের জন্য অপেক্ষা করুন।');
+            ->with('success', 'কোটেশন পাঠানো হয়েছে। Customer সরাসরি দেখতে পারবে।');
     }
 
     public function index()

@@ -13,12 +13,18 @@
     <div class="lg:col-span-2 space-y-5">
 
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            @php
+                $badge = [
+                    'sent_to_customer'   => 'bg-blue-100 text-blue-700',
+                    'accepted'           => 'bg-green-100 text-green-700',
+                    'converted_to_order' => 'bg-green-100 text-green-700',
+                    'rejected'           => 'bg-red-100 text-red-700',
+                    'expired'            => 'bg-gray-100 text-gray-600',
+                ][$quote->status] ?? 'bg-gray-100 text-gray-600';
+            @endphp
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold text-gray-800">কোটেশন #{{ $quote->id }}</h2>
-                <span class="text-xs px-3 py-1 rounded-full font-medium
-                    {{ $quote->admin_approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
-                    {{ $quote->admin_approved ? '✓ Admin অনুমোদিত' : 'Admin অনুমোদন অপেক্ষায়' }}
-                </span>
+                <span class="text-xs px-3 py-1 rounded-full font-medium {{ $badge }}">{{ $quote->statusLabel() }}</span>
             </div>
 
             <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
@@ -44,12 +50,18 @@
                 </div>
                 <div>
                     <dt class="text-gray-400 text-xs uppercase tracking-wider">অগ্রিম</dt>
-                    <dd class="font-semibold text-gray-800 mt-0.5">৳{{ number_format($quote->advance_required, 2) }}</dd>
+                    <dd class="font-semibold text-gray-800 mt-0.5">৳{{ number_format($quote->advanceAmount(), 2) }}@if($quote->advance_percentage) ({{ rtrim(rtrim(number_format($quote->advance_percentage,2),'0'),'.') }}%)@endif</dd>
                 </div>
                 <div>
                     <dt class="text-gray-400 text-xs uppercase tracking-wider">মোট</dt>
                     <dd class="font-bold text-[#c9a227] text-xl mt-0.5">৳{{ number_format($quote->grandTotal(), 2) }}</dd>
                 </div>
+                @if($quote->delivery_time)
+                <div>
+                    <dt class="text-gray-400 text-xs uppercase tracking-wider">ডেলিভারি সময়</dt>
+                    <dd class="font-semibold text-gray-800 mt-0.5">{{ $quote->delivery_time }}</dd>
+                </div>
+                @endif
                 @if($quote->valid_until)
                 <div>
                     <dt class="text-gray-400 text-xs uppercase tracking-wider">বৈধতা পর্যন্ত</dt>
@@ -76,28 +88,14 @@
             </div>
             @endif
 
-            @if($quote->admin_approved && $quote->admin_note)
-            <div class="mt-4 bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-800">
-                <p class="text-xs font-semibold mb-1">Admin মন্তব্য</p>
-                {{ $quote->admin_note }}
-            </div>
-            @endif
-
-            @if(!$quote->admin_approved && $quote->status === 'rejected')
-            <div class="mt-4 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
-                <p class="text-xs font-semibold mb-1">Admin কর্তৃক প্রত্যাখ্যাত</p>
-                @if($quote->admin_note){{ $quote->admin_note }}@endif
-            </div>
-            @endif
         </div>
 
         {{-- Customer response --}}
-        @if($quote->admin_approved)
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h3 class="text-sm font-bold text-gray-700 mb-3">Customer-এর সাড়া</h3>
-            @if($quote->status === 'accepted')
+            @if(in_array($quote->status, ['accepted', 'converted_to_order']))
             <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800 font-semibold">
-                ✓ Customer এই কোটেশন গ্রহণ করেছেন।
+                ✓ Customer এই কোটেশন গ্রহণ করে order confirm করেছেন।
             </div>
             @elseif($quote->status === 'rejected')
             <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
@@ -109,7 +107,6 @@
             </div>
             @endif
         </div>
-        @endif
 
     </div>
 
@@ -122,8 +119,8 @@
         </a>
         @endif
 
-        <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 text-xs text-indigo-800 leading-relaxed">
-            কোটেশন Admin অনুমোদনের পরে Customer দেখতে পাবেন। চ্যাটে আলোচনা করুন।
+        <div class="bg-green-50 border border-green-200 rounded-2xl p-4 text-xs text-green-800 leading-relaxed">
+            কোটেশন Customer সরাসরি দেখতে পাচ্ছেন — admin approval লাগে না। চ্যাটে আলোচনা করুন।
         </div>
     </div>
 </div>

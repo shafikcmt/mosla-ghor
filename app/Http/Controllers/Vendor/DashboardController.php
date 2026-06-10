@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Vendor;
 
 use App\Http\Controllers\Controller;
 use App\Models\VendorOrder;
+use App\Models\WholesaleEnquiry;
+use App\Models\WholesaleQuote;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -27,6 +29,10 @@ class DashboardController extends Controller
             $stats['pending_orders']  = $vendor->vendorOrders()->where('status', 'pending')->count();
             $stats['total_earned']    = $vendor->vendorOrders()->where('status', 'paid')->sum('payable_amount');
             $stats['pending_payout']  = $vendor->payouts()->whereIn('status', ['pending', 'approved'])->sum('amount');
+
+            $stats['enq_new']       = WholesaleEnquiry::where('vendor_id', $vendor->id)->where('status', 'pending')->count();
+            $stats['enq_quotes']    = WholesaleQuote::where('vendor_id', $vendor->id)->where('status', 'sent_to_customer')->count();
+            $stats['enq_confirmed'] = WholesaleQuote::where('vendor_id', $vendor->id)->where('status', 'converted_to_order')->count();
 
             $recentOrders = $vendor->vendorOrders()
                 ->with('order')

@@ -25,7 +25,7 @@
 
             <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <div><dt class="text-gray-400 text-xs uppercase tracking-wider">পণ্য</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->product_name }}</dd></div>
-                <div><dt class="text-gray-400 text-xs uppercase tracking-wider">পরিমাণ</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->quantity_kg }} kg</dd></div>
+                <div><dt class="text-gray-400 text-xs uppercase tracking-wider">পরিমাণ</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ rtrim(rtrim(number_format((float)$enquiry->quantity_kg,2),'0'),'.') }} {{ $enquiry->quantity_unit ?: 'kg' }}</dd></div>
                 <div><dt class="text-gray-400 text-xs uppercase tracking-wider">ডেলিভারি লোকেশন</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->delivery_location }}</dd></div>
                 <div><dt class="text-gray-400 text-xs uppercase tracking-wider">ব্যবসার ধরন</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->businessTypeLabel() }}</dd></div>
                 @if($enquiry->message)
@@ -44,16 +44,22 @@
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h3 class="text-base font-bold text-gray-800 mb-4">পাঠানো কোটেশন</h3>
             @foreach($enquiry->quotes as $quote)
-            <div class="border border-gray-100 rounded-xl p-4 mb-3 text-sm">
+            @php
+                $qBadge = [
+                    'sent_to_customer'   => 'bg-blue-100 text-blue-700',
+                    'accepted'           => 'bg-green-100 text-green-700',
+                    'converted_to_order' => 'bg-green-100 text-green-700',
+                    'rejected'           => 'bg-red-100 text-red-700',
+                    'expired'            => 'bg-gray-100 text-gray-600',
+                ][$quote->status] ?? 'bg-gray-100 text-gray-600';
+            @endphp
+            <a href="{{ route('vendor.wholesale.quote.show', $quote->id) }}" class="block border border-gray-100 rounded-xl p-4 mb-3 text-sm hover:bg-gray-50 transition-colors">
                 <div class="grid grid-cols-2 gap-3 mb-2">
-                    <div><span class="text-gray-400 text-xs">মূল্য/kg</span><div class="font-bold text-[#14532d]">৳{{ number_format($quote->unit_price, 2) }}</div></div>
-                    <div><span class="text-gray-400 text-xs">সাবটোটাল</span><div class="font-bold text-[#14532d]">৳{{ number_format($quote->subtotal, 2) }}</div></div>
+                    <div><span class="text-gray-400 text-xs">ইউনিট মূল্য</span><div class="font-bold text-[#14532d]">৳{{ number_format($quote->unit_price, 2) }}</div></div>
+                    <div><span class="text-gray-400 text-xs">মোট</span><div class="font-bold text-[#c9a227]">৳{{ number_format($quote->grandTotal(), 2) }}</div></div>
                 </div>
-                <span class="text-xs px-2 py-0.5 rounded-full font-medium
-                    {{ $quote->admin_approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
-                    {{ $quote->admin_approved ? '✓ Admin অনুমোদিত' : 'Admin অনুমোদন অপেক্ষায়' }}
-                </span>
-            </div>
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $qBadge }}">{{ $quote->statusLabel() }}</span>
+            </a>
             @endforeach
         </div>
         @endif
@@ -73,12 +79,14 @@
 
     {{-- Right: Actions --}}
     <div class="space-y-4">
-        @if($enquiry->status === 'pending')
+        @if(in_array($enquiry->status, ['pending', 'quoted']))
         <a href="{{ route('vendor.wholesale.quote.create', $enquiry->id) }}"
            class="block w-full text-center bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl text-sm transition-colors shadow">
-            কোটেশন পাঠান →
+            {{ $enquiry->status === 'quoted' ? 'আরেকটি কোটেশন পাঠান →' : 'কোটেশন পাঠান →' }}
         </a>
+        @endif
 
+        @if($enquiry->status === 'pending')
         <form action="{{ route('vendor.wholesale.enquiry.decline', $enquiry->id) }}" method="POST">
             @csrf
             <button type="submit" onclick="return confirm('Enquiry প্রত্যাখ্যান করবেন?')"

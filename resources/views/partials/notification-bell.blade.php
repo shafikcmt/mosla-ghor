@@ -1,11 +1,11 @@
 @php
-    // $panel = 'vendor' | 'admin'
+    // $panel = 'vendor' | 'admin' | 'customer'
     $u      = auth()->user();
     $unread = $u ? $u->unreadNotifications()->count() : 0;
     $recent = $u ? $u->notifications()->latest()->take(8)->get() : collect();
-    $rIndex   = $panel === 'admin' ? 'admin.notifications.index'   : 'vendor.notifications.index';
-    $rRead    = $panel === 'admin' ? 'admin.notifications.read'    : 'vendor.notifications.read';
-    $rReadAll = $panel === 'admin' ? 'admin.notifications.readAll' : 'vendor.notifications.readAll';
+    $rIndex   = $panel . '.notifications.index';
+    $rRead    = $panel . '.notifications.read';
+    $rReadAll = $panel . '.notifications.readAll';
     $levelDot = ['success' => 'bg-green-500', 'warning' => 'bg-amber-500', 'danger' => 'bg-red-500', 'info' => 'bg-indigo-500'];
 @endphp
 

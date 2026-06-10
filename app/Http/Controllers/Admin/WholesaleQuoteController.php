@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\WholesaleEnquiry;
 use App\Models\WholesaleQuote;
-use App\Models\WholesaleCommissionLedger;
+use App\Models\WholesaleChatMessage;
+use App\Notifications\QuoteSubmittedNotification;
+use App\Support\Notify;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class WholesaleQuoteController extends Controller
 {
@@ -24,56 +25,37 @@ class WholesaleQuoteController extends Controller
 
     public function show(WholesaleQuote $quote)
     {
-        $quote->load(['enquiry.customer', 'enquiry.product', 'vendor', 'approvedBy']);
+        $quote->load(['enquiry.customer', 'enquiry.product', 'vendor']);
 
         return view('admin.wholesale-quotes.show', compact('quote'));
     }
 
-    public function approve(Request $request, WholesaleQuote $quote)
+    // Admin submits a quote directly to the customer (e.g. when no vendor is assigned).
+    public function create(WholesaleEnquiry $enquiry)
     {
-        $request->validate(['admin_note' => ['nullable', 'string', 'max:500']]);
+        abort_unless(in_array($enquiry->status, ['pending', 'quoted']), 422);
+        $enquiry->load('product');
 
-        DB::transaction(function () use ($quote, $request) {
-            $quote->update([
-                'admin_approved'    => true,
-                'admin_approved_at' => now(),
-                'admin_approved_by' => Auth::id(),
-                'admin_note'        => $request->admin_note,
-                'status'            => 'approved',
-            ]);
-
-            // Create commission ledger entry
-            $vendor   = $quote->vendor;
-            $commData = $vendor->calculateWholesaleCommission((float) $quote->subtotal);
-
-            WholesaleCommissionLedger::create([
-                'vendor_id'                  => $quote->vendor_id,
-                'customer_id'                => $quote->customer_id,
-                'enquiry_id'                 => $quote->enquiry_id,
-                'quote_id'                   => $quote->id,
-                'order_type'                 => 'wholesale',
-                'subtotal'                   => $quote->subtotal,
-                'commission_type'            => $commData['commission_type'],
-                'commission_value_snapshot'  => $commData['commission_value_snapshot'],
-                'commission_amount'          => $commData['commission_amount'],
-                'vendor_earning'             => $commData['vendor_earning'],
-                'settlement_status'          => 'pending',
-            ]);
-        });
-
-        return back()->with('success', 'Quote অনুমোদন করা হয়েছে। Customer দেখতে পারবেন।');
+        return view('admin.wholesale-quotes.create', compact('enquiry'));
     }
 
-    public function reject(Request $request, WholesaleQuote $quote)
+    public function store(Request $request, WholesaleEnquiry $enquiry)
     {
-        $request->validate(['admin_note' => ['nullable', 'string', 'max:500']]);
+        $quote = WholesaleQuote::createFromRequest($request, $enquiry, $enquiry->vendor_id);
 
-        $quote->update([
-            'admin_rejected_at' => now(),
-            'admin_note'        => $request->admin_note,
-            'status'            => 'rejected',
+        $enquiry->update(['status' => 'quoted']);
+
+        WholesaleChatMessage::create([
+            'enquiry_id'  => $enquiry->id,
+            'quote_id'    => $quote->id,
+            'sender_type' => 'admin',
+            'sender_id'   => auth()->id(),
+            'message'     => 'নতুন কোটেশন পাঠানো হয়েছে — দেখে order confirm করতে পারেন।',
         ]);
 
-        return back()->with('success', 'Quote প্রত্যাখ্যান করা হয়েছে।');
+        Notify::customer($enquiry->customer, new QuoteSubmittedNotification($quote, 'customer'));
+
+        return redirect()->route('admin.wholesale.enquiry.show', $enquiry->id)
+            ->with('success', 'কোটেশন পাঠানো হয়েছে। Customer সরাসরি দেখতে পারবে।');
     }
 }

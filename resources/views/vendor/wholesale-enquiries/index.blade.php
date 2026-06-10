@@ -34,6 +34,8 @@
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">পণ্য</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">পরিমাণ</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">লোকেশন</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">Quote</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">বার্তা</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">কার্যক্রম</th>
             </tr>
@@ -43,8 +45,18 @@
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 text-gray-400 text-xs">#{{ $enquiry->id }}</td>
                 <td class="px-4 py-3 font-medium text-gray-800">{{ $enquiry->product_name }}</td>
-                <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">{{ $enquiry->quantity_kg }} kg</td>
+                <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">{{ rtrim(rtrim(number_format((float)$enquiry->quantity_kg,2),'0'),'.') }} {{ $enquiry->quantity_unit ?: 'kg' }}</td>
                 <td class="px-4 py-3 text-gray-500 text-xs hidden md:table-cell">{{ $enquiry->delivery_location }}</td>
+                <td class="px-4 py-3 hidden lg:table-cell">
+                    <span class="text-xs text-gray-600">{{ $enquiry->latestQuote?->statusLabel() ?? '—' }}</span>
+                </td>
+                <td class="px-4 py-3">
+                    @if($enquiry->unread_count > 0)
+                    <span class="text-xs bg-red-500 text-white font-bold rounded-full px-2 py-0.5">{{ $enquiry->unread_count }}</span>
+                    @else
+                    <span class="text-xs text-gray-300">0</span>
+                    @endif
+                </td>
                 <td class="px-4 py-3">
                     <span class="text-xs px-2 py-0.5 rounded-full font-medium
                         @if($enquiry->status === 'pending') bg-yellow-100 text-yellow-700
@@ -60,12 +72,16 @@
                            class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition-colors font-medium">
                             দেখুন
                         </a>
-                        @if($enquiry->status === 'pending')
+                        @if(in_array($enquiry->status, ['pending', 'quoted']))
                         <a href="{{ route('vendor.wholesale.quote.create', $enquiry->id) }}"
                            class="text-xs border border-[#c9a227] text-amber-700 hover:bg-amber-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
                             Quote পাঠান
                         </a>
                         @endif
+                        <a href="{{ route('vendor.wholesale.chat.show', $enquiry->id) }}"
+                           class="text-xs border border-gray-200 text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                            Chat
+                        </a>
                     </div>
                 </td>
             </tr>

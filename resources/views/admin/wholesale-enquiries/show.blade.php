@@ -37,7 +37,7 @@
 
                 <div class="space-y-3">
                     <div><dt class="text-gray-400 text-xs uppercase tracking-wider">পণ্য</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->product_name }}</dd></div>
-                    <div><dt class="text-gray-400 text-xs uppercase tracking-wider">পরিমাণ</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->quantity_kg }} kg</dd></div>
+                    <div><dt class="text-gray-400 text-xs uppercase tracking-wider">পরিমাণ</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ rtrim(rtrim(number_format((float)$enquiry->quantity_kg,2),'0'),'.') }} {{ $enquiry->quantity_unit ?: 'kg' }}</dd></div>
                     <div><dt class="text-gray-400 text-xs uppercase tracking-wider">ডেলিভারি লোকেশন</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->delivery_location }}</dd></div>
                     <div><dt class="text-gray-400 text-xs uppercase tracking-wider">ব্যবসার ধরন</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->businessTypeLabel() }}</dd></div>
                 </div>
@@ -52,27 +52,41 @@
         </div>
 
         {{-- Quotes --}}
-        @if($enquiry->quotes->isNotEmpty())
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h3 class="text-base font-bold text-gray-800 mb-4">Quote সমূহ</h3>
-            @foreach($enquiry->quotes as $quote)
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-gray-800">Quote সমূহ</h3>
+                @if(in_array($enquiry->status, ['pending', 'quoted']))
+                <a href="{{ route('admin.wholesale.quote.create', $enquiry->id) }}"
+                   class="text-xs bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl font-bold transition-colors">
+                    + কোটেশন পাঠান
+                </a>
+                @endif
+            </div>
+            @forelse($enquiry->quotes as $quote)
+            @php
+                $qBadge = [
+                    'sent_to_customer'   => 'bg-blue-100 text-blue-700',
+                    'accepted'           => 'bg-green-100 text-green-700',
+                    'converted_to_order' => 'bg-green-100 text-green-700',
+                    'rejected'           => 'bg-red-100 text-red-700',
+                    'expired'            => 'bg-gray-100 text-gray-600',
+                ][$quote->status] ?? 'bg-gray-100 text-gray-600';
+            @endphp
             <div class="border border-gray-100 rounded-xl p-4 mb-3 flex items-center justify-between gap-4">
                 <div>
-                    <p class="text-sm font-bold text-[#14532d]">৳{{ number_format($quote->unit_price, 2) }}/kg · মোট ৳{{ number_format($quote->grandTotal(), 2) }}</p>
-                    <p class="text-xs text-gray-400 mt-0.5">{{ $quote->created_at->format('d M Y') }}</p>
-                    <span class="text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block
-                        {{ $quote->admin_approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
-                        {{ $quote->admin_approved ? '✓ অনুমোদিত' : 'অনুমোদন প্রয়োজন' }}
-                    </span>
+                    <p class="text-sm font-bold text-[#14532d]">৳{{ number_format($quote->unit_price, 2) }}/{{ $quote->quantity_unit }} · মোট ৳{{ number_format($quote->grandTotal(), 2) }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ $quote->vendor?->shop_name ?? 'মসলামার্ট (Admin)' }} · {{ $quote->created_at->format('d M Y') }}</p>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block {{ $qBadge }}">{{ $quote->statusLabel() }}</span>
                 </div>
                 <a href="{{ route('admin.wholesale.quote.show', $quote->id) }}"
                    class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-medium flex-shrink-0">
-                    দেখুন / অনুমোদন
+                    দেখুন
                 </a>
             </div>
-            @endforeach
+            @empty
+            <p class="text-sm text-gray-400">এখনো কোনো কোটেশন পাঠানো হয়নি।</p>
+            @endforelse
         </div>
-        @endif
 
         {{-- Chat monitor link --}}
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
@@ -93,7 +107,6 @@
             <h4 class="font-semibold text-gray-700 text-sm mb-3">Status পরিবর্তন</h4>
             <form action="{{ route('admin.wholesale.enquiry.status', $enquiry->id) }}" method="POST" class="space-y-3">
                 @csrf
-                @method('PATCH')
                 <select name="status" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                     @foreach(['pending' => 'অপেক্ষায়', 'quoted' => 'Quote পাঠানো', 'accepted' => 'গৃহীত', 'completed' => 'সম্পন্ন', 'rejected' => 'প্রত্যাখ্যাত', 'cancelled' => 'বাতিল'] as $s => $lbl)
                     <option value="{{ $s }}" {{ $enquiry->status === $s ? 'selected' : '' }}>{{ $lbl }}</option>
@@ -107,12 +120,23 @@
             </form>
         </div>
 
-        @if($enquiry->vendor)
+        {{-- Assign / reassign supplier --}}
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-sm">
-            <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Vendor</p>
-            <p class="font-semibold text-gray-800">{{ $enquiry->vendor->shop_name ?? $enquiry->vendor->name }}</p>
+            <p class="text-xs text-gray-400 uppercase tracking-wider mb-2">Supplier অ্যাসাইন</p>
+            <p class="font-semibold text-gray-800 mb-3">{{ $enquiry->vendor?->shop_name ?? $enquiry->vendor?->owner_name ?? 'কোনো supplier নেই (Admin handle করছে)' }}</p>
+            <form action="{{ route('admin.wholesale.enquiry.assign', $enquiry->id) }}" method="POST" class="space-y-2">
+                @csrf
+                <select name="vendor_id" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                    <option value="">— Admin (কোনো supplier নয়) —</option>
+                    @foreach($vendors as $v)
+                    <option value="{{ $v->id }}" {{ (int)$enquiry->vendor_id === $v->id ? 'selected' : '' }}>{{ $v->shop_name ?? $v->owner_name }}</option>
+                    @endforeach
+                </select>
+                <button type="submit" class="w-full border border-indigo-300 text-indigo-600 hover:bg-indigo-50 font-semibold py-2 rounded-xl text-sm transition-colors">
+                    অ্যাসাইন করুন
+                </button>
+            </form>
         </div>
-        @endif
     </div>
 </div>
 @endsection

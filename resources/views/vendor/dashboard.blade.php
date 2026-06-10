@@ -34,6 +34,22 @@
 @endif
 
 @if($vendor->isApproved())
+{{-- Paykari enquiry widgets --}}
+<div class="grid grid-cols-3 gap-3 mb-6">
+    <a href="{{ route('vendor.wholesale.enquiry.index', ['status' => 'pending']) }}" class="bg-white rounded-xl border border-gray-100 p-4 hover:border-amber-300 transition-colors">
+        <p class="text-xs text-gray-500 mb-1">নতুন Enquiry</p>
+        <p class="text-2xl font-bold text-amber-600">{{ $stats['enq_new'] ?? 0 }}</p>
+    </a>
+    <a href="{{ route('vendor.wholesale.quote.index') }}" class="bg-white rounded-xl border border-gray-100 p-4 hover:border-blue-300 transition-colors">
+        <p class="text-xs text-gray-500 mb-1">Quote পাঠানো</p>
+        <p class="text-2xl font-bold text-blue-600">{{ $stats['enq_quotes'] ?? 0 }}</p>
+    </a>
+    <a href="{{ route('vendor.wholesale.quote.index') }}" class="bg-white rounded-xl border border-gray-100 p-4 hover:border-green-300 transition-colors">
+        <p class="text-xs text-gray-500 mb-1">Confirm অর্ডার</p>
+        <p class="text-2xl font-bold text-green-600">{{ $stats['enq_confirmed'] ?? 0 }}</p>
+    </a>
+</div>
+
 {{-- Stats cards --}}
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-white rounded-xl border border-gray-100 p-4">

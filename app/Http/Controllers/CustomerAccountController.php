@@ -25,7 +25,17 @@ class CustomerAccountController extends CustomerBaseController
 
         $recentOrders = $this->ordersQuery()->latest()->limit(5)->get();
 
-        return view('customer.dashboard', compact('customer', 'stats', 'recentOrders'));
+        $enquiryStats = ['my_enquiries' => 0, 'quotes_received' => 0, 'pending_confirmation' => 0, 'confirmed_orders' => 0];
+        if ($customer) {
+            $enquiryStats = [
+                'my_enquiries'         => \App\Models\WholesaleEnquiry::where('customer_id', $customer->id)->count(),
+                'quotes_received'      => \App\Models\WholesaleQuote::where('customer_id', $customer->id)->whereIn('status', \App\Models\WholesaleQuote::CUSTOMER_VISIBLE_STATUSES)->count(),
+                'pending_confirmation' => \App\Models\WholesaleQuote::where('customer_id', $customer->id)->where('status', 'sent_to_customer')->count(),
+                'confirmed_orders'     => \App\Models\WholesaleQuote::where('customer_id', $customer->id)->where('status', 'converted_to_order')->count(),
+            ];
+        }
+
+        return view('customer.dashboard', compact('customer', 'stats', 'recentOrders', 'enquiryStats'));
     }
 
     public function orders()

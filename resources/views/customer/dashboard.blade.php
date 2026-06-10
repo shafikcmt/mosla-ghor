@@ -34,6 +34,28 @@ $oLabels = ['pending'=>'পেন্ডিং','confirmed'=>'নিশ্চি�
     </div>
 </div>
 
+{{-- Paykari enquiry widgets --}}
+@isset($enquiryStats)
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <a href="{{ route('customer.wholesale.enquiry.index') }}" class="bg-white rounded-xl border border-gray-100 p-4 text-center shadow-sm hover:border-amber-300 transition-colors">
+        <p class="text-2xl font-bold text-amber-600">{{ $enquiryStats['my_enquiries'] }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">আমার Enquiry</p>
+    </a>
+    <a href="{{ route('customer.wholesale.quote.index') }}" class="bg-white rounded-xl border border-gray-100 p-4 text-center shadow-sm hover:border-blue-300 transition-colors">
+        <p class="text-2xl font-bold text-blue-600">{{ $enquiryStats['quotes_received'] }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">প্রাপ্ত Quote</p>
+    </a>
+    <a href="{{ route('customer.wholesale.enquiry.index') }}" class="bg-white rounded-xl border border-gray-100 p-4 text-center shadow-sm hover:border-amber-300 transition-colors">
+        <p class="text-2xl font-bold text-amber-700">{{ $enquiryStats['pending_confirmation'] }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">Confirm বাকি</p>
+    </a>
+    <a href="{{ route('customer.wholesale.quote.index') }}" class="bg-white rounded-xl border border-gray-100 p-4 text-center shadow-sm hover:border-green-300 transition-colors">
+        <p class="text-2xl font-bold text-green-600">{{ $enquiryStats['confirmed_orders'] }}</p>
+        <p class="text-xs text-gray-500 mt-0.5">Confirm অর্ডার</p>
+    </a>
+</div>
+@endisset
+
 {{-- Quick Actions --}}
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
     <a href="{{ route('customer.orders.index') }}" class="flex flex-col items-center gap-2 bg-white rounded-xl border border-gray-100 p-4 hover:border-[#14532d] transition-colors shadow-sm text-center">

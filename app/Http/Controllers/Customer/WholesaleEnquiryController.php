@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\WholesaleEnquiry;
+use App\Notifications\EnquiryReceivedNotification;
+use App\Support\Notify;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,7 +16,8 @@ class WholesaleEnquiryController extends Controller
     {
         $customer  = Auth::user()->customer ?? abort(403);
         $enquiries = WholesaleEnquiry::where('customer_id', $customer->id)
-            ->with(['product', 'vendor', 'latestQuote'])
+            ->with(['product', 'vendor', 'customerVisibleQuote'])
+            ->withCount(['chatMessages as unread_count' => fn($q) => $q->where('sender_type', '!=', 'customer')->where('is_read_by_customer', false)])
             ->latest()
             ->paginate(15);
 
@@ -72,6 +75,10 @@ class WholesaleEnquiryController extends Controller
             'product_name'      => $product->name_bn ?: $product->name_en,
             'status'            => 'pending',
         ]);
+
+        Notify::admins(new EnquiryReceivedNotification($enquiry, 'admin'));
+        Notify::vendor($product->vendor, new EnquiryReceivedNotification($enquiry, 'vendor'));
+        Notify::customer($customer, new EnquiryReceivedNotification($enquiry, 'customer'));
 
         $msg = 'আপনার enquiry successfully submit হয়েছে। MoslaMart team / supplier quote পাঠাবে।';
 

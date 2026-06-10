@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Customer;
 use App\Models\User;
 use App\Models\Vendor;
 use Illuminate\Notifications\Notification;
@@ -27,6 +28,19 @@ class Notify
     {
         try {
             $vendor?->user?->notify($notification);
+        } catch (\Throwable) {
+            // non-critical
+        }
+    }
+
+    /**
+     * Notify the User account behind a customer (if any). Customers sign in as
+     * Users (role=customer), so notifications live on the User for the bell.
+     */
+    public static function customer(?Customer $customer, Notification $notification): void
+    {
+        try {
+            $customer?->user?->notify($notification);
         } catch (\Throwable) {
             // non-critical
         }

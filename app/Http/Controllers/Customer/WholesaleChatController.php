@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Models\WholesaleEnquiry;
 use App\Models\WholesaleChatMessage;
+use App\Notifications\EnquiryChatMessageNotification;
+use App\Support\Notify;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -49,6 +51,10 @@ class WholesaleChatController extends Controller
             'is_read_by_vendor' => false,
             'is_read_by_admin'  => false,
         ]);
+
+        // Notify the other parties (admin + assigned supplier).
+        Notify::admins(new EnquiryChatMessageNotification($enquiry, 'admin'));
+        Notify::vendor($enquiry->vendor, new EnquiryChatMessageNotification($enquiry, 'vendor'));
 
         if ($filterReason) {
             return back()->with('warning', 'আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য MoslaMart-এর ভিতরেই chat এবং order process complete করুন।');

@@ -6,6 +6,28 @@
 
 <h1 class="text-xl font-bold text-gray-800 mb-6">ড্যাশবোর্ড</h1>
 
+{{-- ── Paykari enquiry widgets ──────────────────────────────────────── --}}
+@isset($enquiryStats)
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+    <a href="{{ route('admin.wholesale.enquiry.index', ['status' => 'pending']) }}" class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:border-amber-300 transition-colors">
+        <p class="text-xs text-gray-400">নতুন Enquiry</p>
+        <p class="text-2xl font-bold text-amber-600 mt-1">{{ $enquiryStats['new_enquiries'] }}</p>
+    </a>
+    <a href="{{ route('admin.wholesale.quote.index', ['status' => 'sent_to_customer']) }}" class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:border-blue-300 transition-colors">
+        <p class="text-xs text-gray-400">নতুন Quote</p>
+        <p class="text-2xl font-bold text-blue-600 mt-1">{{ $enquiryStats['new_quotes'] }}</p>
+    </a>
+    <a href="{{ route('admin.wholesale.chat.index') }}" class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:border-indigo-300 transition-colors">
+        <p class="text-xs text-gray-400">নতুন বার্তা</p>
+        <p class="text-2xl font-bold text-indigo-600 mt-1">{{ $enquiryStats['new_messages'] }}</p>
+    </a>
+    <a href="{{ route('admin.wholesale.quote.index', ['status' => 'converted_to_order']) }}" class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:border-green-300 transition-colors">
+        <p class="text-xs text-gray-400">Confirm অর্ডার</p>
+        <p class="text-2xl font-bold text-green-600 mt-1">{{ $enquiryStats['confirmed_orders'] }}</p>
+    </a>
+</div>
+@endisset
+
 {{-- ── Stats grid ──────────────────────────────────────────────────── --}}
 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
 

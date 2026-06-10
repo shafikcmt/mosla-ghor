@@ -29,7 +29,8 @@
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Customer</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">পণ্য</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">পরিমাণ</th>
-                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Phone</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">Quote</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">বার্তা</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">কার্যক্রম</th>
             </tr>
@@ -43,8 +44,21 @@
                     <p class="text-gray-400 text-xs">{{ $enquiry->customer?->email }}</p>
                 </td>
                 <td class="px-4 py-3 font-medium text-gray-800">{{ $enquiry->product_name }}</td>
-                <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">{{ $enquiry->quantity_kg }} kg</td>
-                <td class="px-4 py-3 text-gray-600 text-xs hidden md:table-cell">{{ $enquiry->customer_phone }}</td>
+                <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">{{ rtrim(rtrim(number_format((float)$enquiry->quantity_kg,2),'0'),'.') }} {{ $enquiry->quantity_unit ?: 'kg' }}</td>
+                <td class="px-4 py-3 hidden lg:table-cell">
+                    @if($enquiry->latestQuote)
+                    <span class="text-xs text-gray-600">{{ $enquiry->latestQuote->statusLabel() }}</span>
+                    @else
+                    <span class="text-xs text-gray-300">—</span>
+                    @endif
+                </td>
+                <td class="px-4 py-3">
+                    @if($enquiry->unread_count > 0)
+                    <span class="text-xs bg-red-500 text-white font-bold rounded-full px-2 py-0.5">{{ $enquiry->unread_count }}</span>
+                    @else
+                    <span class="text-xs text-gray-300">0</span>
+                    @endif
+                </td>
                 <td class="px-4 py-3">
                     <span class="text-xs px-2 py-0.5 rounded-full font-medium
                         @if($enquiry->status === 'pending') bg-yellow-100 text-yellow-700

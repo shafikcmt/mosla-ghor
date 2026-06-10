@@ -45,11 +45,11 @@ class WholesaleEnquiry extends Model
         return $this->hasOne(WholesaleQuote::class, 'enquiry_id')->latestOfMany();
     }
 
-    public function approvedQuote(): HasOne
+    /** Latest quote the customer is allowed to see (no admin-approval gate). */
+    public function customerVisibleQuote(): HasOne
     {
         return $this->hasOne(WholesaleQuote::class, 'enquiry_id')
-            ->where('admin_approved', true)
-            ->where('status', 'pending')
+            ->whereIn('status', WholesaleQuote::CUSTOMER_VISIBLE_STATUSES)
             ->latestOfMany();
     }
 
@@ -94,6 +94,28 @@ class WholesaleEnquiry extends Model
     public function businessTypeLabel(): string
     {
         return static::businessTypes()[$this->business_type] ?? $this->business_type;
+    }
+
+    /**
+     * Count chat messages not yet read by the given role ('customer'|'vendor'|'admin').
+     * Counts only messages sent by someone other than that role.
+     */
+    public function unreadFor(string $role): int
+    {
+        $column = match ($role) {
+            'customer' => 'is_read_by_customer',
+            'vendor'   => 'is_read_by_vendor',
+            'admin'    => 'is_read_by_admin',
+            default    => null,
+        };
+        if (! $column) {
+            return 0;
+        }
+
+        return $this->chatMessages()
+            ->where('sender_type', '!=', $role)
+            ->where($column, false)
+            ->count();
     }
 
     // Returns only safe fields — customer contact is excluded

@@ -30,10 +30,16 @@
                 <td class="px-4 py-3 text-[#14532d] font-semibold hidden sm:table-cell">৳{{ number_format($quote->unit_price, 2) }}</td>
                 <td class="px-4 py-3 text-[#c9a227] font-semibold hidden md:table-cell">৳{{ number_format($quote->grandTotal(), 2) }}</td>
                 <td class="px-4 py-3">
-                    <span class="text-xs px-2 py-0.5 rounded-full font-medium
-                        {{ $quote->admin_approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
-                        {{ $quote->admin_approved ? '✓ অনুমোদিত' : 'অপেক্ষায়' }}
-                    </span>
+                    @php
+                        $rowBadge = [
+                            'sent_to_customer'   => 'bg-blue-100 text-blue-700',
+                            'accepted'           => 'bg-green-100 text-green-700',
+                            'converted_to_order' => 'bg-green-100 text-green-700',
+                            'rejected'           => 'bg-red-100 text-red-700',
+                            'expired'            => 'bg-gray-100 text-gray-600',
+                        ][$quote->status] ?? 'bg-gray-100 text-gray-600';
+                    @endphp
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $rowBadge }}">{{ $quote->statusLabel() }}</span>
                 </td>
                 <td class="px-4 py-3">
                     <a href="{{ route('vendor.wholesale.quote.show', $quote->id) }}"
