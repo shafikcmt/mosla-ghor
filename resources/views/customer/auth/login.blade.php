@@ -72,7 +72,7 @@
 
         @if(\App\Support\AuthSettings::customerOtpLogin() && \App\Support\AuthSettings::enabledChannels() !== [])
         <div class="mt-4 pt-4 border-t border-gray-100 text-center">
-            <a href="{{ route('customer.login.otp') }}"
+            <a href="{{ route('customer.login.otp') }}{{ $redirectParam ? '?redirect='.urlencode($redirectParam) : '' }}"
                class="inline-block w-full border border-[#14532d] text-[#14532d] hover:bg-[#14532d] hover:text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
                 OTP দিয়ে লগইন করুন
             </a>

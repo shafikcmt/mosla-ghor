@@ -189,18 +189,22 @@ $productsForJs = $products->map(function ($p) {
                     </button>
                 </form>
             @elseif($navCustomer)
-                {{-- Customer logged in --}}
-                <a href="{{ route('customer.account') }}"
-                   class="text-xs text-green-200 hover:text-[#c9a227] px-3 py-1.5 rounded border border-green-700 hover:border-[#c9a227] transition-colors">
-                    আমার অ্যাকাউন্ট
-                </a>
-                <form method="POST" action="{{ route('customer.logout') }}" class="inline">
-                    @csrf
-                    <button type="submit"
-                            class="text-xs text-red-300 hover:text-red-200 px-3 py-1.5 rounded border border-red-800 hover:border-red-600 transition-colors">
-                        লগআউট
-                    </button>
-                </form>
+                {{-- Customer logged in — account dropdown (no auto-redirect to dashboard) --}}
+                <details class="relative">
+                    <summary class="list-none cursor-pointer select-none text-xs text-green-200 hover:text-[#c9a227] px-3 py-1.5 rounded border border-green-700 hover:border-[#c9a227] transition-colors flex items-center gap-1">
+                        আমার অ্যাকাউন্ট
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </summary>
+                    <div class="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-green-50 py-1.5 z-50 text-sm text-gray-700">
+                        <a href="{{ route('customer.account') }}" class="block px-4 py-2 hover:bg-green-50">আমার অ্যাকাউন্ট</a>
+                        <a href="{{ route('customer.orders.index') }}" class="block px-4 py-2 hover:bg-green-50">অর্ডারসমূহ</a>
+                        <a href="{{ route('customer.account') }}" class="block px-4 py-2 hover:bg-green-50">ড্যাশবোর্ড</a>
+                        <form method="POST" action="{{ route('customer.logout') }}" class="border-t border-green-50 mt-1 pt-1">
+                            @csrf
+                            <button type="submit" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50">লগআউট</button>
+                        </form>
+                    </div>
+                </details>
             @else
                 {{-- Guest — show links based on admin settings --}}
                 @if(($ws['show_vendor_links_in_header'] ?? '0') === '1')
@@ -219,7 +223,7 @@ $productsForJs = $products->map(function ($p) {
                 @endif
                 @if(($ws['show_customer_links_in_header'] ?? '1') === '1')
                     @if(($ws['customer_login_enabled'] ?? '1') === '1')
-                    <a href="{{ route('customer.login') }}"
+                    <a href="{{ route('customer.login') }}?redirect={{ urlencode(request()->getRequestUri()) }}"
                        class="text-xs text-green-200 hover:text-[#c9a227] px-3 py-1.5 rounded border border-green-700 hover:border-[#c9a227] transition-colors">
                         লগইন
                     </a>
@@ -233,6 +237,12 @@ $productsForJs = $products->map(function ($p) {
                 @endif
             @endif
         </div>
+
+        {{-- Unified cart (retail box + paykari bag) → opens shared drawer; always visible --}}
+        <button type="button" onclick="msCartOpen()" class="relative text-green-200 hover:text-[#c9a227] p-1 shrink-0 transition-colors order-last md:order-none" title="কার্ট" aria-label="কার্ট">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 4.6A1 1 0 005.6 19H19M9 22a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z"/></svg>
+            <span data-cart-badge class="absolute -top-1 -right-1 bg-[#c9a227] text-[#0f3d22] text-[10px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center" style="display:none;">0</span>
+        </button>
 
         <button id="nav-toggle" class="md:hidden text-green-300 hover:text-[#c9a227] p-1 shrink-0" aria-label="menu">
             <svg id="ico-open"  class="w-6 h-6"        fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -265,6 +275,10 @@ $productsForJs = $products->map(function ($p) {
                    class="text-sm text-center text-green-200 border border-green-700 rounded-lg px-4 py-2 hover:border-[#c9a227] hover:text-[#c9a227] transition-colors">
                     আমার অ্যাকাউন্ট
                 </a>
+                <a href="{{ route('customer.orders.index') }}"
+                   class="text-sm text-center text-green-200 border border-green-700 rounded-lg px-4 py-2 hover:border-[#c9a227] hover:text-[#c9a227] transition-colors">
+                    অর্ডারসমূহ
+                </a>
                 <form method="POST" action="{{ route('customer.logout') }}">
                     @csrf
                     <button type="submit"
@@ -275,7 +289,7 @@ $productsForJs = $products->map(function ($p) {
             @else
                 @if(($ws['show_customer_links_in_header'] ?? '1') === '1')
                     @if(($ws['customer_login_enabled'] ?? '1') === '1')
-                    <a href="{{ route('customer.login') }}"
+                    <a href="{{ route('customer.login') }}?redirect={{ urlencode(request()->getRequestUri()) }}"
                        class="text-sm text-center text-green-200 border border-green-700 rounded-lg px-4 py-2 hover:border-[#c9a227] hover:text-[#c9a227] transition-colors">
                         লগইন
                     </a>
@@ -1987,6 +2001,10 @@ $productsForJs = $products->map(function ($p) {
     </div>
 </div>
 
+{{-- Shared Mini-Cart drawer + cart store (must load before the combo builder JS below) --}}
+@php($msHideFloat = true)
+@include('partials.mini-cart')
+
 {{-- ━━━━━━━━━━━━━━━━  SCRIPTS  ━━━━━━━━━━━━━━━━ --}}
 <script>
 // ── Product data (server-rendered JSON, keyed by id) ──────────────────────
@@ -2677,8 +2695,22 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 });
 
 // ── Combo Builder ─────────────────────────────────────────────────────────
-let comboItems = [];
-let comboUid   = 0;
+// The retail box is now backed by the shared persistent store (window.msCart,
+// localStorage['ms_cart']). Hydrate from it so the cart survives reload/login
+// and stays in sync with the header mini-cart drawer.
+var msCartReady = false; // var (hoisted) so the early setTab() restore is TDZ-safe
+let comboItems = (window.msCart ? window.msCart.get() : []);
+let comboUid   = comboItems.reduce(function (m, x) { return Math.max(m, x.uid || 0); }, 0);
+
+// Let the shared drawer drive the builder (so removing from the drawer updates
+// the box, and vice-versa). Then mark the store live and paint the restored box.
+window.msComboBridge = {
+    // uid arrives as a string from the drawer; builder uids are numeric → coerce.
+    remove: function (uid) { removeFromCombo(Number(uid)); },
+    clear:  function () { comboItems = []; renderCombo(); }
+};
+msCartReady = true;
+renderCombo();
 
 function pickerPriceUpdate(productId) {
     const sel = document.getElementById('picker-qty-' + productId);
@@ -2838,6 +2870,10 @@ function renderCombo() {
             document.body.style.paddingBottom = '';
         }
     }
+
+    // Persist to the shared store + refresh the header mini-cart drawer.
+    // Gated by msCartReady so the on-load tab restore can't wipe a saved cart.
+    if (msCartReady && window.msCart) { window.msCart.replace(comboItems); }
 }
 
 function goToCombo(productId) {

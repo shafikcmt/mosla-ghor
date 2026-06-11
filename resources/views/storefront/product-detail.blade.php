@@ -264,7 +264,16 @@
                     এখনই কিনুন
                 </button>
             </div>
-            <p class="text-[11px] text-gray-400 mt-2">কার্ট/চেকআউট মসলা ঘরের বাক্স বিল্ডারে সম্পন্ন হয়।</p>
+            <p class="text-[11px] text-gray-400 mt-2">কার্টে যোগ করলে উপরের ব্যাগ আইকনে দেখতে পাবেন।</p>
+
+            {{-- Combo / box cross-sell CTA --}}
+            <div class="mt-4 flex items-center justify-between gap-3 rounded-xl border border-[#c9a227]/40 bg-amber-50/50 px-4 py-3">
+                <span class="text-sm text-[#14532d] font-medium">একাধিক পণ্য একসাথে অর্ডার করতে চান?</span>
+                <a href="/#combo-builder"
+                   class="shrink-0 bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
+                    কম্বো / বক্স তৈরি করুন
+                </a>
+            </div>
         </div>
         @endif
 
@@ -596,9 +605,33 @@
         if (sp) sp.textContent = '৳' + Math.round(parseFloat(btn.dataset.price)).toLocaleString('en-US');
     }
 
-    // ── Add to cart / Buy now (hand off to homepage box builder) ──────────
+    // ── Add to cart / Buy now ─────────────────────────────────────────────
+    // Add straight into the shared persistent cart and open the drawer (no full
+    // page reload). Falls back to the legacy home-page handoff if the shared
+    // store is somehow unavailable.
     function pdAddToCart(buyNow) {
         if (!pdSelectedPriceId) return;
+
+        if (window.msCart) {
+            const active = document.querySelector('.pd-pack.active');
+            const lblEl  = active ? active.querySelector('.pd-pack-lbl') : null;
+            msCart.add({
+                productId:   @json($product->id),
+                priceId:     pdSelectedPriceId,
+                variantId:   null,
+                variantName: null,
+                sellType:    'retail',
+                nameBn:      @json($product->name),
+                label:       lblEl ? lblEl.textContent.trim() : '',
+                price:       active ? parseFloat(active.dataset.price) : 0
+            });
+            if (buyNow) { msCartCheckout(); return; }
+            msToast('🛒 কার্টে যোগ হয়েছে');
+            msCartOpen('retail');
+            return;
+        }
+
+        // Legacy fallback: stash a pending item and let the home builder pick it up.
         try {
             localStorage.setItem('ms_pending_box_item', JSON.stringify({
                 productId: @json($product->id),

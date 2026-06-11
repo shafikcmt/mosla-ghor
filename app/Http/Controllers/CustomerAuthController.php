@@ -29,7 +29,7 @@ class CustomerAuthController extends Controller
             ]);
         }
 
-        return view('customer.auth.register');
+        return view('customer.auth.register', ['redirectParam' => request()->query('redirect', '')]);
     }
 
     public function register(Request $request)
@@ -71,8 +71,24 @@ class CustomerAuthController extends Controller
 
         Auth::login($user);
 
-        return redirect()->route('customer.account')
+        return $this->postAuthRedirect($request)
             ->with('success', 'অ্যাকাউন্ট তৈরি হয়েছে। স্বাগতম!');
+    }
+
+    /**
+     * Ecommerce-friendly post-login destination. Honor a safe ?redirect= (set by
+     * login links on product/cart/checkout/combo pages), then Laravel's intended
+     * URL (set when a guest is bounced off a protected route), else the home page.
+     * Never forces the dashboard — that opens only when the user clicks it.
+     */
+    private function postAuthRedirect(Request $request, ?string $fallbackRedirect = null)
+    {
+        $redirectTo = $request->query('redirect') ?? $fallbackRedirect;
+        if ($redirectTo && str_starts_with($redirectTo, '/') && ! str_starts_with($redirectTo, '//')) {
+            return redirect($redirectTo);
+        }
+
+        return redirect()->intended(url('/'));
     }
 
     public function showLogin()
@@ -122,13 +138,7 @@ class CustomerAuthController extends Controller
         Auth::login($user, true); // Always remember customers — reduces friction
         $request->session()->regenerate();
 
-        // Honor ?redirect= query param (used by wholesale enquiry flow)
-        $redirectTo = $request->query('redirect');
-        if ($redirectTo && str_starts_with($redirectTo, '/')) {
-            return redirect($redirectTo);
-        }
-
-        return redirect()->intended(route('customer.account'));
+        return $this->postAuthRedirect($request);
     }
 
     // ── OTP login ───────────────────────────────────────────────────────────
@@ -146,7 +156,7 @@ class CustomerAuthController extends Controller
             return redirect()->route('customer.account');
         }
 
-        return view('customer.auth.otp-request');
+        return view('customer.auth.otp-request', ['redirectParam' => request()->query('redirect', '')]);
     }
 
     public function sendOtp(Request $request, OtpService $otp)
@@ -172,7 +182,12 @@ class CustomerAuthController extends Controller
         }
 
         $canonical = $this->canonical($identifier);
-        $request->session()->put('otp_login', ['identifier' => $canonical, 'channel' => $channel]);
+        $redirect  = $request->query('redirect');
+        $request->session()->put('otp_login', [
+            'identifier' => $canonical,
+            'channel'    => $channel,
+            'redirect'   => ($redirect && str_starts_with($redirect, '/') && ! str_starts_with($redirect, '//')) ? $redirect : null,
+        ]);
 
         try {
             $otp->issue($canonical, 'login', $channel, 'customer', [
@@ -231,11 +246,17 @@ class CustomerAuthController extends Controller
             return redirect()->route('customer.login')->withErrors(['mobile_number' => 'অ্যাকাউন্ট পাওয়া যায়নি।']);
         }
 
+        $redirect = $session['redirect'] ?? null;
+
         Auth::login($user, true);
         $request->session()->forget('otp_login');
         $request->session()->regenerate();
 
-        return redirect()->intended(route('customer.account'))->with('success', 'সফলভাবে লগইন হয়েছে।');
+        if ($redirect && str_starts_with($redirect, '/') && ! str_starts_with($redirect, '//')) {
+            return redirect($redirect)->with('success', 'সফলভাবে লগইন হয়েছে।');
+        }
+
+        return redirect()->intended(url('/'))->with('success', 'সফলভাবে লগইন হয়েছে।');
     }
 
     public function resendOtp(Request $request, OtpService $otp)

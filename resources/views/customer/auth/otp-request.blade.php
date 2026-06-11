@@ -32,7 +32,8 @@
         </div>
         @endif
 
-        <form method="POST" action="{{ route('customer.login.otp.send') }}" class="space-y-4">
+        @php $redirectParam = $redirectParam ?? ''; @endphp
+        <form method="POST" action="{{ route('customer.login.otp.send') }}{{ $redirectParam ? '?redirect='.urlencode($redirectParam) : '' }}" class="space-y-4">
             @csrf
 
             <div>

@@ -95,6 +95,9 @@ Route::post('/paykari-combo/enquiry', [\App\Http\Controllers\Customer\PaykariCom
 // Public wholesale enquiry bag (manage multiple products + submit). Guest allowed.
 Route::get('/wholesale/enquiry-bag', [ProductController::class, 'enquiryBag'])->name('wholesale.enquiry-bag');
 
+// Combo / box builder lives in the home-page section; this is a shareable entry point.
+Route::get('/combo', fn () => redirect('/#combo-builder'))->name('combo');
+
 // ── Customer / User auth ───────────────────────────────────────────────────
 Route::name('customer.')->group(function () {
     Route::get('register',  [CustomerAuthController::class, 'showRegister'])->name('register');
