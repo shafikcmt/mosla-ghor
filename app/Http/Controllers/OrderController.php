@@ -53,6 +53,8 @@ class OrderController extends Controller
             'delivery_zone_id'         => ['required', 'integer', 'exists:delivery_zones,id'],
             'delivery_location_id'     => ['required', 'integer', 'exists:delivery_locations,id'],
             'payment_method'           => ['required', 'string', Rule::in($enabledMethods)],
+            'payment_mode'             => ['nullable', Rule::in(['cod', 'instant'])],
+            'customer_address_id'      => ['nullable', 'integer', 'exists:customer_addresses,id'],
             'sender_number'            => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:30'],
             'transaction_id'           => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:100'],
             'paid_amount'              => [$isManualPayment ? 'required' : 'nullable', 'numeric', 'min:0'],
@@ -211,7 +213,32 @@ class OrderController extends Controller
         }
 
         $deliveryCharge = $zone->chargeFor($location, $subtotal);
-        $grandTotal     = $subtotal + $packagingCost + $deliveryCharge;
+
+        // ── Payment offer (COD vs Instant prepaid discount) ────────────────────
+        $paymentMode       = $validated['payment_mode'] ?? null;
+        $paymentDiscount   = 0.0;
+        $estimatedDelivery = $paymentSettings->codDeliveryText();
+
+        if ($paymentMode === 'instant') {
+            if (! $paymentSettings->instantAvailable()) {
+                return response()->json([
+                    'message' => 'Online payment এখন available না। Cash on Delivery ব্যবহার করুন।',
+                    'errors'  => ['payment_method' => ['Online payment এখন available না।']],
+                ], 422);
+            }
+            $paymentDiscount   = $paymentSettings->instantDiscountFor($subtotal);
+            $estimatedDelivery = $paymentSettings->instantDeliveryText();
+        }
+
+        $grandTotal = $subtotal + $packagingCost + $deliveryCharge - $paymentDiscount;
+
+        // Only link a saved address that belongs to the logged-in customer.
+        $customerAddressId = null;
+        if (! empty($validated['customer_address_id']) && \Illuminate\Support\Facades\Auth::check()) {
+            $customerAddressId = \App\Models\CustomerAddress::where('id', (int) $validated['customer_address_id'])
+                ->where('user_id', \Illuminate\Support\Facades\Auth::id())
+                ->value('id');
+        }
 
         if (! $isComboOrder && $grandTotal < $minOrderAmount) {
             return response()->json([
@@ -249,7 +276,8 @@ class OrderController extends Controller
             $order = DB::transaction(function () use (
                 $validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge,
                 $grandTotal, $orderNumber, $isManualPayment, $orderType, $zone, $location,
-                $orderComboId, $bdDivision, $bdDistrict, $bdUpazila, $bdUnion, $neededByProduct
+                $orderComboId, $bdDivision, $bdDistrict, $bdUpazila, $bdUnion, $neededByProduct,
+                $paymentMode, $paymentDiscount, $estimatedDelivery, $customerAddressId
             ) {
                 // Re-validate stock with row-level locks to prevent race conditions
                 foreach ($neededByProduct as $productId => $neededGram) {
@@ -278,8 +306,12 @@ class OrderController extends Controller
                     'subtotal'              => $subtotal,
                     'packaging_cost'        => $packagingCost,
                     'delivery_charge'       => $deliveryCharge,
+                    'payment_discount'      => $paymentDiscount,
                     'grand_total'           => $grandTotal,
                     'payment_method'        => $validated['payment_method'],
+                    'payment_mode'          => $paymentMode,
+                    'estimated_delivery'    => $estimatedDelivery,
+                    'customer_address_id'   => $customerAddressId,
                     'sender_number'         => $isManualPayment ? ($validated['sender_number'] ?? null) : null,
                     'transaction_id'        => $isManualPayment ? ($validated['transaction_id'] ?? null) : null,
                     'paid_amount'           => $isManualPayment ? ($validated['paid_amount'] ?? null) : null,
@@ -326,6 +358,9 @@ class OrderController extends Controller
 
         $this->createVendorOrders($order);
         $this->upsertCustomer($order, $request->boolean('accepts_marketing'));
+
+        // Clear the multi-step checkout cart once the order is placed.
+        $request->session()->forget('checkout');
 
         return response()->json([
             'success'  => true,

@@ -882,9 +882,9 @@ $productsForJs = $products->map(function ($p) {
                     {{-- CTA --}}
                     <div class="bg-[#0f3d22] px-5 pb-5">
                         <button type="button" id="combo-order-btn"
-                                onclick="openOrderForm()"
+                                onclick="proceedToCheckout()"
                                 class="w-full bg-[#c9a227] text-[#0f3d22] font-bold py-3 rounded-xl text-sm shadow-lg opacity-40 cursor-not-allowed pointer-events-none transition-all">
-                            অর্ডার দিন →
+                            অর্ডার করুন →
                         </button>
                         <p id="min-order-warning" style="display:none"
                            class="text-red-400 text-[11px] text-center mt-2 leading-tight">
@@ -2924,6 +2924,43 @@ function orderFixedCombo(comboId) {
 }
 
 // ── Order Form ────────────────────────────────────────────────────────────
+// Meesho-style flow: hand the box (cart) to the dedicated checkout pages.
+function proceedToCheckout() {
+    if (!fixedComboData && comboItems.length === 0) return;
+
+    const sub   = getOrderSubtotal();
+    const grand = sub + PACKAGING_COST;
+    if (!fixedComboData && grand < MIN_ORDER_AMOUNT) {
+        const minWarn = document.getElementById('min-order-warning');
+        if (minWarn) minWarn.style.display = 'block';
+        return;
+    }
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = @json(route('checkout.start'));
+
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden'; csrf.name = '_token';
+    csrf.value = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    form.appendChild(csrf);
+
+    if (fixedComboData) {
+        const c = document.createElement('input');
+        c.type = 'hidden'; c.name = 'combo_id'; c.value = fixedComboData.id;
+        form.appendChild(c);
+    } else {
+        comboItems.forEach((item, i) => {
+            const inp = document.createElement('input');
+            inp.type = 'hidden'; inp.name = 'items[' + i + ']'; inp.value = item.priceId;
+            form.appendChild(inp);
+        });
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
 function openOrderForm() {
     if (!fixedComboData && comboItems.length === 0) return;
 

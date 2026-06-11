@@ -134,5 +134,6 @@
         overlay.classList.add('hidden');
     }
 </script>
+@yield('scripts')
 </body>
 </html>

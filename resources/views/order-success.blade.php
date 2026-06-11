@@ -187,6 +187,12 @@
                     <span>৳{{ number_format($order->cod_charge, 0) }}</span>
                 </div>
                 @endif
+                @if($order->payment_discount > 0)
+                <div class="flex justify-between text-sm text-[#c9a227]">
+                    <span>পেমেন্ট ডিসকাউন্ট</span>
+                    <span>- ৳{{ number_format($order->payment_discount, 0) }}</span>
+                </div>
+                @endif
                 <div class="gold-rule opacity-30 my-1"></div>
                 <div class="flex justify-between font-bold text-[#c9a227] font-serif-bn text-xl">
                     <span>সর্বমোট</span>
@@ -202,6 +208,12 @@
                         <span class="text-green-400 text-xs">পেমেন্ট স্ট্যাটাস:</span>
                         <span class="text-green-300 text-xs font-semibold">{{ $paymentStatusLabels[$order->payment_status] ?? $order->payment_status }}</span>
                     </div>
+                    @if($order->estimated_delivery)
+                    <div class="flex items-center gap-2">
+                        <span class="text-green-400 text-xs">আনুমানিক ডেলিভারি:</span>
+                        <span class="text-green-300 text-xs font-semibold">{{ $order->estimated_delivery }}</span>
+                    </div>
+                    @endif
                     @if($order->transaction_id)
                     <div class="flex items-center gap-2">
                         <span class="text-green-400 text-xs">TrxID:</span>

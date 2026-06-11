@@ -28,6 +28,8 @@ class Order extends Model
         'stock_deducted_at', 'stock_restored_at',
         // CRM
         'customer_id', 'accepts_marketing',
+        // Checkout payment offer
+        'payment_mode', 'payment_discount', 'estimated_delivery', 'customer_address_id',
         // Cancellation
         'cancellation_reason', 'cancelled_by', 'cancelled_at',
         // Wholesale
@@ -61,6 +63,7 @@ class Order extends Model
         'discount_amount'            => 'decimal:2',
         'partial_paid_amount'        => 'decimal:2',
         'due_amount'                 => 'decimal:2',
+        'payment_discount'           => 'decimal:2',
         'whatsapp_sent_at'           => 'datetime',
         'customer_confirmed_at'      => 'datetime',
         'invoice_disabled_at'        => 'datetime',
@@ -130,6 +133,11 @@ class Order extends Model
     public function wholesaleEnquiry(): BelongsTo
     {
         return $this->belongsTo(WholesaleEnquiry::class, 'enquiry_id');
+    }
+
+    public function customerAddress(): BelongsTo
+    {
+        return $this->belongsTo(CustomerAddress::class, 'customer_address_id');
     }
 
     public function commissionLedger(): \Illuminate\Database\Eloquent\Relations\HasOne

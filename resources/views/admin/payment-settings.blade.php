@@ -118,6 +118,59 @@
             </div>
         </div>
 
+        {{-- Instant Payment offer (Meesho-style) --}}
+        <div class="px-6 py-5 border-b border-gray-100">
+            <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">ইনস্ট্যান্ট পেমেন্ট অফার</h3>
+
+            <label class="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50 mb-4 max-w-md">
+                <input type="checkbox" name="instant_payment_enabled" value="1"
+                       {{ $settings->instant_payment_enabled ? 'checked' : '' }}
+                       class="w-4 h-4 accent-gray-800">
+                <div>
+                    <div class="text-sm font-semibold text-gray-700">Instant Payment চালু</div>
+                    <div class="text-xs text-gray-400">আগে পেমেন্ট করলে ছাড় + দ্রুত ডেলিভারি (বিকাশ/নগদ/রকেট চালু থাকতে হবে)</div>
+                </div>
+            </label>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">ডিসকাউন্ট টাইপ</label>
+                    <select name="instant_discount_type"
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                        <option value="percentage" {{ $settings->instant_discount_type === 'percentage' ? 'selected' : '' }}>শতাংশ (%)</option>
+                        <option value="fixed" {{ $settings->instant_discount_type === 'fixed' ? 'selected' : '' }}>নির্দিষ্ট টাকা (৳)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">ডিসকাউন্ট ভ্যালু</label>
+                    <input type="number" step="0.01" min="0" name="instant_discount_value"
+                           value="{{ old('instant_discount_value', $settings->instant_discount_value) }}"
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">ন্যূনতম অর্ডার (ঐচ্ছিক)</label>
+                    <input type="number" step="0.01" min="0" name="instant_min_order_amount"
+                           value="{{ old('instant_min_order_amount', $settings->instant_min_order_amount) }}"
+                           placeholder="ছাড় পেতে ন্যূনতম অর্ডার"
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">COD ডেলিভারি (দিন)</label>
+                    <input type="text" name="cod_delivery_days"
+                           value="{{ old('cod_delivery_days', $settings->cod_delivery_days) }}"
+                           placeholder="৫–৭"
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Instant ডেলিভারি (দিন)</label>
+                    <input type="text" name="instant_delivery_days"
+                           value="{{ old('instant_delivery_days', $settings->instant_delivery_days) }}"
+                           placeholder="২–৩"
+                           class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                </div>
+            </div>
+        </div>
+
         {{-- Submit --}}
         <div class="px-6 py-5">
             <button type="submit"

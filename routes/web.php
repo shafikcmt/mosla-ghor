@@ -33,6 +33,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Admin\ProductReviewController as AdminProductReviewController;
 use App\Http\Controllers\TrackOrderController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Vendor\AuthController as VendorAuthController;
 use App\Http\Controllers\Vendor\DashboardController as VendorDashboardController;
 use App\Http\Controllers\Vendor\ProductController as VendorProductController;
@@ -184,6 +185,13 @@ Route::get('/track-order',  [TrackOrderController::class, 'index'])->name('track
 Route::post('/track-order', [TrackOrderController::class, 'track'])->name('track-order.submit');
 
 Route::get('/address/unions/{upazila}', [AddressController::class, 'unions'])->name('address.unions');
+
+// ── Meesho-style multi-step checkout (Cart → Review → Payment). Guests allowed. ──
+Route::post('/checkout/start',                  [CheckoutController::class, 'start'])->name('checkout.start');
+Route::get('/checkout/review',                  [CheckoutController::class, 'review'])->name('checkout.review');
+Route::post('/checkout/address',                [CheckoutController::class, 'storeAddress'])->name('checkout.address.store');
+Route::post('/checkout/select-address/{address}', [CheckoutController::class, 'selectAddress'])->name('checkout.address.select');
+Route::get('/checkout/payment',                 [CheckoutController::class, 'payment'])->name('checkout.payment');
 
 Route::post('/order', [OrderController::class, 'store'])->name('order.store');
 Route::get('/order/success/{orderNumber}', [OrderController::class, 'success'])->name('order.success');
