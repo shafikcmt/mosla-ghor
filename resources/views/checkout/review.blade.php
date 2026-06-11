@@ -14,23 +14,36 @@
     @endif
 
     {{-- ── Delivery address ─────────────────────────────────────────── --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4" x-data="{ changing: false, adding: false }">
-        <div class="flex items-center justify-between mb-3">
-            <h2 class="text-base font-bold text-[#14532d]">ডেলিভারি ঠিকানা</h2>
-            @if($address)
-            <button type="button" onclick="msToggle('addr-change')" class="text-xs text-[#14532d] font-semibold underline">ঠিকানা পরিবর্তন</button>
-            @endif
-        </div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+        <h2 class="text-base font-bold text-[#14532d] mb-3">ডেলিভারি ঠিকানা</h2>
 
         @if($address)
-            {{-- Address summary card --}}
+            {{-- Saved-address summary card (no form unless the customer asks) --}}
             <div class="border border-green-100 bg-green-50/40 rounded-xl p-4 text-sm">
                 <p class="font-bold text-gray-800">{{ $address->name }} <span class="font-normal text-gray-500">· {{ $address->phone }}</span></p>
                 <p class="text-gray-600 mt-1">{{ $address->full_address }}</p>
                 <p class="text-gray-500 text-xs mt-0.5">{{ $address->regionLine() }}</p>
             </div>
 
-            {{-- Change / select another (hidden by default) --}}
+            {{-- Card actions --}}
+            <div class="flex flex-wrap gap-2 mt-3">
+                @if($charge)
+                <a href="{{ route('checkout.payment') }}"
+                   class="flex-1 min-w-[160px] text-center bg-[#14532d] hover:bg-[#166534] text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
+                    এই ঠিকানায় ডেলিভারি দিন
+                </a>
+                @endif
+                <button type="button" onclick="msToggle('addr-change')"
+                        class="flex-1 min-w-[120px] text-center border border-[#14532d] text-[#14532d] text-sm font-semibold py-2.5 rounded-xl hover:bg-green-50 transition-colors">
+                    ঠিকানা পরিবর্তন
+                </button>
+                <button type="button" onclick="msAddrNew()"
+                        class="flex-1 min-w-[120px] text-center border border-gray-300 text-gray-600 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
+                    নতুন ঠিকানা যোগ করুন
+                </button>
+            </div>
+
+            {{-- Saved-address list (hidden until "ঠিকানা পরিবর্তন") --}}
             <div id="addr-change" class="hidden mt-4 space-y-3">
                 @auth
                     @foreach($savedAddresses as $sa)
@@ -42,7 +55,9 @@
                             <p class="text-gray-500 text-xs truncate">{{ $sa->full_address }} — {{ $sa->regionLine() }}</p>
                             @unless($sa->isCheckoutReady())<p class="text-amber-600 text-[11px] mt-0.5">⚠ ডেলিভারি এলাকা সেট করা নেই</p>@endunless
                         </div>
-                        @if($sa->id !== $address->id && $sa->isCheckoutReady())
+                        @if($sa->id === $address->id)
+                            <span class="flex-shrink-0 ml-3 text-xs text-[#14532d] font-semibold">✓ নির্বাচিত</span>
+                        @elseif($sa->isCheckoutReady())
                         <form action="{{ route('checkout.address.select', $sa->id) }}" method="POST" class="flex-shrink-0 ml-3">
                             @csrf
                             <button class="text-xs bg-[#14532d] text-white px-3 py-1.5 rounded-lg">নির্বাচন</button>
@@ -51,10 +66,12 @@
                     </div>
                     @endforeach
                 @endauth
-                <button type="button" onclick="msToggle('addr-new')" class="text-sm text-[#14532d] font-semibold">+ নতুন ঠিকানা যোগ করুন</button>
-                <div id="addr-new" class="hidden mt-3 border-t border-gray-100 pt-4">
-                    @include('checkout.partials.address-form')
-                </div>
+                <button type="button" onclick="msAddrNew()" class="text-sm text-[#14532d] font-semibold">+ নতুন ঠিকানা যোগ করুন</button>
+            </div>
+
+            {{-- New-address form (sibling → can open from the card or the change panel) --}}
+            <div id="addr-new" class="hidden mt-3 border-t border-gray-100 pt-4">
+                @include('checkout.partials.address-form')
             </div>
         @else
             {{-- No usable address → show the form directly --}}
@@ -140,6 +157,12 @@ const OLD_ADDR = @json($oldAddr);
 function msToggle(id) {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hidden');
+}
+
+// Reveal the new-address form (from the card or the change panel) and scroll to it.
+function msAddrNew() {
+    const el = document.getElementById('addr-new');
+    if (el) { el.classList.remove('hidden'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 }
 
 (function () {

@@ -158,15 +158,19 @@ class CheckoutController extends Controller
         ];
 
         if (Auth::check()) {
-            // First address (or none default yet) becomes the default automatically.
-            $hasDefault = CustomerAddress::where('user_id', Auth::id())->where('is_default', true)->exists();
-            if (! $hasDefault) {
-                CustomerAddress::where('user_id', Auth::id())->update(['is_default' => false]);
+            // Reuse an identical saved address instead of creating a duplicate.
+            $existing = CustomerAddress::findDuplicateFor(Auth::id(), $payload);
+            if ($existing) {
+                $existing->update($payload); // refresh zone/region; keep its is_default
+                $address = $existing;
+            } else {
+                // First address (or none default yet) becomes the default automatically.
+                $hasDefault = CustomerAddress::where('user_id', Auth::id())->where('is_default', true)->exists();
+                $address = CustomerAddress::create(array_merge($payload, [
+                    'user_id'    => Auth::id(),
+                    'is_default' => ! $hasDefault,
+                ]));
             }
-            $address = CustomerAddress::create(array_merge($payload, [
-                'user_id'    => Auth::id(),
-                'is_default' => ! $hasDefault,
-            ]));
             $this->setCartAddress($address->id);
         } else {
             session(['checkout.guest_address' => $payload]);
@@ -275,8 +279,14 @@ class CheckoutController extends Controller
                     return $a;
                 }
             }
-            return CustomerAddress::where('user_id', Auth::id())
-                ->orderByDesc('is_default')->first();
+
+            // Prefer a checkout-ready address (default first, then any ready one) so a
+            // legacy default that lacks a delivery zone never forces re-entering the form.
+            $addresses = CustomerAddress::where('user_id', Auth::id())
+                ->orderByDesc('is_default')->get();
+
+            return $addresses->firstWhere(fn ($a) => $a->isCheckoutReady())
+                ?? $addresses->first();
         }
 
         $guest = session('checkout.guest_address');

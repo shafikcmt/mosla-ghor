@@ -40,6 +40,14 @@ class CustomerAddressController extends CustomerBaseController
             CustomerAddress::where('user_id', Auth::id())->update(['is_default' => false]);
         }
 
+        // Reuse an identical saved address instead of creating a duplicate.
+        $existing = CustomerAddress::findDuplicateFor(Auth::id(), $result['data']);
+
+        if ($existing) {
+            $existing->update(array_merge($result['data'], $result['is_default'] ? ['is_default' => true] : []));
+            return redirect()->route('customer.addresses.index')->with('success', 'ঠিকানা আপডেট হয়েছে।');
+        }
+
         CustomerAddress::create(array_merge($result['data'], [
             'user_id'    => Auth::id(),
             'is_default' => $result['is_default'],

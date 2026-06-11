@@ -38,6 +38,21 @@ class CustomerAddress extends Model
         return $this->delivery_zone_id && $this->delivery_location_id;
     }
 
+    /**
+     * Find an existing address for this user that matches the same person + place,
+     * so saving the same details again updates it instead of creating a duplicate.
+     */
+    public static function findDuplicateFor(int $userId, array $data): ?self
+    {
+        return static::where('user_id', $userId)
+            ->where('name', $data['name'] ?? null)
+            ->where('phone', $data['phone'] ?? null)
+            ->where('full_address', $data['full_address'] ?? null)
+            ->where('district_name', $data['district_name'] ?? null)
+            ->where('upazila_name', $data['upazila_name'] ?? null)
+            ->first();
+    }
+
     /** Compact one-line region label for summary cards. */
     public function regionLine(): string
     {
