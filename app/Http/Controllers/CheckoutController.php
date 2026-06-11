@@ -8,8 +8,10 @@ use App\Models\BdUpazila;
 use App\Models\CustomerAddress;
 use App\Models\DeliveryZone;
 use App\Models\PaymentSetting;
+use App\Models\User;
 use App\Services\CheckoutException;
 use App\Services\CheckoutService;
+use App\Support\Phone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -100,9 +102,27 @@ class CheckoutController extends Controller
         ]);
     }
 
+    /**
+     * Privacy-safe check used during guest checkout: does this phone already have a
+     * customer login? Returns ONLY a boolean — never any saved name/address.
+     */
+    public function checkPhone(Request $request)
+    {
+        $phone = Phone::normalize($request->input('phone'));
+
+        return response()->json([
+            'registered' => $phone
+                ? User::where('phone', $phone)->where('role', 'customer')->exists()
+                : false,
+        ]);
+    }
+
     /** Save a new address (logged-in → DB; guest → session) and return to Review. */
     public function storeAddress(Request $request)
     {
+        // Accept 017…/+88017…/88017… and store the canonical local form.
+        $request->merge(['phone' => Phone::normalize($request->input('phone')) ?? $request->input('phone')]);
+
         $data = $request->validate([
             'name'                 => ['required', 'string', 'max:100'],
             'phone'                => ['required', 'string', 'regex:/^01[3-9]\d{8}$/'],

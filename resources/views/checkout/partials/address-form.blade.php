@@ -19,10 +19,44 @@
         </div>
         <div>
             <label class="block text-[#14532d] text-xs font-semibold mb-1">মোবাইল নম্বর <span class="text-red-400">*</span></label>
-            <input type="tel" name="phone" value="{{ old('phone', $prefill['phone'] ?? '') }}" placeholder="01XXXXXXXXX" required
+            <input type="tel" name="phone" id="ca-phone" value="{{ old('phone', $prefill['phone'] ?? '') }}" placeholder="01XXXXXXXXX" required
                    class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
         </div>
     </div>
+
+    @guest
+    {{-- Friendly hint when the phone already has an account (no saved address is exposed). --}}
+    <div id="phone-exists-hint" class="hidden bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-800">
+        এই মোবাইল নম্বর দিয়ে আগে একটি অ্যাকাউন্ট আছে। চাইলে লগইন করলে আপনার সংরক্ষিত ঠিকানা ব্যবহার করতে পারবেন।
+        <div class="flex gap-2 mt-2">
+            <a href="{{ route('customer.login') }}?redirect={{ urlencode(request()->getRequestUri()) }}"
+               class="bg-[#14532d] text-white font-semibold px-3 py-1.5 rounded-lg">লগইন করুন</a>
+            <button type="button" onclick="document.getElementById('phone-exists-hint').classList.add('hidden')"
+                    class="border border-amber-300 text-amber-800 font-semibold px-3 py-1.5 rounded-lg">গেস্ট হিসেবে চালিয়ে যান</button>
+        </div>
+    </div>
+    <script>
+    (function () {
+        const inp = document.getElementById('ca-phone');
+        const hint = document.getElementById('phone-exists-hint');
+        if (!inp || !hint) return;
+        const url = @json(route('checkout.check-phone'));
+        const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        let last = '';
+        inp.addEventListener('blur', function () {
+            const v = inp.value.trim();
+            if (v === last) return;
+            last = v;
+            if (v.replace(/\D/g, '').length < 10) { hint.classList.add('hidden'); return; }
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
+                body: JSON.stringify({ phone: v }),
+            }).then(r => r.json()).then(d => { hint.classList.toggle('hidden', !d.registered); }).catch(() => {});
+        });
+    })();
+    </script>
+    @endguest
 
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>

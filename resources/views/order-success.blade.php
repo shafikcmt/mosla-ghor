@@ -75,6 +75,53 @@
             <p class="text-gray-600 text-sm max-w-sm mx-auto">আপনার অর্ডার সফলভাবে গ্রহণ করা হয়েছে। শীঘ্রই কল করে নিশ্চিত করা হবে।</p>
         </div>
 
+        {{-- Flash messages (e.g. account created) --}}
+        @if(session('success'))
+        <div class="no-print mb-6 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-xl text-sm text-center">{{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+        <div class="no-print mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm text-center">{{ session('error') }}</div>
+        @endif
+
+        {{-- Optional account creation for the guest who just placed this order --}}
+        @if(!empty($canCreateAccount))
+        <div class="no-print mb-6 bg-white rounded-2xl border border-[#c9a227]/40 shadow-sm p-5">
+            <h2 class="font-serif-bn text-[#14532d] text-lg font-bold mb-1">অ্যাকাউন্ট তৈরি করুন (ঐচ্ছিক)</h2>
+            <p class="text-sm text-gray-600 mb-3">
+                এই মোবাইল নম্বর <span class="font-semibold">({{ $order->mobile_number }})</span> দিয়ে একটি পাসওয়ার্ড সেট করলে
+                আপনার অ্যাকাউন্ট তৈরি হয়ে যাবে এবং আপনি সহজে অর্ডার ট্র্যাক করতে পারবেন।
+            </p>
+            @if($errors->any())
+            <div class="mb-3 bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700">
+                <ul class="list-disc list-inside space-y-0.5">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+            </div>
+            @endif
+            <form method="POST" action="{{ route('order.create-account', $order->order_number) }}" class="space-y-3">
+                @csrf
+                <div class="grid sm:grid-cols-2 gap-3">
+                    <input type="password" name="password" required minlength="6" placeholder="পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)" autocomplete="new-password"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+                    <input type="password" name="password_confirmation" required placeholder="পাসওয়ার্ড আবার দিন" autocomplete="new-password"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+                </div>
+                <button type="submit"
+                        class="w-full sm:w-auto bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition-colors">
+                    পাসওয়ার্ড সেট করে অ্যাকাউন্ট তৈরি করুন
+                </button>
+            </form>
+        </div>
+        @elseif(!empty($phoneRegistered) && !auth()->check())
+        <div class="no-print mb-6 bg-white rounded-2xl border border-green-100 shadow-sm p-5 text-center">
+            <p class="text-sm text-gray-600 mb-3">এই মোবাইল নম্বরে আপনার একটি অ্যাকাউন্ট আছে। লগইন করে সব অর্ডার ট্র্যাক করুন।</p>
+            <a href="{{ route('customer.login') }}?redirect={{ urlencode(route('order.success', $order->order_number, false)) }}"
+               class="inline-block bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition-colors">লগইন করুন</a>
+        </div>
+        @elseif(auth()->check())
+        <div class="no-print mb-6 text-center">
+            <a href="{{ route('customer.orders.index') }}" class="inline-block text-sm text-[#14532d] font-semibold underline">আমার অর্ডারসমূহ দেখুন →</a>
+        </div>
+        @endif
+
         {{-- Receipt / Order card --}}
         <div class="receipt-card bg-white rounded-2xl shadow-lg border border-green-100 overflow-hidden mb-6">
 

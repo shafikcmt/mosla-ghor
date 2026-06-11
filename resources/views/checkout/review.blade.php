@@ -13,8 +13,34 @@
     <div class="mb-4 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700">{{ session('success') }}</div>
     @endif
 
+    {{-- ── How to order (logged-out only; guest is the easy default) ──── --}}
+    @guest
+    <div id="guest-choice" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+        <h2 class="text-base font-bold text-[#14532d] mb-1">কিভাবে অর্ডার করবেন?</h2>
+        <p class="text-xs text-gray-500 mb-3">লগইন বা রেজিস্ট্রেশন বাধ্যতামূলক নয় — চাইলে গেস্ট হিসেবেই দ্রুত অর্ডার করুন।</p>
+        <div class="grid sm:grid-cols-3 gap-2">
+            <button type="button"
+                    onclick="document.getElementById('guest-choice').classList.add('hidden'); document.getElementById('addr-section')?.scrollIntoView({behavior:'smooth'});"
+                    class="text-left border-2 border-[#14532d] bg-green-50/40 rounded-xl p-3 hover:bg-green-50 transition-colors">
+                <div class="text-sm font-bold text-[#14532d]">গেস্ট হিসেবে অর্ডার করুন</div>
+                <div class="text-[11px] text-gray-500 mt-0.5">লগইন ছাড়াই দ্রুত অর্ডার করুন।</div>
+            </button>
+            <a href="{{ route('customer.login') }}?redirect={{ urlencode(request()->getRequestUri()) }}"
+               class="block text-left border border-gray-200 rounded-xl p-3 hover:border-[#14532d] transition-colors">
+                <div class="text-sm font-bold text-gray-800">লগইন করুন</div>
+                <div class="text-[11px] text-gray-500 mt-0.5">সংরক্ষিত ঠিকানা ব্যবহার করুন ও অর্ডার ট্র্যাক করুন।</div>
+            </a>
+            <a href="{{ route('customer.register') }}?redirect={{ urlencode(request()->getRequestUri()) }}"
+               class="block text-left border border-gray-200 rounded-xl p-3 hover:border-[#14532d] transition-colors">
+                <div class="text-sm font-bold text-gray-800">নতুন অ্যাকাউন্ট</div>
+                <div class="text-[11px] text-gray-500 mt-0.5">একবার অ্যাকাউন্ট করলে ভবিষ্যতে সহজ হবে।</div>
+            </a>
+        </div>
+    </div>
+    @endguest
+
     {{-- ── Delivery address ─────────────────────────────────────────── --}}
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
+    <div id="addr-section" class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-4">
         <h2 class="text-base font-bold text-[#14532d] mb-3">ডেলিভারি ঠিকানা</h2>
 
         @if($address)

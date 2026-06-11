@@ -81,7 +81,7 @@
     </div>
 
     <div class="text-center mt-5 space-y-2 text-sm text-gray-500">
-        <p>নতুন? <a href="{{ route('customer.register') }}" class="text-[#14532d] font-semibold hover:underline">রেজিস্ট্রেশন করুন</a></p>
+        <p>নতুন? <a href="{{ route('customer.register') }}{{ $redirectParam ? '?redirect='.urlencode($redirectParam) : '' }}" class="text-[#14532d] font-semibold hover:underline">রেজিস্ট্রেশন করুন</a></p>
         <p><a href="/" class="text-gray-400 hover:text-gray-600">← হোম পেজে ফিরুন</a></p>
     </div>
 </div>

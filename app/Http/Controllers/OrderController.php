@@ -15,12 +15,16 @@ use App\Models\PaymentSetting;
 use App\Models\PriceSetting;
 use App\Models\Product;
 use App\Models\ProductPrice;
+use App\Models\User;
 use App\Models\Vendor;
 use App\Models\VendorOrder;
 use App\Models\WebsiteSetting;
+use App\Support\Phone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -38,6 +42,14 @@ class OrderController extends Controller
         $isManualPayment = in_array($request->input('payment_method'), ['bkash', 'rocket', 'nagad']);
 
         $isComboOrder = $request->filled('combo_id');
+
+        // Accept 017…/+88017…/88017… (and Bengali digits); store the canonical local form.
+        $request->merge([
+            'mobile_number'      => Phone::normalize($request->input('mobile_number')) ?? $request->input('mobile_number'),
+            'alternative_number' => $request->filled('alternative_number')
+                ? (Phone::normalize($request->input('alternative_number')) ?? $request->input('alternative_number'))
+                : $request->input('alternative_number'),
+        ]);
 
         $validated = $request->validate([
             'full_name'                => ['required', 'string', 'max:100'],
@@ -362,6 +374,10 @@ class OrderController extends Controller
         // Clear the multi-step checkout cart once the order is placed.
         $request->session()->forget('checkout');
 
+        // Let the success page offer optional account creation, but only to the
+        // browser that actually placed this order (anti-hijack).
+        $request->session()->put('claimable_order', $order->order_number);
+
         return response()->json([
             'success'  => true,
             'redirect' => route('order.success', $order->order_number),
@@ -450,6 +466,74 @@ class OrderController extends Controller
         $whatsappNumber = WebsiteSetting::get('whatsapp_number');
         $siteName       = WebsiteSetting::get('site_name', 'মসলা ঘর');
 
-        return view('order-success', compact('order', 'whatsappNumber', 'siteName'));
+        // Account-creation offer: only for the guest who just placed THIS order,
+        // and only when no customer login exists for the order's phone yet.
+        $phone            = Phone::normalize($order->mobile_number);
+        $phoneRegistered  = $phone ? User::where('phone', $phone)->where('role', 'customer')->exists() : false;
+        $canCreateAccount = ! Auth::check()
+            && ! $phoneRegistered
+            && session('claimable_order') === $order->order_number;
+
+        return view('order-success', compact(
+            'order', 'whatsappNumber', 'siteName', 'phoneRegistered', 'canCreateAccount'
+        ));
+    }
+
+    /**
+     * Turn a just-placed guest order into a customer login by setting a password.
+     * The CRM Customer row already exists (upsertCustomer) and past orders are linked
+     * by phone, so the new account immediately sees this order in the dashboard.
+     */
+    public function createAccount(Request $request, string $orderNumber)
+    {
+        if (Auth::check()) {
+            return redirect()->route('order.success', $orderNumber);
+        }
+
+        // Only the browser that placed this order may claim it.
+        if (session('claimable_order') !== $orderNumber) {
+            return redirect()->route('order.success', $orderNumber)
+                ->with('error', 'এই অর্ডারের জন্য অ্যাকাউন্ট তৈরি করা সম্ভব নয়।');
+        }
+
+        $order = Order::where('order_number', $orderNumber)->firstOrFail();
+
+        $data = $request->validate([
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
+        ], [
+            'password.required'  => 'পাসওয়ার্ড দিন।',
+            'password.min'       => 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষর হতে হবে।',
+            'password.confirmed' => 'পাসওয়ার্ড দুইবার মিলছে না।',
+        ]);
+
+        $phone = Phone::normalize($order->mobile_number) ?? $order->mobile_number;
+
+        // Already registered → don't duplicate; send them to login (back to this order after).
+        if (User::where('phone', $phone)->where('role', 'customer')->exists()) {
+            return redirect()
+                ->route('customer.login', ['redirect' => route('order.success', $orderNumber, false)])
+                ->with('error', 'এই নম্বরে আগে থেকেই একটি অ্যাকাউন্ট আছে। লগইন করুন।');
+        }
+
+        $user = User::create([
+            'name'     => $order->customer_name,
+            'phone'    => $phone,
+            'password' => Hash::make($data['password']),
+            'role'     => 'customer',
+            'is_admin' => false,
+        ]);
+
+        // Ensure the CRM record exists and is linked by phone (upsertCustomer normally made it).
+        Customer::firstOrCreate(
+            ['mobile_number' => $phone],
+            ['name' => $order->customer_name, 'is_active' => true]
+        );
+
+        Auth::login($user, true);
+        $request->session()->forget('claimable_order');
+        $request->session()->regenerate();
+
+        return redirect()->route('order.success', $orderNumber)
+            ->with('success', 'অ্যাকাউন্ট তৈরি হয়েছে। এখন আপনি সহজে অর্ডার ট্র্যাক করতে পারবেন।');
     }
 }

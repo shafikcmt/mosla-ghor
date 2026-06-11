@@ -32,7 +32,8 @@
         </div>
         @endif
 
-        <form method="POST" action="{{ route('customer.register.post') }}" class="space-y-4">
+        @php $redirectParam = $redirectParam ?? ''; @endphp
+        <form method="POST" action="{{ route('customer.register.post') }}{{ $redirectParam ? '?redirect='.urlencode($redirectParam) : '' }}" class="space-y-4">
             @csrf
 
             <div>
@@ -76,7 +77,7 @@
     </div>
 
     <div class="text-center mt-5 space-y-2 text-sm text-gray-500">
-        <p>আগেই অ্যাকাউন্ট আছে? <a href="{{ route('customer.login') }}" class="text-[#14532d] font-semibold hover:underline">লগইন করুন</a></p>
+        <p>আগেই অ্যাকাউন্ট আছে? <a href="{{ route('customer.login') }}{{ $redirectParam ? '?redirect='.urlencode($redirectParam) : '' }}" class="text-[#14532d] font-semibold hover:underline">লগইন করুন</a></p>
         <p><a href="/" class="text-gray-400 hover:text-gray-600">← হোম পেজে ফিরুন</a></p>
     </div>
 </div>

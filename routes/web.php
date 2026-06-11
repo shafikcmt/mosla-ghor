@@ -192,9 +192,13 @@ Route::get('/checkout/review',                  [CheckoutController::class, 'rev
 Route::post('/checkout/address',                [CheckoutController::class, 'storeAddress'])->name('checkout.address.store');
 Route::post('/checkout/select-address/{address}', [CheckoutController::class, 'selectAddress'])->name('checkout.address.select');
 Route::get('/checkout/payment',                 [CheckoutController::class, 'payment'])->name('checkout.payment');
+// Privacy-safe "is this phone already registered?" check for guest checkout (returns only a boolean).
+Route::post('/checkout/check-phone',            [CheckoutController::class, 'checkPhone'])->name('checkout.check-phone');
 
 Route::post('/order', [OrderController::class, 'store'])->name('order.store');
 Route::get('/order/success/{orderNumber}', [OrderController::class, 'success'])->name('order.success');
+// Optional: turn a just-placed guest order into a customer account by setting a password.
+Route::post('/order/{orderNumber}/create-account', [OrderController::class, 'createAccount'])->name('order.create-account');
 
 // ── Public token-addressed invoice (vendor POS orders) ──────────────────────
 Route::get('/invoice/{token}',          [InvoiceController::class, 'show'])->name('invoice.show');
