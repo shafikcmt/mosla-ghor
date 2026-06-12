@@ -37,6 +37,12 @@ $productsForJs = $products->map(function ($p) {
         'variants'          => $variants,
     ];
 })->keyBy('id');
+
+// Listing mode is URL-driven only (no sticky localStorage): default retail unless
+// ?mode=wholesale / ?tab=wholesale|paykari. Defined here (before the hero) so the
+// hero mode toggle + the product section can both use it.
+$listMode  = in_array(strtolower(request('mode') ?? request('tab') ?? ''), ['wholesale', 'paykari'], true) ? 'wholesale' : 'retail';
+$modeQuery = $listMode === 'wholesale' ? 'mode=wholesale' : '';
 @endphp
 <!DOCTYPE html>
 <html lang="bn">
@@ -352,10 +358,19 @@ $productsForJs = $products->map(function ($p) {
             আপনার রান্নাকে করে তুলুন অতুলনীয় ও সুস্বাদু।
         </p>
         @endif
-        <a href="#products" class="btn-gold inline-flex items-center gap-2 text-[#0f3d22] font-bold text-base px-10 py-3.5 rounded-full shadow-xl">
-            {{ $ws['primary_cta_text'] ?? 'পণ্য দেখুন' }}
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
-        </a>
+        {{-- Retail / Wholesale mode toggle (replaces the old "পণ্য দেখুন" CTA).
+             Same ids as before so setTab() keeps driving them; active state is
+             server-rendered from $listMode so a refresh shows the right tab. --}}
+        <div class="inline-flex items-center gap-1 p-1.5 bg-white/95 rounded-2xl shadow-2xl">
+            <button id="tab-retail" onclick="setTab('retail'); document.getElementById('products').scrollIntoView({behavior:'smooth'});"
+                    class="px-7 py-3 rounded-xl text-base font-bold transition-colors {{ $listMode === 'retail' ? 'bg-[#14532d] text-white' : 'text-gray-500 hover:text-gray-700' }}">
+                খুচরা
+            </button>
+            <button id="tab-wholesale" onclick="setTab('wholesale'); document.getElementById('products').scrollIntoView({behavior:'smooth'});"
+                    class="px-7 py-3 rounded-xl text-base font-bold transition-colors {{ $listMode === 'wholesale' ? 'bg-orange-600 text-white' : 'text-gray-500 hover:text-gray-700' }}">
+                পাইকারি
+            </button>
+        </div>
 
         <div class="mt-16 flex flex-wrap justify-center gap-8 md:gap-12">
             <div class="text-center">
@@ -385,13 +400,6 @@ $productsForJs = $products->map(function ($p) {
 
 {{-- ━━━━━━━━━━━━━━━━  PRODUCTS  ━━━━━━━━━━━━━━━━ --}}
 <section id="products" class="py-16 md:py-20 px-5">
-    @php
-        // Mode is URL-driven only (no sticky localStorage): default retail unless
-        // ?mode=wholesale / ?tab=wholesale|paykari. Category links carry it so a
-        // category click keeps the current mode.
-        $listMode  = in_array(strtolower(request('mode') ?? request('tab') ?? ''), ['wholesale', 'paykari'], true) ? 'wholesale' : 'retail';
-        $modeQuery = $listMode === 'wholesale' ? 'mode=wholesale' : '';
-    @endphp
     <div class="max-w-7xl mx-auto">
 
         {{-- Section header + view toggle --}}
@@ -407,19 +415,8 @@ $productsForJs = $products->map(function ($p) {
             </div>
 
             <div class="flex items-center gap-3 self-start sm:self-auto flex-wrap">
-                {{-- Retail / Wholesale tab (initial active state is server-driven by $listMode) --}}
-                <div class="flex items-center gap-0.5 p-1 bg-white border border-gray-200 rounded-xl shadow-sm">
-                    <button id="tab-retail" onclick="setTab('retail')"
-                            class="px-5 py-2 rounded-lg text-sm font-bold transition-colors {{ $listMode === 'retail' ? 'bg-[#14532d] text-white' : 'text-gray-500 hover:text-gray-700' }}">
-                        খুচরা
-                    </button>
-                    <button id="tab-wholesale" onclick="setTab('wholesale')"
-                            class="px-5 py-2 rounded-lg text-sm font-bold transition-colors {{ $listMode === 'wholesale' ? 'bg-orange-600 text-white' : 'text-gray-500 hover:text-gray-700' }}">
-                        পাইকারি
-                    </button>
-                </div>
-
-                {{-- Card / List toggle --}}
+                {{-- Product toolbar: grid / list view only. The খুচরা / পাইকারি mode
+                     toggle now lives in the hero section. --}}
                 <div class="flex items-center gap-1 p-1 bg-white border border-gray-200 rounded-xl shadow-sm">
                     <button id="btn-card" onclick="setView('card')" title="Card view"
                             class="p-2 rounded-lg bg-[#14532d] text-white transition-colors" aria-pressed="true">
@@ -475,7 +472,7 @@ $productsForJs = $products->map(function ($p) {
                     ? route('products.show', ['product' => $product->slug, 'mode' => 'wholesale'])
                     : route('products.show', $product->slug);
             @endphp
-            <article data-card-product="{{ $product->id }}" class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
+            <article data-card-product="{{ $product->id }}" style="{{ (($listMode === 'wholesale') === (bool) $product->is_wholesale) ? '' : 'display:none;' }}" class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
 
                 {{-- Image slideshow / placeholder --}}
                 @php
@@ -620,7 +617,7 @@ $productsForJs = $products->map(function ($p) {
                     ? route('products.show', ['product' => $product->slug, 'mode' => 'wholesale'])
                     : route('products.show', $product->slug);
             @endphp
-            <article data-list-product="{{ $product->id }}" class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
+            <article data-list-product="{{ $product->id }}" style="{{ (($listMode === 'wholesale') === (bool) $product->is_wholesale) ? '' : 'display:none;' }}" class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
 
                 {{-- Thumb --}}
                 <div class="w-28 sm:w-36 flex-shrink-0 relative min-h-[110px]">
@@ -2147,9 +2144,10 @@ function rebuildModalPrices(prices) {
     if (sp) sp.textContent = '——';
 }
 
-const TAB_ON      = 'px-5 py-2 rounded-lg bg-[#14532d] text-white text-sm font-bold transition-colors';
-const TAB_WS_ON   = 'px-5 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold transition-colors';
-const TAB_OFF     = 'px-5 py-2 rounded-lg text-gray-500 hover:text-gray-700 text-sm font-bold transition-colors';
+// Match the hero toggle button sizing (the toggle now lives in the hero).
+const TAB_ON      = 'px-7 py-3 rounded-xl bg-[#14532d] text-white text-base font-bold transition-colors';
+const TAB_WS_ON   = 'px-7 py-3 rounded-xl bg-orange-600 text-white text-base font-bold transition-colors';
+const TAB_OFF     = 'px-7 py-3 rounded-xl text-gray-500 hover:text-gray-700 text-base font-bold transition-colors';
 
 function setTab(tab) {
     activeTab = tab;
