@@ -526,7 +526,7 @@ $productsForJs = $products->map(function ($p) {
                     @if($product->is_wholesale)
                     {{-- Paykari product: price hidden on card, enquiry-only --}}
                     <div class="mt-3 flex flex-wrap items-center gap-1.5">
-                        <span class="inline-flex items-center gap-1 text-xs font-semibold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full">দর জানতে চাই</span>
+                        <span class="inline-flex items-center gap-1 text-xs font-semibold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full">পাইকারি</span>
                         @if($product->min_order_quantity)
                         <span class="text-[11px] text-gray-500">MOQ: {{ rtrim(rtrim(number_format($product->min_order_quantity, 2, '.', ''), '0'), '.') }}{{ $product->min_order_unit ?: 'kg' }}</span>
                         @endif
@@ -534,10 +534,16 @@ $productsForJs = $products->map(function ($p) {
                     <div class="flex-1 min-h-3"></div>
                     <div class="mt-4 flex flex-col gap-2">
                         @include('partials.wholesale-bag-button')
-                        <a href="{{ $detailUrl }}"
-                           class="block w-full border border-amber-700 text-amber-800 hover:bg-amber-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                            দর জানতে চাই
-                        </a>
+                        <div class="grid grid-cols-2 gap-2">
+                            <a href="{{ $detailUrl }}"
+                               class="block w-full border border-amber-700 text-amber-800 hover:bg-amber-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                                দর জানতে চাই
+                            </a>
+                            <a href="{{ $detailUrl }}"
+                               class="block w-full border border-[#14532d] text-[#14532d] hover:bg-green-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                                Contact Supplier
+                            </a>
+                        </div>
                     </div>
                     @else
                     <div id="card-price-wrap-{{ $product->id }}" class="mt-3 flex items-baseline gap-1.5"
@@ -588,10 +594,16 @@ $productsForJs = $products->map(function ($p) {
                     {{-- Wholesale mode buttons (hidden in retail mode): add to enquiry bag + ask price --}}
                     <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4 flex flex-col gap-2">
                         @include('partials.wholesale-bag-button')
-                        <a href="{{ route('customer.wholesale.products.show', $product->slug) }}"
-                           class="block w-full border border-amber-700 text-amber-800 hover:bg-amber-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                            দর জানতে চাই
-                        </a>
+                        <div class="grid grid-cols-2 gap-2">
+                            <a href="{{ route('customer.wholesale.products.show', $product->slug) }}"
+                               class="block w-full border border-amber-700 text-amber-800 hover:bg-amber-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                                দর জানতে চাই
+                            </a>
+                            <a href="{{ route('customer.wholesale.products.show', $product->slug) }}"
+                               class="block w-full border border-[#14532d] text-[#14532d] hover:bg-green-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                                Contact Supplier
+                            </a>
+                        </div>
                     </div>
                     @endif
                 </div>
@@ -671,12 +683,17 @@ $productsForJs = $products->map(function ($p) {
                                class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
                                 বিস্তারিত
                             </a>
-                            @unless($product->is_wholesale)
+                            @if($product->is_wholesale)
+                            <a href="{{ $detailUrl }}"
+                               class="border border-[#14532d] text-[#14532d] hover:bg-green-50 text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
+                                Contact Supplier
+                            </a>
+                            @else
                             <button onclick="goToCombo({{ $product->id }})"
                                     class="border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
                                 বাক্সে যোগ
                             </button>
-                            @endunless
+                            @endif
                         </div>
                     </div>
                 </div>
