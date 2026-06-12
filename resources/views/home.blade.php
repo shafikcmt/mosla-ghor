@@ -778,6 +778,11 @@ $productsForJs = $products->map(function ($p) {
 
 {{-- ━━━━━━━━━━━━━━━━  COMBO BUILDER  ━━━━━━━━━━━━━━━━ --}}
 <section id="combo-builder" class="py-16 md:py-20 px-5 bg-[#f6fdf8]">
+    @php
+        // Combo mode is URL-driven only (no sticky localStorage): default retail
+        // unless ?combo=paykari|wholesale (e.g. the cart drawer "পাইকারি কম্বো" link).
+        $comboMode = in_array(strtolower(request('combo') ?? ''), ['paykari', 'wholesale'], true) ? 'paykari' : 'retail';
+    @endphp
     <div class="max-w-7xl mx-auto">
 
         {{-- Section Label + Combo Mode Tabs --}}
@@ -789,18 +794,18 @@ $productsForJs = $products->map(function ($p) {
             </div>
             <div class="inline-flex bg-white rounded-xl border border-green-200 overflow-hidden shadow-sm mt-4">
                 <button id="combo-tab-retail" onclick="switchComboTab('retail')"
-                        class="px-6 py-2.5 text-sm font-semibold transition-colors bg-[#14532d] text-[#c9a227]">
+                        class="px-6 py-2.5 text-sm font-semibold transition-colors {{ $comboMode === 'retail' ? 'bg-[#14532d] text-[#c9a227]' : 'text-gray-600 hover:bg-gray-50' }}">
                     নিজের বাক্স
                 </button>
                 <button id="combo-tab-paykari" onclick="switchComboTab('paykari')"
-                        class="px-6 py-2.5 text-sm font-semibold transition-colors text-gray-600 hover:bg-amber-50">
+                        class="px-6 py-2.5 text-sm font-semibold transition-colors {{ $comboMode === 'paykari' ? 'bg-amber-700 text-white' : 'text-gray-600 hover:bg-amber-50' }}">
                     পাইকারি অর্ডার
                 </button>
             </div>
         </div>
 
         {{-- ══════════  RETAIL COMBO  ══════════ --}}
-        <div id="combo-retail-section">
+        <div id="combo-retail-section" style="{{ $comboMode === 'paykari' ? 'display:none;' : '' }}">
             <div class="text-center mb-8">
                 <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">নিজের মশলার বাক্স বানান</h2>
                 <p class="text-gray-400 text-sm mt-2 max-w-md mx-auto leading-relaxed">
@@ -944,7 +949,7 @@ $productsForJs = $products->map(function ($p) {
         </div>{{-- /combo-retail-section --}}
 
         {{-- ══════════  PAYKARI COMBO  ══════════ --}}
-        <div id="combo-paykari-section" style="display:none;">
+        <div id="combo-paykari-section" style="{{ $comboMode === 'paykari' ? '' : 'display:none;' }}">
             <div class="text-center mb-8">
                 <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">পাইকারি অর্ডার তৈরি করুন</h2>
                 <p class="text-gray-500 text-sm mt-2 max-w-lg mx-auto leading-relaxed">
@@ -2408,7 +2413,14 @@ function switchComboTab(tab) {
         paykariTab.className = 'px-6 py-2.5 text-sm font-semibold transition-colors bg-amber-700 text-white';
         retailTab.className  = 'px-6 py-2.5 text-sm font-semibold transition-colors text-gray-600 hover:bg-gray-50';
     }
-    try { localStorage.setItem('msComboTab', tab); } catch(e) {}
+    // Reflect combo mode in the URL (no reload) so a refresh keeps it.
+    // NOT saved to localStorage — combo builder must default to retail on a plain load.
+    try {
+        const u = new URL(window.location.href);
+        if (tab === 'paykari') u.searchParams.set('combo', 'paykari');
+        else u.searchParams.delete('combo');
+        history.replaceState(null, '', u.pathname + u.search + window.location.hash);
+    } catch (e) {}
 }
 
 // ── Paykari Combo Builder ────────────────────────────────────────────────
@@ -2582,13 +2594,14 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// Restore combo tab: URL ?combo=paykari (from the cart drawer) wins, else saved tab.
+// Combo tab is URL-driven ONLY (no sticky localStorage): the server already rendered
+// the correct initial tab/sections from ?combo; this just keeps the URL canonical when
+// arriving via ?combo=paykari (and re-applies the active state defensively).
 (function () {
     try {
         const c = (new URLSearchParams(window.location.search).get('combo') || '').toLowerCase();
-        if (c === 'paykari' || c === 'wholesale') { switchComboTab('paykari'); return; }
+        if (c === 'paykari' || c === 'wholesale') switchComboTab('paykari');
     } catch (e) {}
-    try { if (localStorage.getItem('msComboTab') === 'paykari') switchComboTab('paykari'); } catch (e) {}
 })();
 
 // ── Modal open/close ──────────────────────────────────────────────────────
