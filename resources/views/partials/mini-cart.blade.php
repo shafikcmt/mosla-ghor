@@ -106,7 +106,7 @@
             <div class="flex flex-col gap-2 w-full max-w-[220px]">
                 <a href="/?tab=wholesale#products" onclick="msCartClose()"
                    class="bg-amber-700 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-amber-800 transition">পাইকারি পণ্য দেখুন</a>
-                <a href="{{ route('wholesale.enquiry-bag') }}"
+                <a href="/?combo=paykari#combo-builder"
                    class="border border-amber-600 text-amber-800 text-sm font-semibold py-2.5 rounded-xl hover:bg-amber-50 transition">পাইকারি কম্বো তৈরি করুন</a>
             </div>
         </div>
@@ -124,7 +124,7 @@
             <div class="grid grid-cols-2 gap-2">
                 <a href="/?tab=wholesale#products" onclick="msCartClose()"
                    class="text-center border border-amber-700 text-amber-800 text-xs font-semibold py-2 rounded-lg hover:bg-amber-50 transition">+ আরও পাইকারি পণ্য</a>
-                <a href="{{ route('wholesale.enquiry-bag') }}"
+                <a href="/?combo=paykari#combo-builder"
                    class="text-center border border-gray-300 text-gray-600 text-xs font-semibold py-2 rounded-lg hover:bg-gray-50 transition">পাইকারি কম্বো</a>
             </div>
         </div>
@@ -166,7 +166,13 @@
     const MS_BAG_KEY = 'ms_enquiry_bag';
     window.MS_BAG_KEY = MS_BAG_KEY;
     window.msBagGet  = function () { try { return JSON.parse(localStorage.getItem(MS_BAG_KEY) || '[]'); } catch (e) { return []; } };
-    window.msBagSave = function (items) { try { localStorage.setItem(MS_BAG_KEY, JSON.stringify(items)); } catch (e) {} msBadges(); msCartRender(); };
+    window.msBagSave = function (items) {
+        try { localStorage.setItem(MS_BAG_KEY, JSON.stringify(items)); } catch (e) {}
+        msBadges(); msCartRender();
+        // Notify other views of the same bag (e.g. the Paykari order builder) so
+        // every surface stays in sync off this single source of truth.
+        try { window.dispatchEvent(new CustomEvent('ms-bag-changed')); } catch (e) {}
+    };
     window.msBagCount = function () { return msBagGet().length; };
     window.msBagBadge = function () { msBadges(); };   // back-compat alias
     window.msBagAdd  = function (id, slug, name, image, qty, unit, minQty, minUnit) {
@@ -207,6 +213,9 @@
         const cfg = msBagUnitCfg(it.unit);
         msToast('পাইকারি অর্ডারের জন্য কমপক্ষে ' + msFmt(msBagMin(it)) + cfg.suffix + ' নির্বাচন করুন');
     }
+    // Exposed so other views (Paykari order builder) share the exact same rules.
+    window.msBagUnitCfg = msBagUnitCfg;
+    window.msBagMin     = msBagMin;
 
     // In-drawer management — msBagSave re-renders the drawer instantly.
     window.msBagInc = function (i) {

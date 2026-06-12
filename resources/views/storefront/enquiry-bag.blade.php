@@ -143,7 +143,8 @@
             const hidden = document.getElementById('bag-items-hidden');
             hidden.innerHTML = items.map(function (it, i) {
                 return '<input type="hidden" name="items[' + i + '][product_id]" value="' + it.product_id + '">' +
-                       '<input type="hidden" name="items[' + i + '][quantity_kg]" value="' + it.quantity + '">';
+                       '<input type="hidden" name="items[' + i + '][quantity_kg]" value="' + it.quantity + '">' +
+                       '<input type="hidden" name="items[' + i + '][quantity_unit]" value="' + (it.unit || 'kg') + '">';
             }).join('');
             // Items are now serialized into the form; clear the bag so it isn't resubmitted.
             try { localStorage.removeItem(MS_BAG_KEY); } catch (e) {}

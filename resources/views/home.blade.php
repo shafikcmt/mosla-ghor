@@ -19,11 +19,14 @@ $productsForJs = $products->map(function ($p) {
     ])->values()->all();
     return [
         'id'                => $p->id,
+        'slug'              => $p->slug,
         'name_bn'           => $p->name_bn,
         'name_en'           => $p->name_en,
         'short_description' => $p->short_description,
         'description'       => $p->description,
         'main_image'        => $p->main_image ? asset($p->main_image) : null,
+        'min_order_quantity'=> $p->min_order_quantity ? (float) $p->min_order_quantity : null,
+        'min_order_unit'    => $p->min_order_unit ?: null,
         'gallery_images'    => collect($p->gallery_images ?? [])->map(fn($img) => asset($img))->values()->all(),
         'video_url'         => $p->video_url,
         'video_path'        => ($p->video_path ?? null) ? asset($p->video_path) : null,
@@ -969,31 +972,44 @@ $productsForJs = $products->map(function ($p) {
                 <div class="flex-1 min-w-0">
                     <div class="space-y-2.5">
                     @foreach($products as $product)
-                    @if($product->activePrices->isNotEmpty() || $product->activeVariants->isNotEmpty())
+                    @if($product->activePrices->isNotEmpty() || $product->activeVariants->isNotEmpty() || $product->is_wholesale)
                     <div id="paykari-row-{{ $product->id }}"
-                         class="bg-white border border-amber-100 rounded-xl p-3 sm:p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 shadow-sm">
-                        {{-- Avatar --}}
-                        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center flex-shrink-0 shadow">
-                            <span class="text-white font-serif-bn font-bold text-lg">{{ mb_substr($product->name_bn, 0, 1) }}</span>
+                         class="bg-white border border-amber-100 rounded-xl p-3 sm:p-4 shadow-sm">
+                        {{-- Top: avatar + name + MOQ --}}
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center flex-shrink-0 shadow">
+                                <span class="text-white font-serif-bn font-bold text-lg">{{ mb_substr($product->name_bn, 0, 1) }}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-serif-bn text-[#14532d] font-bold text-sm sm:text-base leading-tight">{{ $product->name_bn }}</div>
+                                @if($product->min_order_quantity)
+                                <div class="text-[11px] text-gray-400">সর্বনিম্ন: {{ rtrim(rtrim(number_format($product->min_order_quantity, 2, '.', ''), '0'), '.') }}{{ $product->min_order_unit ?: 'kg' }}</div>
+                                @endif
+                            </div>
                         </div>
-                        {{-- Name --}}
-                        <div class="flex-1 min-w-0">
-                            <div class="font-serif-bn text-[#14532d] font-bold text-sm sm:text-base leading-tight">{{ $product->name_bn }}</div>
+                        {{-- Controls: unit + qty stepper + add --}}
+                        <div class="flex items-center gap-2 mt-3">
+                            <select id="paykari-unit-{{ $product->id }}" onchange="paykariUnitChange({{ $product->id }})" aria-label="একক"
+                                    class="border border-amber-200 rounded-lg px-2 py-2 text-xs bg-white text-amber-900 font-medium focus:outline-none focus:ring-1 focus:ring-amber-400">
+                                <option value="kg">কেজি (kg)</option>
+                                <option value="bag">বস্তা</option>
+                                <option value="carton">কার্টন</option>
+                            </select>
+                            <div class="flex items-center gap-1">
+                                <button type="button" onclick="paykariStep({{ $product->id }}, -1)" aria-label="কমান"
+                                        class="w-8 h-8 rounded-lg border border-amber-200 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-50 transition">−</button>
+                                <input type="number" id="paykari-qty-{{ $product->id }}" inputmode="decimal" min="5" step="5" value="5"
+                                       class="w-14 text-center border border-amber-200 rounded-lg px-1 py-1.5 text-sm font-bold text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-400">
+                                <button type="button" onclick="paykariStep({{ $product->id }}, 1)" aria-label="বাড়ান"
+                                        class="w-8 h-8 rounded-lg border border-amber-200 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-50 transition">+</button>
+                            </div>
+                            <button id="paykari-btn-{{ $product->id }}" onclick="addToPaykari({{ $product->id }})"
+                                    class="ml-auto flex-shrink-0 bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl transition-colors shadow-sm whitespace-nowrap">
+                                + যোগ করুন
+                            </button>
                         </div>
-                        {{-- KG Input --}}
-                        <div class="flex items-center gap-1.5 flex-shrink-0">
-                            <input type="number"
-                                   id="paykari-qty-{{ $product->id }}"
-                                   value="1" min="1" max="9999" step="1"
-                                   class="border border-amber-200 rounded-xl px-3 py-2 text-sm text-[#14532d] font-semibold w-20 focus:outline-none focus:ring-2 focus:ring-amber-400 text-center bg-white">
-                            <span class="text-gray-500 text-xs font-medium">kg</span>
-                        </div>
-                        {{-- Add button --}}
-                        <button id="paykari-btn-{{ $product->id }}"
-                                onclick="addToPaykari({{ $product->id }})"
-                                class="flex-shrink-0 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm whitespace-nowrap w-full sm:w-auto">
-                            + Enquiry তে যোগ করুন
-                        </button>
+                        {{-- Quick quantity chips (filled by JS for the selected unit) --}}
+                        <div id="paykari-chips-{{ $product->id }}" class="flex flex-wrap gap-1.5 mt-2"></div>
                     </div>
                     @endif
                     @endforeach
@@ -1030,7 +1046,11 @@ $productsForJs = $products->map(function ($p) {
                                     class="w-full bg-amber-500 text-white font-bold py-3 rounded-xl text-sm shadow-lg opacity-40 cursor-not-allowed pointer-events-none transition-all">
                                 পাইকারি অর্ডার পাঠান
                             </button>
-                            <p class="text-amber-700 text-[10px] text-center mt-2 leading-relaxed">
+                            <button type="button" onclick="msCartOpen('paykari')"
+                                    class="w-full mt-2 text-amber-300 hover:text-white text-xs font-semibold py-2 transition-colors">
+                                🛍️ আমার পাইকারি ব্যাগ দেখুন
+                            </button>
+                            <p class="text-amber-700 text-[10px] text-center mt-1 leading-relaxed">
                                 পণ্য যোগ করুন · তারপর enquiry পাঠান
                             </p>
                         </div>
@@ -2375,54 +2395,86 @@ function switchComboTab(tab) {
 }
 
 // ── Paykari Combo Builder ────────────────────────────────────────────────
-let paykariItems = [];
-let paykariUid   = 0;
+// ── Paykari order builder → shared enquiry bag (ms_enquiry_bag) ────────────
+// Single source of truth: the SAME bag the cart drawer + enquiry-bag page use,
+// so counts always match. Wholesale rules reused from the drawer (window.msBag*).
+function pkCfg(unit) {
+    return (window.msBagUnitCfg ? window.msBagUnitCfg(unit)
+        : { step: 5, min: 5, chips: [5, 10, 25, 50], suffix: 'kg' });
+}
+function pkMin(p, unit) {
+    const it = { unit: unit, min_qty: p ? p.min_order_quantity : null, min_unit: p ? p.min_order_unit : null };
+    return (window.msBagMin ? window.msBagMin(it) : pkCfg(unit).min);
+}
+function pkUnitName(unit) { return unit === 'bag' ? 'বস্তা' : (unit === 'carton' ? 'কার্টন' : 'kg'); }
+function pkUnitOf(id) { const el = document.getElementById('paykari-unit-' + id); return el ? el.value : 'kg'; }
+
+function renderPaykariChips(id) {
+    const wrap = document.getElementById('paykari-chips-' + id);
+    if (!wrap) return;
+    const cfg = pkCfg(pkUnitOf(id));
+    wrap.innerHTML = cfg.chips.map(function (c) {
+        return '<button type="button" onclick="paykariSetQty(' + id + ',' + c + ')" ' +
+            'class="px-2.5 py-1 rounded-full text-[11px] font-semibold border border-amber-200 text-amber-800 hover:bg-amber-50 transition">' +
+            fmt(c) + cfg.suffix + '</button>';
+    }).join('');
+}
+function paykariSetQty(id, val) { const el = document.getElementById('paykari-qty-' + id); if (el) el.value = val; }
+
+function paykariUnitChange(id) {
+    const unit = pkUnitOf(id), cfg = pkCfg(unit), min = pkMin(PRODUCTS[id], unit);
+    const el = document.getElementById('paykari-qty-' + id);
+    if (el) { el.value = min; el.min = min; el.step = cfg.step; }
+    renderPaykariChips(id);
+}
+function paykariStep(id, dir) {
+    const unit = pkUnitOf(id), cfg = pkCfg(unit), min = pkMin(PRODUCTS[id], unit);
+    const el = document.getElementById('paykari-qty-' + id);
+    if (!el) return;
+    let q = (parseFloat(el.value) || min) + dir * cfg.step;
+    if (q < min) { q = min; if (window.msToast) msToast('পাইকারি অর্ডারের জন্য কমপক্ষে ' + fmt(min) + cfg.suffix + ' নির্বাচন করুন'); }
+    el.value = q;
+}
 
 function addToPaykari(productId) {
     const p = PRODUCTS[productId];
     if (!p) return;
-    const qtyEl = document.getElementById('paykari-qty-' + productId);
-    const qty   = qtyEl ? parseFloat(qtyEl.value) : 1;
-    if (!qty || qty <= 0) return;
+    const unit = pkUnitOf(productId), cfg = pkCfg(unit), min = pkMin(p, unit);
+    const el = document.getElementById('paykari-qty-' + productId);
+    let qty = el ? parseFloat(el.value) : min;
+    if (!qty || qty < min) { qty = min; if (el) el.value = min; if (window.msToast) msToast('পাইকারি অর্ডারের জন্য কমপক্ষে ' + fmt(min) + cfg.suffix + ' নির্বাচন করুন'); }
 
-    // Duplicate → update qty and flash
-    const dup = paykariItems.find(x => x.productId === productId);
-    if (dup) {
-        dup.quantityKg = qty;
-        renderPaykariBasket();
-        flashPaykariItem(dup.uid);
-        return;
+    // Write into the shared bag (re-add = replace this product's qty/unit).
+    const items = (window.msBagGet ? msBagGet() : []);
+    const ex = items.find(function (x) { return x.product_id === p.id; });
+    if (ex) { ex.quantity = qty; ex.unit = unit; }
+    else {
+        items.push({ product_id: p.id, slug: p.slug, name: p.name_bn, image: p.main_image,
+                     quantity: qty, unit: unit,
+                     min_qty: p.min_order_quantity || null, min_unit: p.min_order_unit || null });
     }
-
-    paykariUid++;
-    paykariItems.push({ uid: paykariUid, productId, nameBn: p.name_bn, nameEn: p.name_en, quantityKg: qty });
+    if (window.msBagSave) msBagSave(items);  // fires ms-bag-changed → basket + drawer + badges
 
     const btn = document.getElementById('paykari-btn-' + productId);
     if (btn) {
         const orig = btn.textContent;
-        btn.textContent = '✓ যোগ হয়েছে';
-        btn.style.background = '#92400e';
-        setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1400);
+        btn.textContent = '✓ যোগ হয়েছে'; btn.style.background = '#92400e';
+        setTimeout(function () { btn.textContent = orig; btn.style.background = ''; }, 1300);
     }
-    renderPaykariBasket();
 }
-
-function removeFromPaykari(uid) {
-    paykariItems = paykariItems.filter(x => x.uid !== uid);
-    renderPaykariBasket();
+function removeFromPaykari(productId) {
+    const items = (window.msBagGet ? msBagGet() : []).filter(function (x) { return x.product_id !== productId; });
+    if (window.msBagSave) msBagSave(items);
 }
-
-function editPaykariQty(uid, val) {
-    const item = paykariItems.find(x => x.uid === uid);
-    if (item && parseFloat(val) > 0) item.quantityKg = parseFloat(val);
-}
-
-function flashPaykariItem(uid) {
-    const el = document.getElementById('pitem-' + uid);
-    if (!el) return;
-    el.style.transition = 'background .15s';
-    el.style.background = 'rgba(251,191,36,.3)';
-    setTimeout(() => { el.style.background = ''; }, 900);
+function editPaykariQty(productId, val) {
+    const items = (window.msBagGet ? msBagGet() : []);
+    const it = items.find(function (x) { return x.product_id === productId; });
+    if (!it) return;
+    const min = pkMin(PRODUCTS[productId], it.unit);
+    let q = parseFloat(val);
+    if (!q || q < min) { q = min; if (window.msToast) msToast('পাইকারি অর্ডারের জন্য কমপক্ষে ' + fmt(min) + pkCfg(it.unit).suffix + ' নির্বাচন করুন'); }
+    it.quantity = q;
+    if (window.msBagSave) msBagSave(items);
 }
 
 function renderPaykariBasket() {
@@ -2432,72 +2484,95 @@ function renderPaykariBasket() {
     const btnEl   = document.getElementById('paykari-enquiry-btn');
     if (!listEl) return;
 
-    const n = paykariItems.length;
+    const items = (window.msBagGet ? msBagGet() : []);
+    const n = items.length;
 
     if (n === 0) {
         if (emptyEl) emptyEl.style.display = '';
         listEl.innerHTML = '';
         if (badgeEl) { badgeEl.style.display = 'none'; badgeEl.textContent = '0'; }
-        if (btnEl) { btnEl.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none'); }
+        if (btnEl) btnEl.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
         return;
     }
-
     if (emptyEl) emptyEl.style.display = 'none';
     if (badgeEl) { badgeEl.style.display = ''; badgeEl.textContent = n; }
-    if (btnEl)   { btnEl.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none'); }
+    if (btnEl) btnEl.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
 
-    listEl.innerHTML = paykariItems.map(item => `
-        <div id="pitem-${item.uid}" class="flex items-center justify-between py-2 border-b border-amber-700 last:border-0">
-            <div class="flex-1 min-w-0 mr-2">
-                <span class="font-serif-bn text-white text-sm font-semibold">${item.nameBn || ''}</span>
-                ${item.nameEn ? '<span class="text-amber-400 text-xs ml-1">/ ' + item.nameEn + '</span>' : ''}
-            </div>
-            <div class="flex items-center gap-1.5 flex-shrink-0">
-                <input type="number" value="${item.quantityKg}" min="1" step="1"
-                       onchange="editPaykariQty(${item.uid}, this.value)"
-                       class="w-14 text-center text-xs border border-amber-600 rounded-lg bg-amber-900 text-amber-200 py-1 focus:outline-none">
-                <span class="text-amber-400 text-xs">kg</span>
-                <button onclick="removeFromPaykari(${item.uid})"
-                        class="text-amber-500 hover:text-red-400 transition-colors text-xl leading-none ml-1 font-bold">&times;</button>
-            </div>
-        </div>
-    `).join('');
+    listEl.innerHTML = items.map(function (it) {
+        const cfg = pkCfg(it.unit), min = pkMin(PRODUCTS[it.product_id], it.unit);
+        return '' +
+        '<div class="flex items-center justify-between py-2 border-b border-amber-700 last:border-0">' +
+            '<div class="flex-1 min-w-0 mr-2">' +
+                '<span class="font-serif-bn text-white text-sm font-semibold">' + (it.name || '') + '</span>' +
+            '</div>' +
+            '<div class="flex items-center gap-1.5 flex-shrink-0">' +
+                '<input type="number" value="' + (parseFloat(it.quantity) || 0) + '" min="' + min + '" step="' + cfg.step + '" ' +
+                    'onchange="editPaykariQty(' + it.product_id + ', this.value)" ' +
+                    'class="w-14 text-center text-xs border border-amber-600 rounded-lg bg-amber-900 text-amber-200 py-1 focus:outline-none">' +
+                '<span class="text-amber-400 text-xs">' + pkUnitName(it.unit) + '</span>' +
+                '<button onclick="removeFromPaykari(' + it.product_id + ')" class="text-amber-500 hover:text-red-400 transition-colors text-xl leading-none ml-1 font-bold">&times;</button>' +
+            '</div>' +
+        '</div>';
+    }).join('');
 }
 
 function openPaykariEnquiryForm() {
-    if (paykariItems.length === 0) return;
+    const items = (window.msBagGet ? msBagGet() : []);
+    if (items.length === 0) return;
 
     const preview = document.getElementById('paykari-form-items-preview');
     if (preview) {
-        preview.innerHTML = paykariItems.map(item =>
-            `<div class="flex justify-between text-amber-800 py-0.5">
-                <span class="font-serif-bn font-semibold text-sm">${item.nameBn || ''}</span>
-                <span class="text-amber-600 font-medium text-sm">${item.quantityKg} kg</span>
-             </div>`
-        ).join('');
+        preview.innerHTML = items.map(function (it) {
+            return '<div class="flex justify-between text-amber-800 py-0.5">' +
+                '<span class="font-serif-bn font-semibold text-sm">' + (it.name || '') + '</span>' +
+                '<span class="text-amber-600 font-medium text-sm">' + (parseFloat(it.quantity) || 0) + ' ' + pkUnitName(it.unit) + '</span>' +
+                '</div>';
+        }).join('');
     }
-
     const hiddenContainer = document.getElementById('paykari-form-items-hidden');
     if (hiddenContainer) {
-        hiddenContainer.innerHTML = paykariItems.map((item, i) =>
-            `<input type="hidden" name="items[${i}][product_id]" value="${item.productId}">
-             <input type="hidden" name="items[${i}][quantity_kg]" value="${item.quantityKg}">`
-        ).join('');
+        hiddenContainer.innerHTML = items.map(function (it, i) {
+            return '<input type="hidden" name="items[' + i + '][product_id]" value="' + it.product_id + '">' +
+                   '<input type="hidden" name="items[' + i + '][quantity_kg]" value="' + (parseFloat(it.quantity) || 0) + '">' +
+                   '<input type="hidden" name="items[' + i + '][quantity_unit]" value="' + (it.unit || 'kg') + '">';
+        }).join('');
     }
-
     document.getElementById('paykari-enq-overlay').style.display = 'block';
     document.getElementById('paykari-enq-wrapper').style.display = 'block';
     document.body.style.overflow = 'hidden';
 }
-
 function closePaykariEnquiryForm() {
     document.getElementById('paykari-enq-overlay').style.display = 'none';
     document.getElementById('paykari-enq-wrapper').style.display = 'none';
     document.body.style.overflow = '';
 }
 
-// Restore saved combo tab
-try { if (localStorage.getItem('msComboTab') === 'paykari') switchComboTab('paykari'); } catch(e) {}
+// Initialise each picker row's qty/step/chips for its default unit.
+function paykariInitRows() {
+    Object.values(PRODUCTS).forEach(function (p) {
+        if (document.getElementById('paykari-unit-' + p.id)) paykariUnitChange(p.id);
+    });
+}
+// Stay in sync with every other view of the bag (drawer, listing, detail page).
+window.addEventListener('ms-bag-changed', renderPaykariBasket);
+document.addEventListener('DOMContentLoaded', function () {
+    paykariInitRows();
+    renderPaykariBasket();
+    // Items are serialized into the form on submit; clear the bag so it isn't resubmitted.
+    const pkForm = document.getElementById('paykari-enquiry-form');
+    if (pkForm) pkForm.addEventListener('submit', function () {
+        try { localStorage.removeItem(window.MS_BAG_KEY || 'ms_enquiry_bag'); } catch (e) {}
+    });
+});
+
+// Restore combo tab: URL ?combo=paykari (from the cart drawer) wins, else saved tab.
+(function () {
+    try {
+        const c = (new URLSearchParams(window.location.search).get('combo') || '').toLowerCase();
+        if (c === 'paykari' || c === 'wholesale') { switchComboTab('paykari'); return; }
+    } catch (e) {}
+    try { if (localStorage.getItem('msComboTab') === 'paykari') switchComboTab('paykari'); } catch (e) {}
+})();
 
 // ── Modal open/close ──────────────────────────────────────────────────────
 function openModal(id) {

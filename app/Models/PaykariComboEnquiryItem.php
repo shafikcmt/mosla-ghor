@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PaykariComboEnquiryItem extends Model
 {
     protected $fillable = [
-        'combo_enquiry_id', 'product_id', 'product_name', 'quantity_kg',
+        'combo_enquiry_id', 'product_id', 'product_name', 'quantity_kg', 'quantity_unit',
     ];
 
     protected $casts = [

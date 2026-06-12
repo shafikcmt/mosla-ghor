@@ -43,6 +43,7 @@ class PaykariComboEnquiryController extends Controller
             'items'                  => ['required', 'array', 'min:1', 'max:20'],
             'items.*.product_id'     => ['required', 'exists:products,id'],
             'items.*.quantity_kg'    => ['required', 'numeric', 'min:0.1'],
+            'items.*.quantity_unit'  => ['nullable', 'string', 'in:kg,bag,carton,piece'],
             'delivery_location'      => ['required', 'string', 'max:255'],
             'business_type'          => ['nullable', 'in:shop,restaurant,dealer,retailer,other'],
             'customer_name'          => ['required', 'string', 'max:100'],
@@ -67,9 +68,10 @@ class PaykariComboEnquiryController extends Controller
         foreach ($validated['items'] as $itemData) {
             $product = Product::find($itemData['product_id']);
             $enquiry->items()->create([
-                'product_id'   => $itemData['product_id'],
-                'product_name' => $product ? ($product->name_bn ?: $product->name_en) : 'N/A',
-                'quantity_kg'  => $itemData['quantity_kg'],
+                'product_id'    => $itemData['product_id'],
+                'product_name'  => $product ? ($product->name_bn ?: $product->name_en) : 'N/A',
+                'quantity_kg'   => $itemData['quantity_kg'],
+                'quantity_unit' => $itemData['quantity_unit'] ?? 'kg',
             ]);
         }
 
