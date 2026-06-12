@@ -13,9 +13,19 @@ use Illuminate\Support\Facades\Auth;
 class ProductController extends Controller
 {
     /** Public, SEO-friendly RETAIL product detail page (/products/{slug}). */
-    public function show(Product $product)
+    public function show(Request $request, Product $product)
     {
-        return $this->renderDetail($product, false);
+        // Honor an explicit wholesale mode (?mode=wholesale / ?tab=wholesale|paykari)
+        // and always show wholesale-only products in the enquiry layout.
+        $wholesale = $this->wantsWholesaleMode($request) || $product->isWholesale();
+        return $this->renderDetail($product, $wholesale);
+    }
+
+    /** True when the request explicitly asks for wholesale/paykari mode. */
+    protected function wantsWholesaleMode(Request $request): bool
+    {
+        $mode = strtolower((string) ($request->query('mode') ?? $request->query('tab') ?? ''));
+        return in_array($mode, ['wholesale', 'paykari'], true);
     }
 
     /** Public WHOLESALE product detail page (/wholesale/products/{slug}) — price hidden, enquiry-only. */

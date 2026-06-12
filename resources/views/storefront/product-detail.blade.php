@@ -325,14 +325,18 @@
                         data-id="{{ $product->id }}" data-slug="{{ $product->slug }}"
                         data-name="{{ $product->display_name }}" data-image="{{ $main }}"
                         data-qty="{{ $product->min_order_quantity ?: 1 }}" data-unit="{{ $product->min_order_unit ?: 'kg' }}"
+                        data-min="{{ $product->min_order_quantity ?: '' }}" data-min-unit="{{ $product->min_order_unit ?: '' }}"
                         class="border border-amber-500 text-amber-700 hover:bg-amber-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
-                    🛍️ Enquiry Bag-এ যোগ
+                    🛍️ পাইকারি ব্যাগে যোগ করুন
                 </button>
             </div>
 
-            {{-- Friendly public note (no strict warning on the public page) --}}
+            {{-- Bulk pricing note + platform-safety message --}}
             <p class="text-xs text-gray-500 mt-3">
-                পাইকারি মূল্য জানতে enquiry পাঠান। MoslaMart team আপনাকে quote জানাবে।
+                Bulk quantity অনুযায়ী price change হতে পারে। MoslaMart team quote জানাবে।
+            </p>
+            <p class="text-[11px] text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2 mt-2 leading-snug">
+                আপনার তথ্য, quote এবং payment record নিরাপদ রাখার জন্য MoslaMart chatbox এবং order process ব্যবহার করুন।
             </p>
 
             {{-- In-page enquiry form (slide section, NOT a popup) — guest + logged-in --}}
@@ -668,7 +672,8 @@
         const b = document.getElementById('pd-add-bag');
         if (b) b.addEventListener('click', function () {
             msBagAdd(parseInt(b.dataset.id, 10), b.dataset.slug, b.dataset.name, b.dataset.image,
-                     parseFloat(b.dataset.qty) || 1, b.dataset.unit || 'kg');
+                     parseFloat(b.dataset.qty) || 1, b.dataset.unit || 'kg',
+                     parseFloat(b.dataset.min) || null, b.dataset.minUnit || null);
         });
     })();
 </script>

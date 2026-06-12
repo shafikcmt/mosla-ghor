@@ -400,11 +400,11 @@ $productsForJs = $products->map(function ($p) {
                 {{-- Retail / Wholesale tab --}}
                 <div class="flex items-center gap-0.5 p-1 bg-white border border-gray-200 rounded-xl shadow-sm">
                     <button id="tab-retail" onclick="setTab('retail')"
-                            class="px-4 py-1.5 rounded-lg bg-[#14532d] text-white text-xs font-semibold transition-colors">
+                            class="px-5 py-2 rounded-lg bg-[#14532d] text-white text-sm font-bold transition-colors">
                         খুচরা
                     </button>
                     <button id="tab-wholesale" onclick="setTab('wholesale')"
-                            class="px-4 py-1.5 rounded-lg text-gray-400 hover:text-gray-600 text-xs font-semibold transition-colors">
+                            class="px-5 py-2 rounded-lg text-gray-500 hover:text-gray-700 text-sm font-bold transition-colors">
                         পাইকারি
                     </button>
                 </div>
@@ -525,14 +525,18 @@ $productsForJs = $products->map(function ($p) {
 
                     @if($product->is_wholesale)
                     {{-- Paykari product: price hidden on card, enquiry-only --}}
-                    <div class="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full self-start">
-                        পাইকারি — দাম জানতে enquiry
+                    <div class="mt-3 flex flex-wrap items-center gap-1.5">
+                        <span class="inline-flex items-center gap-1 text-xs font-semibold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full">দর জানতে চাই</span>
+                        @if($product->min_order_quantity)
+                        <span class="text-[11px] text-gray-500">MOQ: {{ rtrim(rtrim(number_format($product->min_order_quantity, 2, '.', ''), '0'), '.') }}{{ $product->min_order_unit ?: 'kg' }}</span>
+                        @endif
                     </div>
                     <div class="flex-1 min-h-3"></div>
-                    <div class="mt-4">
+                    <div class="mt-4 flex flex-col gap-2">
+                        @include('partials.wholesale-bag-button')
                         <a href="{{ $detailUrl }}"
-                           class="block w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
-                            বিস্তারিত দেখুন
+                           class="block w-full border border-amber-700 text-amber-800 hover:bg-amber-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                            দর জানতে চাই
                         </a>
                     </div>
                     @else
@@ -559,9 +563,12 @@ $productsForJs = $products->map(function ($p) {
                         @endforeach
                     </div>
 
-                    {{-- Wholesale CTA (hidden in retail mode) --}}
-                    <div id="card-wholesale-ui-{{ $product->id }}" style="display:none;" class="mt-3">
-                        {{-- wholesale prices shown in modal, nothing extra on card --}}
+                    {{-- Wholesale enquiry info (shown only in পাইকারি mode) --}}
+                    <div id="card-wholesale-ui-{{ $product->id }}" style="display:none;" class="mt-3 flex flex-wrap items-center gap-1.5">
+                        <span class="inline-flex items-center gap-1 text-xs font-semibold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full">দর জানতে চাই</span>
+                        @if($product->min_order_quantity)
+                        <span class="text-[11px] text-gray-500">MOQ: {{ rtrim(rtrim(number_format($product->min_order_quantity, 2, '.', ''), '0'), '.') }}{{ $product->min_order_unit ?: 'kg' }}</span>
+                        @endif
                     </div>
 
                     <div class="flex-1 min-h-3"></div>
@@ -578,11 +585,12 @@ $productsForJs = $products->map(function ($p) {
                         </button>
                     </div>
 
-                    {{-- Wholesale mode buttons (hidden in retail mode) → wholesale detail page --}}
-                    <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4">
+                    {{-- Wholesale mode buttons (hidden in retail mode): add to enquiry bag + ask price --}}
+                    <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4 flex flex-col gap-2">
+                        @include('partials.wholesale-bag-button')
                         <a href="{{ route('customer.wholesale.products.show', $product->slug) }}"
-                           class="block w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
-                            বিস্তারিত দেখুন
+                           class="block w-full border border-amber-700 text-amber-800 hover:bg-amber-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                            দর জানতে চাই
                         </a>
                     </div>
                     @endif
@@ -603,7 +611,7 @@ $productsForJs = $products->map(function ($p) {
                     ? route('customer.wholesale.products.show', $product->slug)
                     : route('products.show', $product->slug);
             @endphp
-            <article class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
+            <article data-list-product="{{ $product->id }}" class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
 
                 {{-- Thumb --}}
                 <div class="w-28 sm:w-36 flex-shrink-0 relative min-h-[110px]">
@@ -674,6 +682,17 @@ $productsForJs = $products->map(function ($p) {
                 </div>
             </article>
             @endforeach
+        </div>
+
+        {{-- Wholesale empty state — shown by JS when পাইকারি mode has no wholesale products --}}
+        <div id="ms-wholesale-empty" style="display:none;" class="text-center py-20">
+            <div class="text-5xl mb-4">🧺</div>
+            <p class="font-serif-bn text-[#14532d] text-xl font-bold">এখন কোনো পাইকারি পণ্য পাওয়া যায়নি</p>
+            <p class="text-gray-500 text-sm mt-1 mb-5">খুব শীঘ্রই নতুন পাইকারি পণ্য যোগ করা হবে।</p>
+            <button type="button" onclick="setTab('retail')"
+                    class="inline-block bg-[#14532d] hover:bg-[#166534] text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-colors">
+                সব পণ্য দেখুন
+            </button>
         </div>
 
         @endif {{-- end products not empty --}}
@@ -2097,9 +2116,9 @@ function rebuildModalPrices(prices) {
     if (sp) sp.textContent = '——';
 }
 
-const TAB_ON      = 'px-4 py-1.5 rounded-lg bg-[#14532d] text-white text-xs font-semibold transition-colors';
-const TAB_WS_ON   = 'px-4 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold transition-colors';
-const TAB_OFF     = 'px-4 py-1.5 rounded-lg text-gray-400 hover:text-gray-600 text-xs font-semibold transition-colors';
+const TAB_ON      = 'px-5 py-2 rounded-lg bg-[#14532d] text-white text-sm font-bold transition-colors';
+const TAB_WS_ON   = 'px-5 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold transition-colors';
+const TAB_OFF     = 'px-5 py-2 rounded-lg text-gray-500 hover:text-gray-700 text-sm font-bold transition-colors';
 
 function setTab(tab) {
     activeTab = tab;
@@ -2114,7 +2133,41 @@ function setTab(tab) {
     refreshListViewForTab();
     refreshPickerForTab();
     refreshCombosForTab();
+    filterCardsByMode();
     try { localStorage.setItem('mstab', tab); } catch(e) {}
+}
+
+// Show only the products that belong to the active mode:
+//   retail  → non-wholesale products (is_wholesale = false)
+//   পাইকারি  → wholesale-only products (is_wholesale = true)
+// Toggles both the card-view <article> and the list-view <article> for each product,
+// and surfaces a friendly empty state when পাইকারি has no products.
+function filterCardsByMode() {
+    const isWholesale = activeTab === 'wholesale';
+    let visible = 0;
+    Object.values(PRODUCTS).forEach(function (p) {
+        const show = isWholesale ? !!p.is_wholesale : !p.is_wholesale;
+        if (show) visible++;
+        document
+            .querySelectorAll('[data-card-product="' + p.id + '"], [data-list-product="' + p.id + '"]')
+            .forEach(function (el) { el.style.display = show ? '' : 'none'; });
+    });
+
+    const emptyEl = document.getElementById('ms-wholesale-empty');
+    const cv = document.getElementById('card-view');
+    const lv = document.getElementById('list-view');
+    let view = 'card';
+    try { if (localStorage.getItem('msv') === 'list') view = 'list'; } catch (e) {}
+
+    if (visible === 0) {
+        if (emptyEl) emptyEl.style.display = '';
+        if (cv) cv.style.display = 'none';
+        if (lv) lv.style.display = 'none';
+    } else {
+        if (emptyEl) emptyEl.style.display = 'none';
+        if (cv) cv.style.display = view === 'card' ? '' : 'none';
+        if (lv) lv.style.display = view === 'list' ? 'flex' : 'none';
+    }
 }
 
 function refreshCardsForTab() {
@@ -2155,11 +2208,18 @@ function refreshCardsForTab() {
 }
 
 function refreshListViewForTab() {
+    const isWholesale = activeTab === 'wholesale';
     Object.values(PRODUCTS).forEach(function(p) {
         if (p.is_wholesale) return; // Paykari rows are static (no price chips)
-        const prices = activeTabPrices(p);
         const pc = document.getElementById('list-prices-' + p.id);
         const lf = document.getElementById('list-from-' + p.id);
+        if (isWholesale) {
+            // Wholesale mode: no fixed price — show an enquiry badge instead.
+            if (pc) pc.innerHTML = '<span class="text-[11px] font-semibold text-orange-700 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full">দর জানতে চাই</span>';
+            if (lf) lf.textContent = '';
+            return;
+        }
+        const prices = activeTabPrices(p);
         if (pc) pc.innerHTML = prices.map(function(pr) {
             return '<span class="text-[11px] bg-green-50 border border-green-100 text-[#14532d] px-2 py-0.5 rounded-full whitespace-nowrap">' + pr.label + ' · ৳' + fmt(pr.final_price) + '</span>';
         }).join('');
@@ -2258,8 +2318,22 @@ function closeEnquiry() {
     enquiryProductId = null;
 }
 
-// Restore saved tab
-try { const saved = localStorage.getItem('mstab'); if (saved === 'wholesale') setTab('wholesale'); } catch(e) {}
+// Decide initial tab: URL ?tab=/?mode= wins (cross-page links), else the saved tab.
+// Accepts tab=wholesale|paykari|retail and mode=wholesale|retail. Defaults to retail.
+(function () {
+    let applied = false;
+    try {
+        const qs = new URLSearchParams(window.location.search);
+        let want = (qs.get('tab') || qs.get('mode') || '').toLowerCase();
+        if (want === 'paykari') want = 'wholesale';
+        if (want === 'retail' || want === 'wholesale') { setTab(want); applied = true; }
+    } catch (e) {}
+    if (!applied) {
+        try { if (localStorage.getItem('mstab') === 'wholesale') { setTab('wholesale'); applied = true; } } catch (e) {}
+    }
+    // Retail default still needs filtering so wholesale-only products stay hidden.
+    if (!applied) filterCardsByMode();
+})();
 
 // ── Combo Builder Mode (Retail / Paykari) ─────────────────────────────────
 function switchComboTab(tab) {
@@ -2640,6 +2714,7 @@ function setView(view) {
         bl.className = on;  bl.setAttribute('aria-pressed','true');
     }
     try { localStorage.setItem('msv', view); } catch(e) {}
+    filterCardsByMode(); // keep mode filtering + empty state correct after a view switch
 }
 
 // Restore saved view

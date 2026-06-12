@@ -40,17 +40,17 @@
         </button>
     </div>
 
-    {{-- Tabs --}}
-    <div class="flex shrink-0 border-b border-green-100 bg-white">
+    {{-- Tabs (pinned at top of drawer; large tap targets, clear active state) --}}
+    <div class="flex shrink-0 border-b-2 border-green-100 bg-white">
         <button id="ms-tab-retail-btn" onclick="msCartTab('retail')"
-                class="flex-1 px-3 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5">
+                class="flex-1 px-3 py-3.5 text-[15px] font-bold transition-colors flex items-center justify-center gap-1.5 border-b-2 border-transparent">
             খুচরা / কম্বো
-            <span id="ms-tab-retail-count" class="bg-[#c9a227] text-[#0f3d22] text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 items-center justify-center" style="display:none;">0</span>
+            <span id="ms-tab-retail-count" class="bg-[#c9a227] text-[#0f3d22] text-[11px] font-bold rounded-full min-w-[20px] h-[20px] px-1 items-center justify-center" style="display:none;">0</span>
         </button>
         <button id="ms-tab-paykari-btn" onclick="msCartTab('paykari')"
-                class="flex-1 px-3 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-1.5">
+                class="flex-1 px-3 py-3.5 text-[15px] font-bold transition-colors flex items-center justify-center gap-1.5 border-b-2 border-transparent">
             পাইকারি
-            <span id="ms-tab-paykari-count" class="bg-amber-700 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 items-center justify-center" style="display:none;">0</span>
+            <span id="ms-tab-paykari-count" class="bg-amber-700 text-white text-[11px] font-bold rounded-full min-w-[20px] h-[20px] px-1 items-center justify-center" style="display:none;">0</span>
         </button>
     </div>
 
@@ -94,17 +94,39 @@
 
     {{-- ═══════════ PAYKARI BODY ═══════════ --}}
     <div id="ms-paykari-body" class="flex-1 flex flex-col min-h-0" style="display:none;">
+        {{-- Helper hint (shows whenever the wholesale tab is active) --}}
+        <div class="shrink-0 bg-amber-50 border-b border-amber-100 px-4 py-2">
+            <p class="text-[11px] text-amber-800 leading-snug">বাল্ক অর্ডারের জন্য kg, বস্তা বা কার্টন নির্বাচন করুন</p>
+        </div>
+        {{-- Empty state --}}
         <div id="ms-bag-empty" class="flex-1 flex flex-col items-center justify-center text-center px-6 py-10" style="display:none;">
             <div class="text-5xl mb-3">🧺</div>
-            <p class="font-serif-bn text-amber-800 text-lg font-bold">পাইকারি ব্যাগ খালি</p>
-            <p class="text-gray-500 text-sm mt-1 mb-5">পাইকারি দরের জন্য পণ্য যোগ করুন</p>
+            <p class="font-serif-bn text-amber-800 text-lg font-bold">আপনার পাইকারি ব্যাগ খালি</p>
+            <p class="text-gray-500 text-sm mt-1 mb-5">বাল্ক অর্ডারের জন্য পণ্য যোগ করুন</p>
+            <div class="flex flex-col gap-2 w-full max-w-[220px]">
+                <a href="/?tab=wholesale#products" onclick="msCartClose()"
+                   class="bg-amber-700 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-amber-800 transition">পাইকারি পণ্য দেখুন</a>
+                <a href="{{ route('wholesale.enquiry-bag') }}"
+                   class="border border-amber-600 text-amber-800 text-sm font-semibold py-2.5 rounded-xl hover:bg-amber-50 transition">পাইকারি কম্বো তৈরি করুন</a>
+            </div>
         </div>
+
+        {{-- Items --}}
         <div id="ms-bag-list" class="flex-1 overflow-y-auto px-4 py-3 space-y-2"></div>
-        <div id="ms-bag-foot" class="shrink-0 border-t border-amber-100 bg-white px-4 py-3" style="display:none;">
+
+        {{-- Footer: quick actions + main CTA --}}
+        <div id="ms-bag-foot" class="shrink-0 border-t border-amber-100 bg-white px-4 py-3 space-y-3" style="display:none;">
+            <p class="text-[11px] text-gray-400 leading-snug">পরিমাণ ঠিক করে দর জানতে চান — MoslaMart টিম quote পাঠাবে।</p>
             <a href="{{ route('wholesale.enquiry-bag') }}"
                class="block w-full text-center bg-amber-700 hover:bg-amber-800 text-white font-bold text-sm py-3 rounded-xl transition shadow">
-                পাইকারি ব্যাগ / দর জানতে চাই →
+                দর জানতে চাই →
             </a>
+            <div class="grid grid-cols-2 gap-2">
+                <a href="/?tab=wholesale#products" onclick="msCartClose()"
+                   class="text-center border border-amber-700 text-amber-800 text-xs font-semibold py-2 rounded-lg hover:bg-amber-50 transition">+ আরও পাইকারি পণ্য</a>
+                <a href="{{ route('wholesale.enquiry-bag') }}"
+                   class="text-center border border-gray-300 text-gray-600 text-xs font-semibold py-2 rounded-lg hover:bg-gray-50 transition">পাইকারি কম্বো</a>
+            </div>
         </div>
     </div>
 </aside>
@@ -147,13 +169,81 @@
     window.msBagSave = function (items) { try { localStorage.setItem(MS_BAG_KEY, JSON.stringify(items)); } catch (e) {} msBadges(); msCartRender(); };
     window.msBagCount = function () { return msBagGet().length; };
     window.msBagBadge = function () { msBadges(); };   // back-compat alias
-    window.msBagAdd  = function (id, slug, name, image, qty, unit) {
+    window.msBagAdd  = function (id, slug, name, image, qty, unit, minQty, minUnit) {
         const items = msBagGet();
         const ex = items.find(function (x) { return x.product_id === id; });
-        if (ex) { ex.quantity = (parseFloat(ex.quantity) || 0) + (parseFloat(qty) || 1); }
-        else { items.push({ product_id: id, slug: slug, name: name, image: image, quantity: parseFloat(qty) || 1, unit: unit || 'kg' }); }
+        if (ex) {
+            const cfg = msBagUnitCfg(ex.unit);
+            ex.quantity = (parseFloat(ex.quantity) || 0) + (parseFloat(qty) || cfg.step);
+        } else {
+            const it = { product_id: id, slug: slug, name: name, image: image,
+                         unit: unit || 'kg',
+                         min_qty: parseFloat(minQty) || null, min_unit: minUnit || null };
+            // Never start below the wholesale minimum for the chosen unit.
+            it.quantity = Math.max(parseFloat(qty) || 0, msBagMin(it)) || msBagMin(it);
+            items.push(it);
+        }
         msBagSave(items);
         msToast('🛍️ পাইকারি ব্যাগে যোগ হয়েছে');
+    };
+
+    // ── Wholesale quantity rules (unit-aware step/min, honors product MOQ) ──
+    // kg → step 5, default min 5;  বস্তা/কার্টন → step 1, min 1.
+    function msBagUnitCfg(unit) {
+        if (unit === 'bag')    return { step: 1, min: 1, chips: [1, 2, 5],   label: 'বস্তা', suffix: ' বস্তা' };
+        if (unit === 'carton') return { step: 1, min: 1, chips: [1, 2, 5],   label: 'কার্টন', suffix: ' কার্টন' };
+        return { step: 5, min: 5, chips: [5, 10, 25, 50], label: 'kg', suffix: 'kg' };   // kg default
+    }
+    // Product MOQ applies only in its own unit (or kg when unit unspecified).
+    function msBagMin(it) {
+        const cfg = msBagUnitCfg(it.unit);
+        const pm = parseFloat(it.min_qty);
+        if (pm > 0 && (it.min_unit ? it.min_unit === it.unit : it.unit === 'kg')) {
+            return Math.max(cfg.min, pm);
+        }
+        return cfg.min;
+    }
+    function msBagWarn(it) {
+        const cfg = msBagUnitCfg(it.unit);
+        msToast('পাইকারি অর্ডারের জন্য কমপক্ষে ' + msFmt(msBagMin(it)) + cfg.suffix + ' নির্বাচন করুন');
+    }
+
+    // In-drawer management — msBagSave re-renders the drawer instantly.
+    window.msBagInc = function (i) {
+        const items = msBagGet(); if (!items[i]) return;
+        items[i].quantity = (parseFloat(items[i].quantity) || 0) + msBagUnitCfg(items[i].unit).step;
+        msBagSave(items);
+    };
+    window.msBagDec = function (i) {
+        const items = msBagGet(); if (!items[i]) return;
+        const min = msBagMin(items[i]);
+        const next = (parseFloat(items[i].quantity) || 0) - msBagUnitCfg(items[i].unit).step;
+        if (next < min) { items[i].quantity = min; msBagSave(items); msBagWarn(items[i]); return; }
+        items[i].quantity = next; msBagSave(items);
+    };
+    window.msBagSetQty = function (i, val) {
+        const items = msBagGet(); if (!items[i]) return;
+        const min = msBagMin(items[i]);
+        let q = parseFloat(val);
+        if (!(q > 0) || q < min) { q = min; msBagWarn(items[i]); }
+        items[i].quantity = q; msBagSave(items);
+    };
+    window.msBagSetUnit = function (i, unit) {
+        const items = msBagGet(); if (!items[i]) return;
+        items[i].unit = unit;
+        items[i].quantity = msBagMin(items[i]);   // reset to that unit's minimum
+        msBagSave(items);
+    };
+    window.msBagChip = function (i, val) {
+        const items = msBagGet(); if (!items[i]) return;
+        const min = msBagMin(items[i]);
+        let q = parseFloat(val) || min;
+        if (q < min) { q = min; msBagWarn(items[i]); }
+        items[i].quantity = q; msBagSave(items);
+    };
+    window.msBagRemove = function (i) {
+        const items = msBagGet();
+        if (items[i]) { items.splice(i, 1); msBagSave(items); msToast('পণ্য সরানো হয়েছে'); }
     };
 
     // ── Retail cart store (localStorage['ms_cart']) ───────────────────────
@@ -209,10 +299,10 @@
     };
 
     // ── Drawer open / close / tab ─────────────────────────────────────────
-    const TAB_ON_R  = 'flex-1 px-3 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 bg-[#14532d] text-[#c9a227]';
-    const TAB_OFF_R = 'flex-1 px-3 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 text-gray-600 hover:bg-gray-50';
-    const TAB_ON_P  = 'flex-1 px-3 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 bg-amber-700 text-white';
-    const TAB_OFF_P = 'flex-1 px-3 py-2.5 text-sm font-semibold flex items-center justify-center gap-1.5 text-gray-600 hover:bg-amber-50';
+    const TAB_ON_R  = 'flex-1 px-3 py-3.5 text-[15px] font-bold flex items-center justify-center gap-1.5 bg-[#14532d] text-[#c9a227] border-b-2 border-[#c9a227]';
+    const TAB_OFF_R = 'flex-1 px-3 py-3.5 text-[15px] font-bold flex items-center justify-center gap-1.5 text-gray-500 hover:bg-gray-50 border-b-2 border-transparent';
+    const TAB_ON_P  = 'flex-1 px-3 py-3.5 text-[15px] font-bold flex items-center justify-center gap-1.5 bg-amber-700 text-white border-b-2 border-amber-900';
+    const TAB_OFF_P = 'flex-1 px-3 py-3.5 text-[15px] font-bold flex items-center justify-center gap-1.5 text-gray-500 hover:bg-amber-50 border-b-2 border-transparent';
 
     window.msCartTab = function (tab) {
         const retail  = document.getElementById('ms-retail-body');
@@ -294,13 +384,47 @@
                 bagList.style.display = 'block';
                 if (bagEmpty) bagEmpty.style.display = 'none';
                 if (bagFoot)  bagFoot.style.display  = 'block';
-                bagList.innerHTML = bag.map(function (it) {
+                bagList.innerHTML = bag.map(function (it, i) {
+                    const variant = it.variant ? '<span class="text-gray-400"> · ' + it.variant + '</span>' : '';
+                    const cfg = msBagUnitCfg(it.unit);
+                    const min = msBagMin(it);
+                    const qty = parseFloat(it.quantity) || min;
+                    // Unit selector (kg / বস্তা / কার্টন)
+                    const units = [['kg', 'কেজি (kg)'], ['bag', 'বস্তা'], ['carton', 'কার্টন']];
+                    const opts = units.map(function (u) {
+                        return '<option value="' + u[0] + '"' + (it.unit === u[0] ? ' selected' : '') + '>' + u[1] + '</option>';
+                    }).join('');
+                    // Quick quantity chips for the current unit
+                    const chips = cfg.chips.map(function (c) {
+                        const on = qty === c;
+                        return '<button type="button" onclick="msBagChip(' + i + ',' + c + ')" ' +
+                            'class="px-2.5 py-1 rounded-full text-[11px] font-semibold border transition ' +
+                            (on ? 'bg-amber-700 text-white border-amber-700' : 'border-amber-200 text-amber-800 hover:bg-amber-50') + '">' +
+                            msFmt(c) + cfg.suffix + '</button>';
+                    }).join('');
                     return '' +
-                    '<div class="flex items-center gap-2 bg-white rounded-xl border border-amber-50 px-3 py-2.5 shadow-sm">' +
-                        '<div class="flex-1 min-w-0">' +
-                            '<div class="font-serif-bn text-amber-900 text-sm font-semibold truncate">' + (it.name || '') + '</div>' +
-                            '<div class="text-[11px] text-gray-500 mt-0.5">পরিমাণ: ' + msFmt(it.quantity) + ' ' + (it.unit || '') + '</div>' +
+                    '<div class="bg-white rounded-xl border border-amber-50 px-3 py-3 shadow-sm">' +
+                        '<div class="flex items-start gap-2">' +
+                            '<div class="flex-1 min-w-0">' +
+                                '<div class="font-serif-bn text-amber-900 text-sm font-semibold truncate">' + (it.name || '') + variant + '</div>' +
+                            '</div>' +
+                            '<button onclick="msBagRemove(' + i + ')" aria-label="মুছুন" ' +
+                                'class="w-7 h-7 rounded-full bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500 flex items-center justify-center text-lg leading-none transition shrink-0">&times;</button>' +
                         '</div>' +
+                        '<div class="flex items-center gap-2 mt-2.5">' +
+                            '<select onchange="msBagSetUnit(' + i + ',this.value)" aria-label="একক" ' +
+                                'class="border border-amber-200 rounded-lg px-2 py-1.5 text-xs bg-white text-amber-900 font-medium focus:outline-none focus:ring-1 focus:ring-amber-500">' + opts + '</select>' +
+                            '<div class="flex items-center gap-1 ml-auto">' +
+                                '<button onclick="msBagDec(' + i + ')" aria-label="কমান" ' +
+                                    'class="w-8 h-8 rounded-lg border border-amber-200 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-50 transition">−</button>' +
+                                '<input type="number" inputmode="decimal" min="' + min + '" step="' + cfg.step + '" value="' + qty + '" ' +
+                                    'onchange="msBagSetQty(' + i + ',this.value)" aria-label="পরিমাণ" ' +
+                                    'class="w-14 text-center border border-amber-200 rounded-lg px-1 py-1.5 text-sm font-bold text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-500">' +
+                                '<button onclick="msBagInc(' + i + ')" aria-label="বাড়ান" ' +
+                                    'class="w-8 h-8 rounded-lg border border-amber-200 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-50 transition">+</button>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="flex flex-wrap gap-1.5 mt-2.5">' + chips + '</div>' +
                     '</div>';
                 }).join('');
             }
