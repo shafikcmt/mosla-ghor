@@ -56,6 +56,28 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>মসলা ঘর — খাঁটি মশলার আস্থার দোকান</title>
+
+    {{-- Installable "MoslaMart App" (manifest + home-screen install) --}}
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#14532d">
+    <link rel="apple-touch-icon" href="{{ asset('icons/icon-192.png') }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="MoslaMart">
+    <script>
+        // Capture the install prompt as early as possible (it can fire before the
+        // main script runs). The download button reads window.__msDeferredPrompt.
+        window.__msDeferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            window.__msDeferredPrompt = e;
+        });
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('{{ asset('sw.js') }}').catch(function () {});
+            });
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;600;700&family=Noto+Sans+Bengali:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -1144,49 +1166,75 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
     </div>
 </section>
 
-{{-- ━━━━━━━━━━━━━━━━  APP-LIKE PROMO (replaces the homepage FAQ)  ━━━━━━━━━━━━━━━━ --}}
+{{-- ━━━━━━━━━━━━━━━━  MOSLAMART APP PROMO (replaces the homepage FAQ)  ━━━━━━━━━━━━━━━━ --}}
+@php
+    // Spice-themed mini product cards for the phone mockup (no photo assets needed).
+    $appMockProducts = [
+        ['জিরা',      'from-amber-600 to-amber-900',   'খুচরা'],
+        ['এলাচ',      'from-emerald-600 to-green-900', 'পাইকারি'],
+        ['দারুচিনি',  'from-orange-700 to-red-900',    'খুচরা'],
+        ['লবঙ্গ',     'from-amber-800 to-stone-800',   'পাইকারি'],
+    ];
+@endphp
 <section id="app-promo" class="py-16 md:py-20 px-5">
     <div class="max-w-6xl mx-auto">
         <div class="bg-gradient-to-br from-[#0f3d22] to-[#14532d] rounded-3xl overflow-hidden shadow-2xl">
             <div class="grid md:grid-cols-2 gap-8 items-center p-8 md:p-12">
 
-                {{-- Left: phone mockup (CSS-drawn, no image asset) --}}
+                {{-- Left: phone mockup with spice product cards --}}
                 <div class="flex justify-center order-2 md:order-1">
-                    <div class="relative w-56 h-[420px] bg-[#fef9ee] rounded-[2.5rem] border-[6px] border-[#0a2a17] shadow-2xl">
+                    <div class="relative w-60 h-[440px] bg-[#fef9ee] rounded-[2.5rem] border-[6px] border-[#0a2a17] shadow-2xl">
                         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-[#0a2a17] rounded-b-2xl z-10"></div>
+                        {{-- App top bar --}}
                         <div class="bg-[#0f3d22] px-4 pt-7 pb-3 flex items-center justify-between rounded-t-[2rem]">
                             <span class="font-serif-bn text-[#c9a227] text-base font-bold">মসলা ঘর</span>
-                            <div class="w-6 h-6 rounded-full bg-[#c9a227]/20"></div>
+                            <div class="w-6 h-6 rounded-full bg-[#c9a227]/25 flex items-center justify-center text-[#c9a227] text-xs">🔍</div>
                         </div>
+                        {{-- Mode tabs --}}
                         <div class="flex gap-1 px-3 py-2">
                             <span class="flex-1 text-center text-[10px] font-bold bg-[#14532d] text-white py-1.5 rounded-lg">খুচরা</span>
                             <span class="flex-1 text-center text-[10px] font-bold bg-orange-100 text-orange-700 py-1.5 rounded-lg">পাইকারি</span>
                         </div>
+                        {{-- Spice product cards --}}
                         <div class="grid grid-cols-2 gap-2 px-3">
-                            @foreach(range(1,4) as $n)
-                            <div class="bg-white rounded-xl border border-green-50 p-2 shadow-sm">
-                                <div class="h-14 rounded-lg bg-gradient-to-br from-[#14532d] to-[#1a6b3a] mb-1.5"></div>
-                                <div class="h-2 bg-gray-200 rounded w-3/4 mb-1"></div>
-                                <div class="h-2 bg-[#c9a227]/60 rounded w-1/2"></div>
+                            @foreach($appMockProducts as $mp)
+                            <div class="bg-white rounded-xl border border-green-50 p-1.5 shadow-sm">
+                                <div class="h-14 rounded-lg bg-gradient-to-br {{ $mp[1] }} mb-1 flex items-center justify-center relative overflow-hidden">
+                                    <div class="w-8 h-8 rounded-full shadow-inner" style="background:radial-gradient(circle at 30% 30%, #fde68a, transparent 70%);"></div>
+                                    <span class="absolute top-1 left-1 text-[7px] font-bold px-1 rounded-full {{ $mp[2] === 'খুচরা' ? 'bg-[#c9a227] text-[#0f3d22]' : 'bg-orange-600 text-white' }}">{{ $mp[2] }}</span>
+                                </div>
+                                <div class="text-[9px] font-bold text-[#14532d] truncate">{{ $mp[0] }}</div>
+                                <div class="text-[8px] text-[#c9a227] font-semibold">দর দেখুন</div>
                             </div>
                             @endforeach
                         </div>
-                        <div class="absolute bottom-3 left-3 right-3 bg-[#c9a227] text-[#0f3d22] text-center text-[11px] font-bold py-2.5 rounded-xl shadow">অর্ডার করুন →</div>
+                        {{-- Mini CTA --}}
+                        <div class="absolute bottom-3 left-3 right-3 bg-[#c9a227] text-[#0f3d22] text-center text-[11px] font-bold py-2.5 rounded-xl shadow">অর্ডার / enquiry →</div>
                     </div>
                 </div>
 
-                {{-- Right: app info --}}
+                {{-- Right: app info + download --}}
                 <div class="order-1 md:order-2 text-center md:text-left">
-                    <div class="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-[#c9a227] to-orange-500 items-center justify-center shadow-lg mb-4">
-                        <span class="font-serif-bn text-white text-3xl font-bold">ম</span>
+                    {{-- Spice app icon --}}
+                    <div class="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-[#14532d] to-[#0f3d22] items-center justify-center shadow-lg mb-4 ring-1 ring-[#c9a227]/40">
+                        <svg viewBox="0 0 64 64" class="w-10 h-10" aria-hidden="true">
+                            <ellipse cx="32" cy="35" rx="19" ry="7.5" fill="#d97706"/>
+                            <ellipse cx="27" cy="33" rx="8" ry="3.5" fill="#f59e0b"/>
+                            <circle cx="40" cy="33" r="2" fill="#b45309"/>
+                            <circle cx="24" cy="35" r="1.8" fill="#b45309"/>
+                            <path d="M11 37 a21 11 0 0 0 42 0 Z" fill="#c9a227"/>
+                            <ellipse cx="32" cy="37" rx="21" ry="3.5" fill="#e2bb45"/>
+                            <path d="M27 24 q-3 -5 0 -10" stroke="#fde68a" stroke-width="2" fill="none" stroke-linecap="round" opacity=".8"/>
+                            <path d="M37 24 q3 -5 0 -10" stroke="#fde68a" stroke-width="2" fill="none" stroke-linecap="round" opacity=".8"/>
+                        </svg>
                     </div>
-                    <h2 class="font-serif-bn text-[#fef9ee] text-3xl md:text-4xl font-bold leading-tight">MoslaMart অ্যাপের মতো ব্যবহার করুন</h2>
+                    <h2 class="font-serif-bn text-[#fef9ee] text-3xl md:text-4xl font-bold leading-tight">MoslaMart App ডাউনলোড করুন</h2>
                     <p class="text-green-200 text-sm md:text-base mt-3 leading-relaxed max-w-lg mx-auto md:mx-0">
-                        Website visit করেই MoslaMart ব্যবহার করুন। চাইলে মোবাইল Home Screen-এ shortcut হিসেবে যোগ করে app-এর মতো ব্যবহার করতে পারবেন।
+                        খুচরা ও পাইকারি মসলা অর্ডার করুন আরও দ্রুত। মোবাইলে এক ক্লিকে MoslaMart খুলুন, পণ্য দেখুন, enquiry পাঠান এবং order track করুন।
                     </p>
 
                     <div class="grid grid-cols-2 gap-3 mt-6 max-w-md mx-auto md:mx-0">
-                        @foreach([['📲','Home screen shortcut'], ['⚡','Fast access'], ['🛒','খুচরা ও পাইকারি অর্ডার'], ['💬','সহজ enquiry process']] as $feat)
+                        @foreach([['⚡','দ্রুত অর্ডার'], ['🧺','পাইকারি enquiry'], ['📲','Home screen shortcut'], ['📦','সহজ order tracking']] as $feat)
                         <div class="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2.5">
                             <span class="text-lg">{{ $feat[0] }}</span>
                             <span class="text-green-100 text-xs font-semibold">{{ $feat[1] }}</span>
@@ -1195,14 +1243,42 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                     </div>
 
                     <div class="flex flex-wrap gap-3 mt-7 justify-center md:justify-start">
-                        <a href="#products" class="btn-gold inline-flex items-center gap-2 text-[#0f3d22] font-bold text-sm px-7 py-3 rounded-full shadow-lg">পণ্য দেখুন</a>
-                        <a href="{{ route('faq') }}#app-install" class="inline-flex items-center gap-2 border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] font-semibold text-sm px-7 py-3 rounded-full transition-colors">কীভাবে ব্যবহার করবেন</a>
+                        <button type="button" onclick="msInstallApp()"
+                                class="btn-gold inline-flex items-center gap-2 text-[#0f3d22] font-bold text-base px-8 py-3.5 rounded-full shadow-xl">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/></svg>
+                            App ডাউনলোড করুন
+                        </button>
+                        <a href="#products" class="inline-flex items-center gap-2 border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] font-semibold text-base px-8 py-3.5 rounded-full transition-colors">
+                            পণ্য দেখুন
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
+
+{{-- Install instructions modal (fallback when the browser has no install prompt) --}}
+<div id="ms-install-help" class="fixed inset-0 z-[140] hidden items-center justify-center bg-black/60 p-4" onclick="if(event.target===this)msCloseInstallHelp()">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div class="bg-[#0f3d22] px-5 py-4 flex items-center justify-between">
+            <h3 class="font-serif-bn text-[#c9a227] text-lg font-bold">App যোগ করুন</h3>
+            <button onclick="msCloseInstallHelp()" class="text-green-200 hover:text-white text-xl leading-none">&times;</button>
+        </div>
+        <div class="p-5 text-sm text-gray-600 space-y-3">
+            <p>MoslaMart কে মোবাইলের Home Screen-এ যোগ করতে:</p>
+            <div class="bg-amber-50 rounded-xl p-3">
+                <p class="font-bold text-[#14532d] mb-1">Android (Chrome)</p>
+                <p>উপরে ডান কোণে <b>⋮ মেনু</b> → <b>Add to Home screen</b> নির্বাচন করুন।</p>
+            </div>
+            <div class="bg-amber-50 rounded-xl p-3">
+                <p class="font-bold text-[#14532d] mb-1">iPhone (Safari)</p>
+                <p>নিচে <b>Share</b> → <b>Add to Home Screen</b> নির্বাচন করুন।</p>
+            </div>
+            <a href="{{ route('faq') }}#app-install" class="block text-center text-[#14532d] font-semibold underline">বিস্তারিত নির্দেশনা দেখুন</a>
+        </div>
+    </div>
+</div>
 
 <div class="gold-rule"></div>
 
@@ -3920,6 +3996,29 @@ function toggleFaq(i) {
     body.classList.toggle('hidden', open);
     if (icon) icon.style.transform = open ? '' : 'rotate(180deg)';
 }
+
+// ── "App ডাউনলোড করুন" — add MoslaMart to the home screen ─────────────────
+async function msInstallApp() {
+    const dp = window.__msDeferredPrompt;
+    if (dp) {
+        dp.prompt();
+        try { await dp.userChoice; } catch (e) {}
+        window.__msDeferredPrompt = null;   // can only be used once
+        return;
+    }
+    // Already installed, or browser has no install prompt → show instructions.
+    msShowInstallHelp();
+}
+function msShowInstallHelp() {
+    const m = document.getElementById('ms-install-help');
+    if (m) { m.classList.remove('hidden'); m.classList.add('flex'); document.body.style.overflow = 'hidden'; }
+}
+function msCloseInstallHelp() {
+    const m = document.getElementById('ms-install-help');
+    if (m) { m.classList.add('hidden'); m.classList.remove('flex'); document.body.style.overflow = ''; }
+}
+// After a successful install, nothing else to do — keep it simple.
+window.addEventListener('appinstalled', function () { window.__msDeferredPrompt = null; });
 
 // ── Image Zoom Lightbox ───────────────────────────────────────────────────
 let zoomImages = [];
