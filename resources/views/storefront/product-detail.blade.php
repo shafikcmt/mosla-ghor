@@ -30,9 +30,12 @@
     // A wholesale product hides its retail price entirely, regardless of price rows.
     $hasRetail      = ! $isWholesale && $retailPacks->isNotEmpty();
     $hasWholesale   = $wholesalePacks->isNotEmpty();
-    // Show the enquiry block for any flagged wholesale product (gated by toggle) or
-    // any product that simply has wholesale price rows.
-    $showWholesale  = $isWholesale ? (bool) $product->wholesale_enquiry_enabled : $hasWholesale;
+    // A wholesale product (or wholesale-mode view) has NO price, so the enquiry
+    // block is its only call to action — always show it. (Previously this was gated
+    // by wholesale_enquiry_enabled, which left products with the toggle off showing
+    // a price-less page and no way to enquire.) Retail products still only show the
+    // wholesale block when they actually carry wholesale price rows.
+    $showWholesale  = $isWholesale ? true : $hasWholesale;
     $lowestRetail   = $hasRetail ? (float) $retailPacks->min('final_price') : null;
     $moqLabel       = $product->moqLabel();
 
@@ -366,6 +369,18 @@
                         </div>
                     </div>
 
+                    {{-- Quick wholesale quantity chips (set quantity + unit) --}}
+                    <div class="flex flex-wrap gap-1.5">
+                        <button type="button" onclick="pdSetQty(5,'kg')" class="px-3 py-1.5 rounded-full text-xs font-semibold border border-amber-200 text-amber-800 hover:bg-amber-50 transition">৫kg</button>
+                        <button type="button" onclick="pdSetQty(10,'kg')" class="px-3 py-1.5 rounded-full text-xs font-semibold border border-amber-200 text-amber-800 hover:bg-amber-50 transition">১০kg</button>
+                        <button type="button" onclick="pdSetQty(25,'kg')" class="px-3 py-1.5 rounded-full text-xs font-semibold border border-amber-200 text-amber-800 hover:bg-amber-50 transition">২৫kg</button>
+                        <button type="button" onclick="pdSetQty(50,'kg')" class="px-3 py-1.5 rounded-full text-xs font-semibold border border-amber-200 text-amber-800 hover:bg-amber-50 transition">৫০kg</button>
+                        <button type="button" onclick="pdSetQty(1,'bag')" class="px-3 py-1.5 rounded-full text-xs font-semibold border border-amber-200 text-amber-800 hover:bg-amber-50 transition">১ বস্তা</button>
+                        <button type="button" onclick="pdSetQty(2,'bag')" class="px-3 py-1.5 rounded-full text-xs font-semibold border border-amber-200 text-amber-800 hover:bg-amber-50 transition">২ বস্তা</button>
+                        <button type="button" onclick="pdSetQty(1,'carton')" class="px-3 py-1.5 rounded-full text-xs font-semibold border border-amber-200 text-amber-800 hover:bg-amber-50 transition">১ কার্টন</button>
+                        <button type="button" onclick="pdSetQty(2,'carton')" class="px-3 py-1.5 rounded-full text-xs font-semibold border border-amber-200 text-amber-800 hover:bg-amber-50 transition">২ কার্টন</button>
+                    </div>
+
                     {{-- Name + phone (required; autofilled for logged-in customers) --}}
                     <div class="grid grid-cols-2 gap-3">
                         <div>
@@ -667,14 +682,35 @@
     }
     pdSetStars(5);
 
+    // ── Quick wholesale quantity chips → set the enquiry form's qty + unit ──
+    function pdSetQty(qty, unit) {
+        const qEl = document.querySelector('#pd-enquiry-form [name="quantity_kg"]');
+        const uEl = document.querySelector('#pd-enquiry-form [name="quantity_unit"]');
+        if (qEl) qEl.value = qty;
+        if (uEl) uEl.value = unit;
+    }
+
     // ── Add to Enquiry Bag (uses shared msBagAdd from the layout) ─────────
+    // Prefer the quantity/unit the user picked in the form (or via the chips);
+    // fall back to the product MOQ defaults. Opens the drawer for instant feedback.
     (function () {
         const b = document.getElementById('pd-add-bag');
         if (b) b.addEventListener('click', function () {
+            const qEl = document.querySelector('#pd-enquiry-form [name="quantity_kg"]');
+            const uEl = document.querySelector('#pd-enquiry-form [name="quantity_unit"]');
+            const qty  = (qEl && parseFloat(qEl.value) > 0) ? parseFloat(qEl.value) : (parseFloat(b.dataset.qty) || 5);
+            const unit = (uEl && uEl.value) ? uEl.value : (b.dataset.unit || 'kg');
             msBagAdd(parseInt(b.dataset.id, 10), b.dataset.slug, b.dataset.name, b.dataset.image,
-                     parseFloat(b.dataset.qty) || 1, b.dataset.unit || 'kg',
+                     qty, unit,
                      parseFloat(b.dataset.min) || null, b.dataset.minUnit || null);
+            if (window.msCartOpen) msCartOpen('paykari');
         });
     })();
+
+    // Arriving via a "দর জানতে চাই" / "Contact Supplier" card link (#enquiry) →
+    // reveal the enquiry form right away.
+    if (window.location.hash === '#enquiry' && typeof pdToggleEnquiry === 'function') {
+        pdToggleEnquiry(true);
+    }
 </script>
 @endsection

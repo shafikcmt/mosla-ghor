@@ -538,11 +538,11 @@ $productsForJs = $products->map(function ($p) {
                     <div class="mt-4 flex flex-col gap-2">
                         @include('partials.wholesale-bag-button')
                         <div class="grid grid-cols-2 gap-2">
-                            <a href="{{ $detailUrl }}"
+                            <a href="{{ $detailUrl }}#enquiry"
                                class="block w-full border border-amber-700 text-amber-800 hover:bg-amber-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
                                 দর জানতে চাই
                             </a>
-                            <a href="{{ $detailUrl }}"
+                            <a href="{{ $detailUrl }}#enquiry"
                                class="block w-full border border-[#14532d] text-[#14532d] hover:bg-green-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
                                 Contact Supplier
                             </a>
@@ -598,11 +598,11 @@ $productsForJs = $products->map(function ($p) {
                     <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4 flex flex-col gap-2">
                         @include('partials.wholesale-bag-button')
                         <div class="grid grid-cols-2 gap-2">
-                            <a href="{{ route('customer.wholesale.products.show', $product->slug) }}"
+                            <a href="{{ route('customer.wholesale.products.show', $product->slug) }}#enquiry"
                                class="block w-full border border-amber-700 text-amber-800 hover:bg-amber-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
                                 দর জানতে চাই
                             </a>
-                            <a href="{{ route('customer.wholesale.products.show', $product->slug) }}"
+                            <a href="{{ route('customer.wholesale.products.show', $product->slug) }}#enquiry"
                                class="block w-full border border-[#14532d] text-[#14532d] hover:bg-green-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
                                 Contact Supplier
                             </a>
@@ -687,7 +687,7 @@ $productsForJs = $products->map(function ($p) {
                                 বিস্তারিত
                             </a>
                             @if($product->is_wholesale)
-                            <a href="{{ $detailUrl }}"
+                            <a href="{{ $detailUrl }}#enquiry"
                                class="border border-[#14532d] text-[#14532d] hover:bg-green-50 text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
                                 Contact Supplier
                             </a>
