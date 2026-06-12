@@ -385,6 +385,13 @@ $productsForJs = $products->map(function ($p) {
 
 {{-- ━━━━━━━━━━━━━━━━  PRODUCTS  ━━━━━━━━━━━━━━━━ --}}
 <section id="products" class="py-16 md:py-20 px-5">
+    @php
+        // Mode is URL-driven only (no sticky localStorage): default retail unless
+        // ?mode=wholesale / ?tab=wholesale|paykari. Category links carry it so a
+        // category click keeps the current mode.
+        $listMode  = in_array(strtolower(request('mode') ?? request('tab') ?? ''), ['wholesale', 'paykari'], true) ? 'wholesale' : 'retail';
+        $modeQuery = $listMode === 'wholesale' ? 'mode=wholesale' : '';
+    @endphp
     <div class="max-w-7xl mx-auto">
 
         {{-- Section header + view toggle --}}
@@ -400,14 +407,14 @@ $productsForJs = $products->map(function ($p) {
             </div>
 
             <div class="flex items-center gap-3 self-start sm:self-auto flex-wrap">
-                {{-- Retail / Wholesale tab --}}
+                {{-- Retail / Wholesale tab (initial active state is server-driven by $listMode) --}}
                 <div class="flex items-center gap-0.5 p-1 bg-white border border-gray-200 rounded-xl shadow-sm">
                     <button id="tab-retail" onclick="setTab('retail')"
-                            class="px-5 py-2 rounded-lg bg-[#14532d] text-white text-sm font-bold transition-colors">
+                            class="px-5 py-2 rounded-lg text-sm font-bold transition-colors {{ $listMode === 'retail' ? 'bg-[#14532d] text-white' : 'text-gray-500 hover:text-gray-700' }}">
                         খুচরা
                     </button>
                     <button id="tab-wholesale" onclick="setTab('wholesale')"
-                            class="px-5 py-2 rounded-lg text-gray-500 hover:text-gray-700 text-sm font-bold transition-colors">
+                            class="px-5 py-2 rounded-lg text-sm font-bold transition-colors {{ $listMode === 'wholesale' ? 'bg-orange-600 text-white' : 'text-gray-500 hover:text-gray-700' }}">
                         পাইকারি
                     </button>
                 </div>
@@ -430,16 +437,16 @@ $productsForJs = $products->map(function ($p) {
             </div>
         </div>
 
-        {{-- ══ Category filter pills ══ --}}
+        {{-- ══ Category filter pills (carry the current mode so a click keeps it) ══ --}}
         @if($navCategories->isNotEmpty())
         <div class="flex flex-wrap items-center gap-2 mb-8">
-            <a href="{{ url()->current() }}#products"
+            <a data-mode-link href="{{ url()->current() }}{{ $modeQuery ? '?'.$modeQuery : '' }}#products"
                class="px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors
                       {{ empty($selectedCategory) ? 'bg-[#14532d] text-white border-[#14532d]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#14532d] hover:text-[#14532d]' }}">
                 সব পণ্য
             </a>
             @foreach($navCategories as $navCat)
-            <a href="{{ url()->current() }}?category={{ $navCat->slug }}#products"
+            <a data-mode-link href="{{ url()->current() }}?category={{ $navCat->slug }}{{ $modeQuery ? '&'.$modeQuery : '' }}#products"
                class="px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors
                       {{ (!empty($selectedCategory) && $selectedCategory->id === $navCat->id) ? 'bg-[#14532d] text-white border-[#14532d]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#14532d] hover:text-[#14532d]' }}">
                 {{ $navCat->name_bn }}
@@ -465,7 +472,7 @@ $productsForJs = $products->map(function ($p) {
                     : ($product->activeVariants->first()?->activePrices->where('sell_type', 'retail') ?? collect());
                 // Wholesale products link to the wholesale detail page; others to retail.
                 $detailUrl = $product->is_wholesale
-                    ? route('customer.wholesale.products.show', $product->slug)
+                    ? route('products.show', ['product' => $product->slug, 'mode' => 'wholesale'])
                     : route('products.show', $product->slug);
             @endphp
             <article data-card-product="{{ $product->id }}" class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
@@ -535,18 +542,12 @@ $productsForJs = $products->map(function ($p) {
                         @endif
                     </div>
                     <div class="flex-1 min-h-3"></div>
-                    <div class="mt-4 flex flex-col gap-2">
-                        @include('partials.wholesale-bag-button')
-                        <div class="grid grid-cols-2 gap-2">
-                            <a href="{{ $detailUrl }}#enquiry"
-                               class="block w-full border border-amber-700 text-amber-800 hover:bg-amber-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                                দর জানতে চাই
-                            </a>
-                            <a href="{{ $detailUrl }}#enquiry"
-                               class="block w-full border border-[#14532d] text-[#14532d] hover:bg-green-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                                Contact Supplier
-                            </a>
-                        </div>
+                    {{-- Listing stays simple: enquiry/contact actions live on the details page. --}}
+                    <div class="mt-4">
+                        <a href="{{ $detailUrl }}"
+                           class="block w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
+                            বিস্তারিত দেখুন
+                        </a>
                     </div>
                     @else
                     <div id="card-price-wrap-{{ $product->id }}" class="mt-3 flex items-baseline gap-1.5"
@@ -594,19 +595,12 @@ $productsForJs = $products->map(function ($p) {
                         </button>
                     </div>
 
-                    {{-- Wholesale mode buttons (hidden in retail mode): add to enquiry bag + ask price --}}
-                    <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4 flex flex-col gap-2">
-                        @include('partials.wholesale-bag-button')
-                        <div class="grid grid-cols-2 gap-2">
-                            <a href="{{ route('customer.wholesale.products.show', $product->slug) }}#enquiry"
-                               class="block w-full border border-amber-700 text-amber-800 hover:bg-amber-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                                দর জানতে চাই
-                            </a>
-                            <a href="{{ route('customer.wholesale.products.show', $product->slug) }}#enquiry"
-                               class="block w-full border border-[#14532d] text-[#14532d] hover:bg-green-50 text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                                Contact Supplier
-                            </a>
-                        </div>
+                    {{-- Wholesale mode button (hidden in retail mode): Details only --}}
+                    <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4">
+                        <a href="{{ route('products.show', ['product' => $product->slug, 'mode' => 'wholesale']) }}"
+                           class="block w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
+                            বিস্তারিত দেখুন
+                        </a>
                     </div>
                     @endif
                 </div>
@@ -623,7 +617,7 @@ $productsForJs = $products->map(function ($p) {
                     ? $directRetail
                     : ($product->activeVariants->first()?->activePrices->where('sell_type', 'retail') ?? collect());
                 $detailUrl = $product->is_wholesale
-                    ? route('customer.wholesale.products.show', $product->slug)
+                    ? route('products.show', ['product' => $product->slug, 'mode' => 'wholesale'])
                     : route('products.show', $product->slug);
             @endphp
             <article data-list-product="{{ $product->id }}" class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
@@ -686,17 +680,12 @@ $productsForJs = $products->map(function ($p) {
                                class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
                                 বিস্তারিত
                             </a>
-                            @if($product->is_wholesale)
-                            <a href="{{ $detailUrl }}#enquiry"
-                               class="border border-[#14532d] text-[#14532d] hover:bg-green-50 text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
-                                Contact Supplier
-                            </a>
-                            @else
+                            @unless($product->is_wholesale)
                             <button onclick="goToCombo({{ $product->id }})"
                                     class="border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
                                 বাক্সে যোগ
                             </button>
-                            @endif
+                            @endunless
                         </div>
                     </div>
                 </div>
@@ -708,7 +697,7 @@ $productsForJs = $products->map(function ($p) {
         <div id="ms-wholesale-empty" style="display:none;" class="text-center py-20">
             <div class="text-5xl mb-4">🧺</div>
             <p class="font-serif-bn text-[#14532d] text-xl font-bold">এখন কোনো পাইকারি পণ্য পাওয়া যায়নি</p>
-            <p class="text-gray-500 text-sm mt-1 mb-5">খুব শীঘ্রই নতুন পাইকারি পণ্য যোগ করা হবে।</p>
+            <p class="text-gray-500 text-sm mt-1 mb-5">Admin থেকে পাইকারি পণ্য active করুন।</p>
             <button type="button" onclick="setTab('retail')"
                     class="inline-block bg-[#14532d] hover:bg-[#166534] text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-colors">
                 সব পণ্য দেখুন
@@ -2171,7 +2160,29 @@ function setTab(tab) {
     refreshPickerForTab();
     refreshCombosForTab();
     filterCardsByMode();
-    try { localStorage.setItem('mstab', tab); } catch(e) {}
+    updateModeLinks();
+    // Reflect mode in the URL (no reload) so refresh + category clicks keep it.
+    // NOTE: intentionally NOT saved to localStorage — /products must default to
+    // retail on a plain load; only the URL drives wholesale mode.
+    try {
+        const u = new URL(window.location.href);
+        if (tab === 'wholesale') u.searchParams.set('mode', 'wholesale');
+        else u.searchParams.delete('mode');
+        history.replaceState(null, '', u.pathname + u.search + window.location.hash);
+    } catch (e) {}
+}
+
+// Keep category / "সব পণ্য" links carrying the current mode so a click preserves it.
+function updateModeLinks() {
+    const wholesale = activeTab === 'wholesale';
+    document.querySelectorAll('[data-mode-link]').forEach(function (a) {
+        try {
+            const u = new URL(a.href, window.location.origin);
+            if (wholesale) u.searchParams.set('mode', 'wholesale');
+            else u.searchParams.delete('mode');
+            a.href = u.pathname + u.search + '#products';
+        } catch (e) {}
+    });
 }
 
 // Show only the products that belong to the active mode:
@@ -2358,18 +2369,24 @@ function closeEnquiry() {
 // Decide initial tab: URL ?tab=/?mode= wins (cross-page links), else the saved tab.
 // Accepts tab=wholesale|paykari|retail and mode=wholesale|retail. Defaults to retail.
 (function () {
-    let applied = false;
+    // Mode is URL-driven ONLY (no sticky localStorage): default retail unless the
+    // URL explicitly asks for wholesale. This is what fixes "পাইকারি stays active
+    // after refresh on a plain /products".
+    let want = 'retail';
     try {
         const qs = new URLSearchParams(window.location.search);
-        let want = (qs.get('tab') || qs.get('mode') || '').toLowerCase();
-        if (want === 'paykari') want = 'wholesale';
-        if (want === 'retail' || want === 'wholesale') { setTab(want); applied = true; }
+        let m = (qs.get('mode') || qs.get('tab') || '').toLowerCase();
+        if (m === 'paykari') m = 'wholesale';
+        if (m === 'wholesale') want = 'wholesale';
     } catch (e) {}
-    if (!applied) {
-        try { if (localStorage.getItem('mstab') === 'wholesale') { setTab('wholesale'); applied = true; } } catch (e) {}
+    if (want === 'wholesale') {
+        setTab('wholesale');
+    } else {
+        // Retail default: filter wholesale-only cards + clean links, WITHOUT the
+        // combo-clearing that setTab does (preserves the restored retail box).
+        filterCardsByMode();
+        updateModeLinks();
     }
-    // Retail default still needs filtering so wholesale-only products stay hidden.
-    if (!applied) filterCardsByMode();
 })();
 
 // ── Combo Builder Mode (Retail / Paykari) ─────────────────────────────────
