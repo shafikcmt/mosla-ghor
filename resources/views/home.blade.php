@@ -1144,42 +1144,67 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
     </div>
 </section>
 
-{{-- ━━━━━━━━━━━━━━━━  FAQ  ━━━━━━━━━━━━━━━━ --}}
-@if($faqs->isNotEmpty())
-<section id="faq" class="py-16 md:py-20 px-5">
-    <div class="max-w-3xl mx-auto">
-        <div class="text-center mb-12">
-            <div class="flex items-center justify-center gap-4 mb-3">
-                <div class="h-px w-14 bg-[#c9a227] opacity-40"></div>
-                <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">FAQ</span>
-                <div class="h-px w-14 bg-[#c9a227] opacity-40"></div>
-            </div>
-            <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">সাধারণ প্রশ্নোত্তর</h2>
-        </div>
-        <div class="space-y-3" id="faq-list">
-            @foreach($faqs as $i => $faq)
-            <div class="border border-amber-100 rounded-xl overflow-hidden bg-white shadow-sm">
-                <button type="button"
-                        onclick="toggleFaq({{ $i }})"
-                        class="w-full text-left px-6 py-4 flex items-center justify-between gap-4 hover:bg-amber-50 transition-colors">
-                    <span class="text-[#14532d] font-semibold text-sm md:text-base leading-snug">{{ $faq->question }}</span>
-                    <svg id="faq-icon-{{ $i }}" class="w-5 h-5 text-[#c9a227] flex-shrink-0 transition-transform duration-200"
-                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                    </svg>
-                </button>
-                <div id="faq-body-{{ $i }}" class="hidden px-6 pb-5">
-                    <div class="h-px bg-amber-100 mb-4"></div>
-                    <p class="text-gray-600 text-sm leading-relaxed">{{ $faq->answer }}</p>
+{{-- ━━━━━━━━━━━━━━━━  APP-LIKE PROMO (replaces the homepage FAQ)  ━━━━━━━━━━━━━━━━ --}}
+<section id="app-promo" class="py-16 md:py-20 px-5">
+    <div class="max-w-6xl mx-auto">
+        <div class="bg-gradient-to-br from-[#0f3d22] to-[#14532d] rounded-3xl overflow-hidden shadow-2xl">
+            <div class="grid md:grid-cols-2 gap-8 items-center p-8 md:p-12">
+
+                {{-- Left: phone mockup (CSS-drawn, no image asset) --}}
+                <div class="flex justify-center order-2 md:order-1">
+                    <div class="relative w-56 h-[420px] bg-[#fef9ee] rounded-[2.5rem] border-[6px] border-[#0a2a17] shadow-2xl">
+                        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-[#0a2a17] rounded-b-2xl z-10"></div>
+                        <div class="bg-[#0f3d22] px-4 pt-7 pb-3 flex items-center justify-between rounded-t-[2rem]">
+                            <span class="font-serif-bn text-[#c9a227] text-base font-bold">মসলা ঘর</span>
+                            <div class="w-6 h-6 rounded-full bg-[#c9a227]/20"></div>
+                        </div>
+                        <div class="flex gap-1 px-3 py-2">
+                            <span class="flex-1 text-center text-[10px] font-bold bg-[#14532d] text-white py-1.5 rounded-lg">খুচরা</span>
+                            <span class="flex-1 text-center text-[10px] font-bold bg-orange-100 text-orange-700 py-1.5 rounded-lg">পাইকারি</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 px-3">
+                            @foreach(range(1,4) as $n)
+                            <div class="bg-white rounded-xl border border-green-50 p-2 shadow-sm">
+                                <div class="h-14 rounded-lg bg-gradient-to-br from-[#14532d] to-[#1a6b3a] mb-1.5"></div>
+                                <div class="h-2 bg-gray-200 rounded w-3/4 mb-1"></div>
+                                <div class="h-2 bg-[#c9a227]/60 rounded w-1/2"></div>
+                            </div>
+                            @endforeach
+                        </div>
+                        <div class="absolute bottom-3 left-3 right-3 bg-[#c9a227] text-[#0f3d22] text-center text-[11px] font-bold py-2.5 rounded-xl shadow">অর্ডার করুন →</div>
+                    </div>
+                </div>
+
+                {{-- Right: app info --}}
+                <div class="order-1 md:order-2 text-center md:text-left">
+                    <div class="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-[#c9a227] to-orange-500 items-center justify-center shadow-lg mb-4">
+                        <span class="font-serif-bn text-white text-3xl font-bold">ম</span>
+                    </div>
+                    <h2 class="font-serif-bn text-[#fef9ee] text-3xl md:text-4xl font-bold leading-tight">MoslaMart অ্যাপের মতো ব্যবহার করুন</h2>
+                    <p class="text-green-200 text-sm md:text-base mt-3 leading-relaxed max-w-lg mx-auto md:mx-0">
+                        Website visit করেই MoslaMart ব্যবহার করুন। চাইলে মোবাইল Home Screen-এ shortcut হিসেবে যোগ করে app-এর মতো ব্যবহার করতে পারবেন।
+                    </p>
+
+                    <div class="grid grid-cols-2 gap-3 mt-6 max-w-md mx-auto md:mx-0">
+                        @foreach([['📲','Home screen shortcut'], ['⚡','Fast access'], ['🛒','খুচরা ও পাইকারি অর্ডার'], ['💬','সহজ enquiry process']] as $feat)
+                        <div class="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2.5">
+                            <span class="text-lg">{{ $feat[0] }}</span>
+                            <span class="text-green-100 text-xs font-semibold">{{ $feat[1] }}</span>
+                        </div>
+                        @endforeach
+                    </div>
+
+                    <div class="flex flex-wrap gap-3 mt-7 justify-center md:justify-start">
+                        <a href="#products" class="btn-gold inline-flex items-center gap-2 text-[#0f3d22] font-bold text-sm px-7 py-3 rounded-full shadow-lg">পণ্য দেখুন</a>
+                        <a href="{{ route('faq') }}#app-install" class="inline-flex items-center gap-2 border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] font-semibold text-sm px-7 py-3 rounded-full transition-colors">কীভাবে ব্যবহার করবেন</a>
+                    </div>
                 </div>
             </div>
-            @endforeach
         </div>
     </div>
 </section>
 
 <div class="gold-rule"></div>
-@endif
 
 {{-- ━━━━━━━━━━━━━━━━  CONTACT  ━━━━━━━━━━━━━━━━ --}}
 <section id="contact" class="bg-[#fef9ee] py-12 px-5 border-t border-amber-100">
@@ -1241,6 +1266,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
             <div class="flex flex-wrap gap-6 text-green-500 text-xs justify-center">
                 <a href="#products" class="hover:text-[#c9a227] transition-colors">পণ্যসমূহ</a>
                 <a href="#why-us"   class="hover:text-[#c9a227] transition-colors">আমাদের সম্পর্কে</a>
+                <a href="{{ route('faq') }}" class="hover:text-[#c9a227] transition-colors">সাধারণ প্রশ্নোত্তর</a>
                 <a href="#contact"  class="hover:text-[#c9a227] transition-colors">যোগাযোগ</a>
                 @if(($ws['show_vendor_links_in_footer'] ?? '1') === '1')
                     @if(($ws['vendor_login_enabled'] ?? '1') === '1' || ($ws['vendor_registration_enabled'] ?? '0') === '1')

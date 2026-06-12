@@ -104,8 +104,14 @@
 {{-- Footer --}}
 <footer class="bg-[#0f3d22] text-green-200 mt-10">
     <div class="gold-rule"></div>
-    <div class="max-w-6xl mx-auto px-4 py-6 text-center text-xs">
-        © {{ date('Y') }} মসলা ঘর — খাঁটি মশলার আস্থার দোকান।
+    <div class="max-w-6xl mx-auto px-4 py-6 text-center text-xs space-y-3">
+        <div class="flex flex-wrap justify-center gap-4 text-green-300">
+            <a href="/" class="hover:text-[#c9a227] transition-colors">হোম</a>
+            <a href="/#products" class="hover:text-[#c9a227] transition-colors">পণ্য</a>
+            <a href="{{ route('faq') }}" class="hover:text-[#c9a227] transition-colors">সাধারণ প্রশ্নোত্তর</a>
+            <a href="/#contact" class="hover:text-[#c9a227] transition-colors">যোগাযোগ</a>
+        </div>
+        <div>© {{ date('Y') }} মসলা ঘর — খাঁটি মশলার আস্থার দোকান।</div>
     </div>
 </footer>
 

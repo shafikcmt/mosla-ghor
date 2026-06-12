@@ -109,6 +109,12 @@ Route::get('/wholesale/enquiry-bag', [ProductController::class, 'enquiryBag'])->
 // Combo / box builder lives in the home-page section; this is a shareable entry point.
 Route::get('/combo', fn () => redirect('/#combo-builder'))->name('combo');
 
+// Public FAQ page (moved off the homepage). SEO-friendly, uses the storefront layout.
+Route::get('/faq', function () {
+    $faqs = \App\Models\Faq::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
+    return view('faq', compact('faqs'));
+})->name('faq');
+
 // ── Customer / User auth ───────────────────────────────────────────────────
 Route::name('customer.')->group(function () {
     Route::get('register',  [CustomerAuthController::class, 'showRegister'])->name('register');
