@@ -43,6 +43,11 @@ $productsForJs = $products->map(function ($p) {
 // hero mode toggle + the product section can both use it.
 $listMode  = in_array(strtolower(request('mode') ?? request('tab') ?? ''), ['wholesale', 'paykari'], true) ? 'wholesale' : 'retail';
 $modeQuery = $listMode === 'wholesale' ? 'mode=wholesale' : '';
+// Hero toggle hrefs — server-driven mode (URL is the single source of truth),
+// preserving the active category. খুচরা drops mode; পাইকারি adds mode=wholesale.
+$catParam      = request('category');
+$retailHref    = url('/') . ($catParam ? '?category=' . urlencode($catParam) : '') . '#products';
+$wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urlencode($catParam) : '') . '#products';
 @endphp
 <!DOCTYPE html>
 <html lang="bn">
@@ -359,17 +364,18 @@ $modeQuery = $listMode === 'wholesale' ? 'mode=wholesale' : '';
         </p>
         @endif
         {{-- Retail / Wholesale mode toggle (replaces the old "পণ্য দেখুন" CTA).
-             Same ids as before so setTab() keeps driving them; active state is
-             server-rendered from $listMode so a refresh shows the right tab. --}}
+             These are real LINKS — the URL is the single source of truth, so the
+             SERVER renders the right mode. No JS/localStorage switching to get out
+             of sync. Active state is server-rendered from $listMode. --}}
         <div class="inline-flex items-center gap-1 p-1.5 bg-white/95 rounded-2xl shadow-2xl">
-            <button id="tab-retail" onclick="setTab('retail'); document.getElementById('products').scrollIntoView({behavior:'smooth'});"
-                    class="px-7 py-3 rounded-xl text-base font-bold transition-colors {{ $listMode === 'retail' ? 'bg-[#14532d] text-white' : 'text-gray-500 hover:text-gray-700' }}">
+            <a href="{{ $retailHref }}"
+               class="px-7 py-3 rounded-xl text-base font-bold transition-colors {{ $listMode === 'retail' ? 'bg-[#14532d] text-white' : 'text-gray-500 hover:text-gray-700' }}">
                 খুচরা
-            </button>
-            <button id="tab-wholesale" onclick="setTab('wholesale'); document.getElementById('products').scrollIntoView({behavior:'smooth'});"
-                    class="px-7 py-3 rounded-xl text-base font-bold transition-colors {{ $listMode === 'wholesale' ? 'bg-orange-600 text-white' : 'text-gray-500 hover:text-gray-700' }}">
+            </a>
+            <a href="{{ $wholesaleHref }}"
+               class="px-7 py-3 rounded-xl text-base font-bold transition-colors {{ $listMode === 'wholesale' ? 'bg-orange-600 text-white' : 'text-gray-500 hover:text-gray-700' }}">
                 পাইকারি
-            </button>
+            </a>
         </div>
 
         <div class="mt-16 flex flex-wrap justify-center gap-8 md:gap-12">
@@ -695,10 +701,10 @@ $modeQuery = $listMode === 'wholesale' ? 'mode=wholesale' : '';
             <div class="text-5xl mb-4">🧺</div>
             <p class="font-serif-bn text-[#14532d] text-xl font-bold">এখন কোনো পাইকারি পণ্য পাওয়া যায়নি</p>
             <p class="text-gray-500 text-sm mt-1 mb-5">Admin থেকে পাইকারি পণ্য active করুন।</p>
-            <button type="button" onclick="setTab('retail')"
-                    class="inline-block bg-[#14532d] hover:bg-[#166534] text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-colors">
+            <a href="{{ url('/') }}#products"
+               class="inline-block bg-[#14532d] hover:bg-[#166534] text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-colors">
                 সব পণ্য দেখুন
-            </button>
+            </a>
         </div>
 
         @endif {{-- end products not empty --}}
@@ -2382,14 +2388,17 @@ function closeEnquiry() {
         if (m === 'paykari') m = 'wholesale';
         if (m === 'wholesale') want = 'wholesale';
     } catch (e) {}
-    if (want === 'wholesale') {
-        setTab('wholesale');
-    } else {
-        // Retail default: filter wholesale-only cards + clean links, WITHOUT the
-        // combo-clearing that setTab does (preserves the restored retail box).
-        filterCardsByMode();
-        updateModeLinks();
-    }
+    activeTab = want;
+    // Cards are already mode-filtered server-side (display:none on non-matching
+    // <article>s by $listMode). Re-apply defensively + sync the inner retail/wholesale
+    // UI. The combo/picker refreshes are isolated in try/catch so a failure there can
+    // NEVER stop the listing from filtering correctly (the old switching bug).
+    try { refreshCardsForTab(); }    catch (e) {}
+    try { refreshListViewForTab(); } catch (e) {}
+    try { refreshPickerForTab(); }   catch (e) {}
+    try { refreshCombosForTab(); }   catch (e) {}
+    filterCardsByMode();
+    updateModeLinks();
 })();
 
 // ── Combo Builder Mode (Retail / Paykari) ─────────────────────────────────
