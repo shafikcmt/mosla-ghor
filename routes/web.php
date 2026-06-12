@@ -78,6 +78,17 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class);
 
+// Product listing lives on the home page (#products). This shareable entry point
+// preserves retail/wholesale mode for links like /products?mode=wholesale.
+Route::get('/products', function (\Illuminate\Http\Request $request) {
+    $mode = strtolower((string) ($request->query('mode') ?? $request->query('tab') ?? ''));
+    if ($mode === 'paykari') {
+        $mode = 'wholesale';
+    }
+    $q = in_array($mode, ['wholesale', 'retail'], true) ? '?mode=' . $mode : '';
+    return redirect('/' . $q . '#products');
+})->name('products.index');
+
 // ── Public product detail (SEO-friendly) ───────────────────────────────────
 Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
 Route::post('/products/{product:slug}/reviews', [ProductController::class, 'storeReview'])->name('products.reviews.store');
