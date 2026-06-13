@@ -162,6 +162,10 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 
         /* Picker row highlight on goToCombo */
         .picker-highlight { background:#dcfce7 !important; }
+
+        /* Room for the app-like mobile bottom navigation (lg:hidden).
+           The combo-bar JS overrides this inline with 76px when a box is active. */
+        @media (max-width: 1023px) { body { padding-bottom: calc(60px + env(safe-area-inset-bottom)); } }
     </style>
 </head>
 <body class="min-h-screen">
@@ -179,187 +183,10 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 @endif
 
 {{-- ━━━━━━━━━━━━━━━━  ANNOUNCEMENT BAR  ━━━━━━━━━━━━━━━━ --}}
-<div class="bg-[#c9a227] text-[#0f3d22] py-2 overflow-hidden text-sm font-semibold">
-    <p class="marquee-text">
-        &nbsp;&nbsp;&nbsp;✦ ঈদ স্পেশাল — এখনই অর্ডার করুন এবং পান বিশেষ ছাড়!
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;✦ ১০০% খাঁটি মশলা — কোনো ভেজাল নেই
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;✦ সারা বাংলাদেশে হোম ডেলিভারি
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;✦ ঈদ স্পেশাল — এখনই অর্ডার করুন এবং পান বিশেষ ছাড়!
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;✦ ১০০% খাঁটি মশলা — কোনো ভেজাল নেই
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;✦ সারা বাংলাদেশে হোম ডেলিভারি &nbsp;&nbsp;&nbsp;
-    </p>
-</div>
+@include('partials.storefront.announcement')
 
 {{-- ━━━━━━━━━━━━━━━━  NAVBAR  ━━━━━━━━━━━━━━━━ --}}
-@php
-    $navVendor   = (Auth::check() && Auth::user()->isVendor()) ? Auth::user()->vendor : null;
-    $navCustomer = (Auth::check() && Auth::user()->role === 'customer') ? Auth::user() : null;
-@endphp
-<nav class="nav-blur sticky top-0 z-50 border-b border-green-900 shadow-lg">
-    <div class="max-w-7xl mx-auto px-5 py-4 flex justify-between items-center gap-4">
-        <a href="/" class="group flex flex-col leading-none shrink-0">
-            <span class="text-[#c9a227] text-2xl font-bold font-serif-bn group-hover:text-[#e2bb45] transition-colors">মসলা ঘর</span>
-            <span class="text-green-400 text-[10px] tracking-[.2em] uppercase mt-0.5">Authentic Spice Store</span>
-        </a>
-
-        {{-- Desktop nav links --}}
-        <div class="hidden md:flex items-center gap-6">
-            <a href="#products" class="text-green-200 hover:text-[#c9a227] text-sm transition-colors">পণ্যসমূহ</a>
-            <a href="#why-us"   class="text-green-200 hover:text-[#c9a227] text-sm transition-colors">আমাদের সম্পর্কে</a>
-            <a href="#contact"  class="text-green-200 hover:text-[#c9a227] text-sm transition-colors">যোগাযোগ</a>
-        </div>
-
-        {{-- Desktop auth buttons --}}
-        <div class="hidden md:flex items-center gap-2">
-            @if($navVendor)
-                {{-- Vendor logged in --}}
-                <a href="{{ route('vendor.dashboard') }}"
-                   class="text-xs text-green-200 hover:text-[#c9a227] px-3 py-1.5 rounded border border-green-700 hover:border-[#c9a227] transition-colors">
-                    ড্যাশবোর্ড
-                </a>
-                <form method="POST" action="{{ route('vendor.logout') }}" class="inline">
-                    @csrf
-                    <button type="submit"
-                            class="text-xs text-red-300 hover:text-red-200 px-3 py-1.5 rounded border border-red-800 hover:border-red-600 transition-colors">
-                        লগআউট
-                    </button>
-                </form>
-            @elseif($navCustomer)
-                {{-- Customer logged in — account dropdown (no auto-redirect to dashboard) --}}
-                <details class="relative">
-                    <summary class="list-none cursor-pointer select-none text-xs text-green-200 hover:text-[#c9a227] px-3 py-1.5 rounded border border-green-700 hover:border-[#c9a227] transition-colors flex items-center gap-1">
-                        আমার অ্যাকাউন্ট
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </summary>
-                    <div class="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-green-50 py-1.5 z-50 text-sm text-gray-700">
-                        <a href="{{ route('customer.account') }}" class="block px-4 py-2 hover:bg-green-50">আমার অ্যাকাউন্ট</a>
-                        <a href="{{ route('customer.orders.index') }}" class="block px-4 py-2 hover:bg-green-50">অর্ডারসমূহ</a>
-                        <a href="{{ route('customer.account') }}" class="block px-4 py-2 hover:bg-green-50">ড্যাশবোর্ড</a>
-                        <form method="POST" action="{{ route('customer.logout') }}" class="border-t border-green-50 mt-1 pt-1">
-                            @csrf
-                            <button type="submit" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50">লগআউট</button>
-                        </form>
-                    </div>
-                </details>
-            @else
-                {{-- Guest — show links based on admin settings --}}
-                @if(($ws['show_vendor_links_in_header'] ?? '0') === '1')
-                    @if(($ws['vendor_registration_enabled'] ?? '0') === '1')
-                    <a href="{{ route('vendor.register') }}"
-                       class="text-xs text-indigo-300 hover:text-indigo-200 px-3 py-1.5 rounded border border-indigo-700 hover:border-indigo-500 transition-colors whitespace-nowrap">
-                        মার্চেন্ট হন
-                    </a>
-                    @endif
-                    @if(($ws['vendor_login_enabled'] ?? '1') === '1')
-                    <a href="{{ route('vendor.login') }}"
-                       class="text-xs text-indigo-300 hover:text-indigo-200 px-3 py-1.5 rounded border border-indigo-700 hover:border-indigo-500 transition-colors whitespace-nowrap">
-                        মার্চেন্ট লগইন
-                    </a>
-                    @endif
-                @endif
-                @if(($ws['show_customer_links_in_header'] ?? '1') === '1')
-                    @if(($ws['customer_login_enabled'] ?? '1') === '1')
-                    <a href="{{ route('customer.login') }}?redirect={{ urlencode(request()->getRequestUri()) }}"
-                       class="text-xs text-green-200 hover:text-[#c9a227] px-3 py-1.5 rounded border border-green-700 hover:border-[#c9a227] transition-colors">
-                        লগইন
-                    </a>
-                    @endif
-                    @if(($ws['customer_registration_enabled'] ?? '1') === '1')
-                    <a href="{{ route('customer.register') }}"
-                       class="text-xs bg-[#c9a227] hover:bg-[#e2bb45] text-[#0f3d22] font-semibold px-3 py-1.5 rounded transition-colors whitespace-nowrap">
-                        রেজিস্ট্রেশন
-                    </a>
-                    @endif
-                @endif
-            @endif
-        </div>
-
-        {{-- Unified cart (retail box + paykari bag) → opens shared drawer; always visible --}}
-        <button type="button" onclick="msCartOpen()" class="relative text-green-200 hover:text-[#c9a227] p-1 shrink-0 transition-colors order-last md:order-none" title="কার্ট" aria-label="কার্ট">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 4.6A1 1 0 005.6 19H19M9 22a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z"/></svg>
-            <span data-cart-badge class="absolute -top-1 -right-1 bg-[#c9a227] text-[#0f3d22] text-[10px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center" style="display:none;">0</span>
-        </button>
-
-        <button id="nav-toggle" class="md:hidden text-green-300 hover:text-[#c9a227] p-1 shrink-0" aria-label="menu">
-            <svg id="ico-open"  class="w-6 h-6"        fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-            <svg id="ico-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-    </div>
-
-    {{-- Mobile menu --}}
-    <div id="mobile-menu" class="hidden md:hidden border-t border-green-900 px-5 py-4 flex-col gap-3">
-        <a href="#products" class="text-green-200 hover:text-[#c9a227] text-sm">পণ্যসমূহ</a>
-        <a href="#why-us"   class="text-green-200 hover:text-[#c9a227] text-sm">আমাদের সম্পর্কে</a>
-        <a href="#contact"  class="text-green-200 hover:text-[#c9a227] text-sm">যোগাযোগ</a>
-
-        <div class="border-t border-green-900 pt-3 flex flex-col gap-2">
-            @if($navVendor)
-                <a href="{{ route('vendor.dashboard') }}"
-                   class="text-sm text-center text-green-200 border border-green-700 rounded-lg px-4 py-2 hover:border-[#c9a227] hover:text-[#c9a227] transition-colors">
-                    ড্যাশবোর্ড
-                </a>
-                <form method="POST" action="{{ route('vendor.logout') }}">
-                    @csrf
-                    <button type="submit"
-                            class="w-full text-sm text-center text-red-300 border border-red-800 rounded-lg px-4 py-2 hover:border-red-600 transition-colors">
-                        লগআউট
-                    </button>
-                </form>
-            @elseif($navCustomer)
-                <span class="text-xs text-green-400 text-center">{{ $navCustomer->name }}</span>
-                <a href="{{ route('customer.account') }}"
-                   class="text-sm text-center text-green-200 border border-green-700 rounded-lg px-4 py-2 hover:border-[#c9a227] hover:text-[#c9a227] transition-colors">
-                    আমার অ্যাকাউন্ট
-                </a>
-                <a href="{{ route('customer.orders.index') }}"
-                   class="text-sm text-center text-green-200 border border-green-700 rounded-lg px-4 py-2 hover:border-[#c9a227] hover:text-[#c9a227] transition-colors">
-                    অর্ডারসমূহ
-                </a>
-                <form method="POST" action="{{ route('customer.logout') }}">
-                    @csrf
-                    <button type="submit"
-                            class="w-full text-sm text-center text-red-300 border border-red-800 rounded-lg px-4 py-2 hover:border-red-600 transition-colors">
-                        লগআউট
-                    </button>
-                </form>
-            @else
-                @if(($ws['show_customer_links_in_header'] ?? '1') === '1')
-                    @if(($ws['customer_login_enabled'] ?? '1') === '1')
-                    <a href="{{ route('customer.login') }}?redirect={{ urlencode(request()->getRequestUri()) }}"
-                       class="text-sm text-center text-green-200 border border-green-700 rounded-lg px-4 py-2 hover:border-[#c9a227] hover:text-[#c9a227] transition-colors">
-                        লগইন
-                    </a>
-                    @endif
-                    @if(($ws['customer_registration_enabled'] ?? '1') === '1')
-                    <a href="{{ route('customer.register') }}"
-                       class="text-sm text-center bg-[#c9a227] text-[#0f3d22] font-semibold rounded-lg px-4 py-2 hover:bg-[#e2bb45] transition-colors">
-                        রেজিস্ট্রেশন
-                    </a>
-                    @endif
-                @endif
-                @if(($ws['show_vendor_links_in_header'] ?? '0') === '1')
-                    @php $anyVendorMobile = ($ws['vendor_registration_enabled'] ?? '0') === '1' || ($ws['vendor_login_enabled'] ?? '1') === '1'; @endphp
-                    @if($anyVendorMobile)
-                    <div class="border-t border-green-900 pt-2 flex flex-col gap-2">
-                        @if(($ws['vendor_registration_enabled'] ?? '0') === '1')
-                        <a href="{{ route('vendor.register') }}"
-                           class="text-sm text-center text-indigo-300 border border-indigo-800 rounded-lg px-4 py-2 hover:border-indigo-500 transition-colors">
-                            মার্চেন্ট হন
-                        </a>
-                        @endif
-                        @if(($ws['vendor_login_enabled'] ?? '1') === '1')
-                        <a href="{{ route('vendor.login') }}"
-                           class="text-sm text-center text-indigo-300 border border-indigo-800 rounded-lg px-4 py-2 hover:border-indigo-500 transition-colors">
-                            মার্চেন্ট লগইন
-                        </a>
-                        @endif
-                    </div>
-                    @endif
-                @endif
-            @endif
-        </div>
-    </div>
-</nav>
+@include("partials.storefront.navbar")
 
 {{-- ━━━━━━━━━━━━━━━━  HERO  ━━━━━━━━━━━━━━━━ --}}
 <section class="hero-bg py-20 md:py-28 px-5">
@@ -463,22 +290,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
         </div>
 
         {{-- ══ Category filter pills (carry the current mode so a click keeps it) ══ --}}
-        @if($navCategories->isNotEmpty())
-        <div class="flex flex-wrap items-center gap-2 mb-8">
-            <a data-mode-link href="{{ url()->current() }}{{ $modeQuery ? '?'.$modeQuery : '' }}#products"
-               class="px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors
-                      {{ empty($selectedCategory) ? 'bg-[#14532d] text-white border-[#14532d]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#14532d] hover:text-[#14532d]' }}">
-                সব পণ্য
-            </a>
-            @foreach($navCategories as $navCat)
-            <a data-mode-link href="{{ url()->current() }}?category={{ $navCat->slug }}{{ $modeQuery ? '&'.$modeQuery : '' }}#products"
-               class="px-4 py-1.5 rounded-full text-xs font-semibold border transition-colors
-                      {{ (!empty($selectedCategory) && $selectedCategory->id === $navCat->id) ? 'bg-[#14532d] text-white border-[#14532d]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#14532d] hover:text-[#14532d]' }}">
-                {{ $navCat->name_bn }}
-            </a>
-            @endforeach
-        </div>
-        @endif
+        @include('partials.storefront.category-chips')
 
         @if($products->isEmpty())
             <div class="text-center py-24 text-gray-400">
@@ -490,231 +302,14 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
         {{-- ══ CARD VIEW ══ --}}
         <div id="card-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             @foreach($products as $product)
-            @php
-                $directRetail = $product->activePrices->filter(fn($pr) => is_null($pr->product_variant_id))->where('sell_type', 'retail');
-                $initRetailPrices = $directRetail->isNotEmpty()
-                    ? $directRetail
-                    : ($product->activeVariants->first()?->activePrices->where('sell_type', 'retail') ?? collect());
-                // Wholesale products link to the wholesale detail page; others to retail.
-                $detailUrl = $product->is_wholesale
-                    ? route('products.show', ['product' => $product->slug, 'mode' => 'wholesale'])
-                    : route('products.show', $product->slug);
-            @endphp
-            <article data-card-product="{{ $product->id }}" style="{{ (($listMode === 'wholesale') === (bool) $product->is_wholesale) ? '' : 'display:none;' }}" class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
-
-                {{-- Image slideshow / placeholder --}}
-                @php
-                    $cardSlides = collect([$product->main_image])
-                        ->merge($product->gallery_images ?? [])
-                        ->filter()->values();
-                @endphp
-                <a href="{{ $detailUrl }}" class="block">
-                <div class="relative h-52 overflow-hidden flex-shrink-0" data-slideshow="{{ $product->id }}">
-                    @if($cardSlides->isNotEmpty())
-                        @foreach($cardSlides as $si => $slide)
-                        <img src="{{ asset($slide) }}" alt="{{ $product->name_bn }}"
-                             class="card-slide absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
-                             style="{{ $si > 0 ? 'opacity:0;' : '' }}">
-                        @endforeach
-                        @if($cardSlides->count() > 1)
-                        <div class="absolute bottom-2 left-0 right-0 flex justify-center gap-1 z-10 pointer-events-none">
-                            @foreach($cardSlides as $si => $slide)
-                            <span class="card-dot w-1.5 h-1.5 rounded-full bg-white transition-opacity"
-                                  style="{{ $si === 0 ? 'opacity:.9;' : 'opacity:.4;' }}"></span>
-                            @endforeach
-                        </div>
-                        @endif
-                    @else
-                        <div class="w-full h-full bg-gradient-to-br from-[#14532d] to-[#1a6b3a] flex items-center justify-center relative">
-                            <div class="absolute inset-0 pointer-events-none opacity-20">
-                                <div class="absolute top-3 left-3 w-14 h-14 border border-[#c9a227] rounded-full"></div>
-                                <div class="absolute bottom-3 right-3 w-10 h-10 border border-[#c9a227] rounded-full"></div>
-                                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 border border-[#c9a227] rounded-full"></div>
-                            </div>
-                            <div class="z-10 text-center px-4">
-                                <div class="text-[#c9a227] font-serif-bn text-2xl font-bold leading-tight">{{ $product->name_bn }}</div>
-                            </div>
-                        </div>
-                    @endif
-                    <span class="absolute top-3 left-3 text-[10px] font-bold px-2 py-0.5 rounded-full shadow
-                        {{ $product->isInStock() ? 'bg-[#c9a227] text-[#0f3d22]' : 'bg-red-500 text-white' }}">
-                        {{ $product->isInStock() ? 'স্টকে আছে' : 'স্টক শেষ' }}
-                    </span>
-                    @if($product->cat)
-                    <span class="absolute top-3 right-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/90 text-[#14532d] shadow">
-                        {{ $product->cat->name_bn }}
-                    </span>
-                    @endif
-                </div>
-                </a>
-
-                {{-- Body --}}
-                <div class="p-5 flex flex-col flex-1">
-                    <a href="{{ $detailUrl }}" class="hover:underline">
-                        <h3 class="font-serif-bn text-[#14532d] text-xl font-bold leading-snug">{{ $product->name_bn }}</h3>
-                    </a>
-
-                    @if($product->short_description)
-                        <p class="text-gray-500 text-sm mt-2 leading-relaxed line-clamp-2">{{ $product->short_description }}</p>
-                    @endif
-
-                    @if($product->is_wholesale)
-                    {{-- Paykari product: price hidden on card, enquiry-only --}}
-                    <div class="mt-3 flex flex-wrap items-center gap-1.5">
-                        <span class="inline-flex items-center gap-1 text-xs font-semibold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full">পাইকারি</span>
-                        @if($product->min_order_quantity)
-                        <span class="text-[11px] text-gray-500">MOQ: {{ rtrim(rtrim(number_format($product->min_order_quantity, 2, '.', ''), '0'), '.') }}{{ $product->min_order_unit ?: 'kg' }}</span>
-                        @endif
-                    </div>
-                    <div class="flex-1 min-h-3"></div>
-                    {{-- Listing stays simple: enquiry/contact actions live on the details page. --}}
-                    <div class="mt-4">
-                        <a href="{{ $detailUrl }}"
-                           class="block w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
-                            বিস্তারিত দেখুন
-                        </a>
-                    </div>
-                    @else
-                    <div id="card-price-wrap-{{ $product->id }}" class="mt-3 flex items-baseline gap-1.5"
-                         style="{{ $initRetailPrices->isEmpty() ? 'display:none;' : '' }}">
-                        <span id="card-from-{{ $product->id }}" class="text-[#c9a227] font-serif-bn text-2xl font-bold">
-                            {{ $initRetailPrices->isNotEmpty() ? '৳' . number_format($initRetailPrices->first()->final_price, 0) : '' }}
-                        </span>
-                        <span class="text-gray-400 text-xs">থেকে শুরু</span>
-                    </div>
-
-                    {{-- Pack price chips --}}
-                    <div id="card-chips-{{ $product->id }}" class="mt-3 grid grid-cols-3 gap-1.5">
-                        @foreach($initRetailPrices as $price)
-                            <div class="p-chip p-1.5 text-center">
-                                <div class="chip-lbl text-gray-400 text-[10px] leading-tight">{{ $price->label }}</div>
-                                <div class="chip-val text-[#14532d] text-[13px] font-semibold leading-tight mt-0.5">
-                                    ৳{{ number_format($price->final_price, 0) }}
-                                </div>
-                                @if($price->is_manual_override)
-                                    <div class="text-[#c9a227] text-[9px] leading-none mt-0.5">★</div>
-                                @endif
-                            </div>
-                        @endforeach
-                    </div>
-
-                    {{-- Wholesale enquiry info (shown only in পাইকারি mode) --}}
-                    <div id="card-wholesale-ui-{{ $product->id }}" style="display:none;" class="mt-3 flex flex-wrap items-center gap-1.5">
-                        <span class="inline-flex items-center gap-1 text-xs font-semibold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full">দর জানতে চাই</span>
-                        @if($product->min_order_quantity)
-                        <span class="text-[11px] text-gray-500">MOQ: {{ rtrim(rtrim(number_format($product->min_order_quantity, 2, '.', ''), '0'), '.') }}{{ $product->min_order_unit ?: 'kg' }}</span>
-                        @endif
-                    </div>
-
-                    <div class="flex-1 min-h-3"></div>
-
-                    {{-- Retail mode buttons --}}
-                    <div id="card-retail-btns-{{ $product->id }}" class="mt-4 flex gap-2">
-                        <a href="{{ route('products.show', $product->slug) }}"
-                           class="flex-1 bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
-                            বিস্তারিত দেখুন
-                        </a>
-                        <button onclick="goToCombo({{ $product->id }})"
-                                class="flex-1 border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                            বাক্সে যোগ
-                        </button>
-                    </div>
-
-                    {{-- Wholesale mode button (hidden in retail mode): Details only --}}
-                    <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4">
-                        <a href="{{ route('products.show', ['product' => $product->slug, 'mode' => 'wholesale']) }}"
-                           class="block w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
-                            বিস্তারিত দেখুন
-                        </a>
-                    </div>
-                    @endif
-                </div>
-            </article>
+            @include("partials.storefront.product-card")
             @endforeach
         </div>
 
         {{-- ══ LIST VIEW ══ --}}
         <div id="list-view">
             @foreach($products as $product)
-            @php
-                $directRetail = $product->activePrices->filter(fn($pr) => is_null($pr->product_variant_id))->where('sell_type', 'retail');
-                $initRetailPrices = $directRetail->isNotEmpty()
-                    ? $directRetail
-                    : ($product->activeVariants->first()?->activePrices->where('sell_type', 'retail') ?? collect());
-                $detailUrl = $product->is_wholesale
-                    ? route('products.show', ['product' => $product->slug, 'mode' => 'wholesale'])
-                    : route('products.show', $product->slug);
-            @endphp
-            <article data-list-product="{{ $product->id }}" style="{{ (($listMode === 'wholesale') === (bool) $product->is_wholesale) ? '' : 'display:none;' }}" class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
-
-                {{-- Thumb --}}
-                <div class="w-28 sm:w-36 flex-shrink-0 relative min-h-[110px]">
-                    @if($product->main_image)
-                        <img src="{{ asset($product->main_image) }}" alt="{{ $product->name_bn }}"
-                             class="w-full h-full object-cover">
-                    @else
-                        <div class="w-full h-full bg-gradient-to-br from-[#14532d] to-[#1a6b3a] flex items-center justify-center">
-                            <div class="text-center px-2">
-                                <div class="text-[#c9a227] font-serif-bn text-base font-bold leading-tight">{{ $product->name_bn }}</div>
-                            </div>
-                        </div>
-                    @endif
-                    <span class="absolute top-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full
-                        {{ $product->isInStock() ? 'bg-[#c9a227] text-[#0f3d22]' : 'bg-red-500 text-white' }}">
-                        {{ $product->isInStock() ? '✓' : '✗' }}
-                    </span>
-                </div>
-
-                {{-- Content --}}
-                <div class="flex-1 p-4 flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex flex-wrap items-baseline gap-2">
-                            <h3 class="font-serif-bn text-[#14532d] font-bold text-lg leading-tight">{{ $product->name_bn }}</h3>
-                        </div>
-                        @if($product->short_description)
-                            <p class="text-gray-500 text-sm mt-0.5 line-clamp-1">{{ $product->short_description }}</p>
-                        @endif
-
-                        @if($product->is_wholesale)
-                        <div class="mt-2">
-                            <span class="text-[11px] font-semibold text-orange-700 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full">পাইকারি — দাম জানতে enquiry</span>
-                        </div>
-                        @else
-                        <div id="list-prices-{{ $product->id }}" class="mt-2 flex flex-wrap gap-1">
-                            @foreach($initRetailPrices as $price)
-                                <span class="text-[11px] bg-green-50 border border-green-100 text-[#14532d] px-2 py-0.5 rounded-full whitespace-nowrap">
-                                    {{ $price->label }} · ৳{{ number_format($price->final_price, 0) }}
-                                </span>
-                            @endforeach
-                        </div>
-                        @endif
-                    </div>
-
-                    {{-- Price + buttons --}}
-                    <div class="flex sm:flex-col items-center sm:items-end justify-between gap-2 flex-shrink-0">
-                        @if($product->activePrices->isNotEmpty() && ! $product->is_wholesale)
-                            <div class="text-right">
-                                <div id="list-from-{{ $product->id }}" class="text-[#c9a227] font-bold text-xl font-serif-bn">
-                                    {{ $initRetailPrices->isNotEmpty() ? '৳' . number_format($initRetailPrices->first()->final_price, 0) : '' }}
-                                </div>
-                                <div class="text-gray-400 text-[10px]">থেকে শুরু</div>
-                            </div>
-                        @endif
-                        <div class="flex gap-2">
-                            <a href="{{ $detailUrl }}"
-                               class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
-                                বিস্তারিত
-                            </a>
-                            @unless($product->is_wholesale)
-                            <button onclick="goToCombo({{ $product->id }})"
-                                    class="border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
-                                বাক্সে যোগ
-                            </button>
-                            @endunless
-                        </div>
-                    </div>
-                </div>
-            </article>
+            @include("partials.storefront.product-list-item")
             @endforeach
         </div>
 
@@ -740,59 +335,14 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 <section id="fixed-combos" class="py-16 md:py-20 px-5">
     <div class="max-w-7xl mx-auto">
 
-        <div class="text-center mb-10">
-            <div class="flex items-center justify-center gap-4 mb-3">
-                <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
-                <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">প্রস্তুত প্যাক</span>
-                <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
-            </div>
-            <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">রেডি মশলার বাক্স</h2>
-            <p class="text-gray-400 text-sm mt-2 max-w-md mx-auto leading-relaxed">
-                রেডি-মেড মশলার সেট — এক ক্লিকে অর্ডার করুন।
-            </p>
-        </div>
+        <x-storefront.section-heading
+            eyebrow="প্রস্তুত প্যাক"
+            title="রেডি মশলার বাক্স"
+            subtitle="রেডি-মেড মশলার সেট — এক ক্লিকে অর্ডার করুন।" />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             @foreach($fixedCombos as $combo)
-            <div data-combo-type="{{ $combo->sell_type }}"
-                 class="bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col transition-shadow hover:shadow-lg"
-                 style="{{ $combo->sell_type === 'wholesale' ? 'display:none;' : '' }}">
-
-                <div class="bg-gradient-to-br from-[#14532d] to-[#1a6b3a] px-5 pt-5 pb-4 relative">
-                    @if($combo->badge_text)
-                    <span class="absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#c9a227] text-[#0f3d22]">
-                        {{ $combo->badge_text }}
-                    </span>
-                    @endif
-                    <h3 class="font-serif-bn text-[#c9a227] text-xl font-bold leading-snug pr-16">{{ $combo->name }}</h3>
-                    @if($combo->short_description)
-                    <p class="text-green-300 text-xs mt-1 leading-relaxed">{{ $combo->short_description }}</p>
-                    @endif
-                    <div class="mt-3 text-[#fef9ee] font-serif-bn text-3xl font-bold">
-                        ৳{{ number_format($combo->sell_price, 0) }}
-                    </div>
-                </div>
-
-                <div class="px-5 py-4 flex-1">
-                    <ul class="space-y-1.5">
-                        @foreach($combo->items as $item)
-                        <li class="flex justify-between items-baseline text-sm">
-                            <span class="font-medium text-[#14532d]">{{ $item->product?->name_bn ?? 'পণ্য' }}</span>
-                            <span class="text-gray-400 text-xs ml-2 flex-shrink-0">
-                                {{ $item->quantity_gram >= 1000 ? ($item->quantity_gram / 1000).' কেজি' : $item->quantity_gram.' গ্রাম' }}
-                            </span>
-                        </li>
-                        @endforeach
-                    </ul>
-                </div>
-
-                <div class="px-5 pb-5">
-                    <button onclick="orderFixedCombo({{ $combo->id }})"
-                            class="w-full bg-[#c9a227] hover:bg-[#e2bb45] text-[#0f3d22] font-bold py-3 rounded-xl text-sm shadow transition-colors">
-                        এখনই অর্ডার করুন →
-                    </button>
-                </div>
-            </div>
+                @include('partials.storefront.fixed-combo-card')
             @endforeach
         </div>
     </div>
@@ -811,12 +361,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
     <div class="max-w-7xl mx-auto">
 
         {{-- Section Label + Combo Mode Tabs --}}
-        <div class="text-center mb-8">
-            <div class="flex items-center justify-center gap-4 mb-3">
-                <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
-                <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">আপনার পছন্দে তৈরি</span>
-                <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
-            </div>
+        <x-storefront.section-heading eyebrow="আপনার পছন্দে তৈরি" margin="mb-8">
             <div class="inline-flex bg-white rounded-xl border border-green-200 overflow-hidden shadow-sm mt-4">
                 <button id="combo-tab-retail" onclick="switchComboTab('retail')"
                         class="px-6 py-2.5 text-sm font-semibold transition-colors {{ $comboMode === 'retail' ? 'bg-[#14532d] text-[#c9a227]' : 'text-gray-600 hover:bg-gray-50' }}">
@@ -827,16 +372,14 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                     পাইকারি অর্ডার
                 </button>
             </div>
-        </div>
+        </x-storefront.section-heading>
 
         {{-- ══════════  RETAIL COMBO  ══════════ --}}
         <div id="combo-retail-section" style="{{ $comboMode === 'paykari' ? 'display:none;' : '' }}">
-            <div class="text-center mb-8">
-                <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">নিজের মশলার বাক্স বানান</h2>
-                <p class="text-gray-400 text-sm mt-2 max-w-md mx-auto leading-relaxed">
-                    আপনার পছন্দের মশলা বেছে নিন, পরিমাণ ঠিক করুন — আমরা পৌঁছে দেব।
-                </p>
-            </div>
+            <x-storefront.section-heading
+                title="নিজের মশলার বাক্স বানান"
+                subtitle="আপনার পছন্দের মশলা বেছে নিন, পরিমাণ ঠিক করুন — আমরা পৌঁছে দেব।"
+                margin="mb-8" />
 
         <div class="flex flex-col lg:flex-row gap-8 items-start">
 
@@ -1090,14 +633,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 @if(false)
 <section id="reviews" class="py-16 md:py-20 px-5 bg-[#fef9ee]">
     <div class="max-w-5xl mx-auto">
-        <div class="text-center mb-12">
-            <div class="flex items-center justify-center gap-4 mb-3">
-                <div class="h-px w-14 bg-[#c9a227] opacity-40"></div>
-                <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">Customer Reviews</span>
-                <div class="h-px w-14 bg-[#c9a227] opacity-40"></div>
-            </div>
-            <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">গ্রাহকরা কী বলছেন?</h2>
-        </div>
+        <x-storefront.section-heading eyebrow="Customer Reviews" title="গ্রাহকরা কী বলছেন?" margin="mb-12" />
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             @foreach($reviews as $review)
             <div class="bg-white rounded-2xl shadow-sm border border-amber-100 p-6 flex flex-col gap-4 hover:shadow-md transition-shadow">
@@ -1139,14 +675,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 {{-- ━━━━━━━━━━━━━━━━  WHY US  ━━━━━━━━━━━━━━━━ --}}
 <section id="why-us" class="bg-[#14532d] py-16 md:py-20 px-5">
     <div class="max-w-5xl mx-auto">
-        <div class="text-center mb-12">
-            <div class="flex items-center justify-center gap-4 mb-3">
-                <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
-                <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">Why Choose Us</span>
-                <div class="h-px w-14 bg-[#c9a227] opacity-50"></div>
-            </div>
-            <h2 class="font-serif-bn text-[#fef9ee] text-3xl md:text-4xl font-bold">কেন আমাদের বেছে নেবেন?</h2>
-        </div>
+        <x-storefront.section-heading eyebrow="Why Choose Us" title="কেন আমাদের বেছে নেবেন?" :dark="true" margin="mb-12" />
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
             @foreach([
                 ['🌱', '১০০% খাঁটি',     'কোনো কৃত্রিম রং বা সংরক্ষক ছাড়া সরাসরি উৎস থেকে সংগৃহীত।'],
@@ -2160,6 +1689,9 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 @php($msHideFloat = true)
 @include('partials.mini-cart')
 
+{{-- App-like mobile/tablet bottom navigation (combo-bar z-50 sits above it when active) --}}
+@include('partials.bottom-nav')
+
 {{-- ━━━━━━━━━━━━━━━━  SCRIPTS  ━━━━━━━━━━━━━━━━ --}}
 <script>
 // ── Product data (server-rendered JSON, keyed by id) ──────────────────────
@@ -2973,24 +2505,7 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { closeModal(); closeOrderForm(); }
 });
 
-// Mobile nav
-(function () {
-    const toggle = document.getElementById('nav-toggle');
-    const menu   = document.getElementById('mobile-menu');
-    const open   = document.getElementById('ico-open');
-    const close  = document.getElementById('ico-close');
-    toggle.addEventListener('click', () => {
-        const vis = menu.style.display === 'flex';
-        menu.style.display = vis ? 'none' : 'flex';
-        open.classList.toggle('hidden', !vis);
-        close.classList.toggle('hidden', vis);
-    });
-    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-        menu.style.display = 'none';
-        open.classList.remove('hidden');
-        close.classList.add('hidden');
-    }));
-})();
+// Mobile nav drawer is self-contained in partials/storefront/navbar.blade.php.
 
 // Smooth scroll
 document.querySelectorAll('a[href^="#"]').forEach(a => {

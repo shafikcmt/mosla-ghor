@@ -27,54 +27,17 @@
             transition: background-position .4s ease, box-shadow .2s;
         }
         .btn-gold:hover { background-position: right center; box-shadow: 0 8px 24px rgba(201,162,39,.45); }
+
+        /* Leave room for the app-like mobile bottom navigation (lg:hidden). */
+        @media (max-width: 1023px) { body { padding-bottom: calc(60px + env(safe-area-inset-bottom)); } }
     </style>
 
     @yield('head')
 </head>
 <body class="min-h-screen flex flex-col">
 
-{{-- Header --}}
-<header class="bg-[#0f3d22] sticky top-0 z-40 shadow-md">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-        <a href="/" class="flex items-center gap-2">
-            <span class="font-serif-bn text-[#c9a227] text-xl font-bold">মসলা ঘর</span>
-        </a>
-        <nav class="flex items-center gap-3 sm:gap-4 text-sm">
-            <a href="/" class="text-green-100 hover:text-white transition-colors hidden sm:inline">হোম</a>
-            <a href="/#products" class="text-green-100 hover:text-white transition-colors hidden sm:inline">পণ্য</a>
-
-            {{-- Unified cart (retail box + paykari bag) → opens shared drawer --}}
-            <button type="button" onclick="msCartOpen()" class="relative text-green-100 hover:text-white transition-colors p-1" title="কার্ট" aria-label="কার্ট">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 4.6A1 1 0 005.6 19H19M9 22a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2z"/></svg>
-                <span data-cart-badge class="absolute -top-1 -right-1 bg-[#c9a227] text-[#0f3d22] text-[10px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center" style="display:none;">0</span>
-            </button>
-
-            @if(auth()->check() && auth()->user()->role === 'customer')
-                {{-- Account dropdown (dashboard only opens when intentionally clicked) --}}
-                <details class="relative group">
-                    <summary class="list-none cursor-pointer bg-[#c9a227] text-[#0f3d22] font-semibold px-3 py-1.5 rounded-lg hover:brightness-110 transition flex items-center gap-1 select-none">
-                        <span class="hidden sm:inline">আমার অ্যাকাউন্ট</span><span class="sm:hidden">অ্যাকাউন্ট</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                    </summary>
-                    <div class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-green-50 py-1.5 z-50 text-sm text-gray-700">
-                        <a href="{{ route('customer.account') }}" class="block px-4 py-2 hover:bg-green-50">আমার অ্যাকাউন্ট</a>
-                        <a href="{{ route('customer.orders.index') }}" class="block px-4 py-2 hover:bg-green-50">অর্ডারসমূহ</a>
-                        <a href="{{ route('customer.account') }}" class="block px-4 py-2 hover:bg-green-50">ড্যাশবোর্ড</a>
-                        <form method="POST" action="{{ route('customer.logout') }}" class="border-t border-green-50 mt-1 pt-1">
-                            @csrf
-                            <button type="submit" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50">লগআউট</button>
-                        </form>
-                    </div>
-                </details>
-            @else
-                <a href="{{ route('customer.login') }}?redirect={{ urlencode(request()->getRequestUri()) }}"
-                   class="bg-[#c9a227] text-[#0f3d22] font-semibold px-3 py-1.5 rounded-lg hover:brightness-110 transition">
-                    লগইন
-                </a>
-            @endif
-        </nav>
-    </div>
-</header>
+{{-- Header (shared, responsive storefront navbar) --}}
+@include('partials.storefront.navbar')
 
 {{-- Main --}}
 <main class="flex-1 w-full">
@@ -118,8 +81,13 @@
 {{-- Toast container --}}
 <div id="ms-toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[200] hidden bg-[#14532d] text-white text-sm px-4 py-2.5 rounded-xl shadow-lg"></div>
 
-{{-- Shared Mini-Cart drawer + enquiry-bag store (works for guests across pages) --}}
+{{-- Shared Mini-Cart drawer + enquiry-bag store (works for guests across pages).
+     Float button suppressed — the mobile bottom nav already exposes the bag. --}}
+@php($msHideFloat = true)
 @include('partials.mini-cart')
+
+{{-- App-like mobile/tablet bottom navigation --}}
+@include('partials.bottom-nav')
 
 @yield('scripts')
 </body>

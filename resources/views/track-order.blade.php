@@ -1,29 +1,15 @@
-<!DOCTYPE html>
-<html lang="bn">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>অর্ডার ট্র্যাক করুন — মসলা ঘর</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Noto Sans Bengali', sans-serif; background: #fef9ee; }</style>
-</head>
-<body class="min-h-screen flex flex-col items-center justify-start py-12 px-4">
+@extends('storefront.layout')
 
-<div class="w-full max-w-md">
+@section('title', 'অর্ডার ট্র্যাক করুন')
+
+@section('content')
+<div class="w-full max-w-md mx-auto">
     <div class="text-center mb-8">
-        <a href="/" class="text-[#14532d] text-2xl font-bold">মসলা ঘর</a>
-        <h1 class="text-xl font-bold text-gray-800 mt-3">অর্ডার ট্র্যাক করুন</h1>
+        <h1 class="text-xl font-bold text-gray-800">অর্ডার ট্র্যাক করুন</h1>
         <p class="text-gray-500 text-sm mt-1">অর্ডার নম্বর ও মোবাইল নম্বর দিয়ে স্ট্যাটাস জানুন</p>
     </div>
 
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-        @if($errors->any())
-        <div class="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
-            @foreach($errors->all() as $e)<p>• {{ $e }}</p>@endforeach
-        </div>
-        @endif
-
         <form method="POST" action="{{ route('track-order.submit') }}" class="space-y-4">
             @csrf
             <div>
@@ -121,5 +107,4 @@
         <a href="/" class="text-[#14532d] hover:underline">← হোম পেজে ফিরুন</a>
     </div>
 </div>
-</body>
-</html>
+@endsection
