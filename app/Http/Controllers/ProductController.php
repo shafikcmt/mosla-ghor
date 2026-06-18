@@ -92,6 +92,36 @@ class ProductController extends Controller
         return view('storefront.enquiry-bag');
     }
 
+    /**
+     * Active variants for a set of product IDs (used by the enquiry-bag page to
+     * render a per-row variant dropdown). Returns { productId: [{id,name}, …] }.
+     */
+    public function variantsLookup(Request $request)
+    {
+        $ids = collect(explode(',', (string) $request->query('ids')))
+            ->map(fn($v) => (int) trim($v))
+            ->filter()
+            ->unique()
+            ->take(50)
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $variants = \App\Models\ProductVariant::whereIn('product_id', $ids)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['id', 'product_id', 'name']);
+
+        $map = $variants->groupBy('product_id')->map(
+            fn($group) => $group->map(fn($v) => ['id' => $v->id, 'name' => $v->name])->values()
+        );
+
+        return response()->json($map);
+    }
+
     /** Public review submission — guest or logged-in. Starts as pending. */
     public function storeReview(Request $request, Product $product)
     {
@@ -143,17 +173,23 @@ class ProductController extends Controller
         abort_unless($product->is_active, 404);
 
         $validated = $request->validate([
-            'customer_name'     => ['required', 'string', 'max:100'],
-            'customer_phone'    => ['required', 'string', 'max:20', 'regex:/^[0-9+\-\s]{6,20}$/'],
-            'delivery_location' => ['required', 'string', 'max:255'],
-            'quantity_kg'       => ['required', 'numeric', 'min:0.01'],
-            'quantity_unit'     => ['nullable', 'in:kg,gram,bag,carton,piece,packet,ton'],
-            'business_type'     => ['nullable', 'in:shop,restaurant,dealer,retailer,other'],
-            'customer_whatsapp' => ['nullable', 'string', 'max:20'],
-            'message'           => ['nullable', 'string', 'max:1000'],
+            'customer_name'      => ['required', 'string', 'max:100'],
+            'customer_phone'     => ['required', 'string', 'max:20', 'regex:/^[0-9+\-\s]{6,20}$/'],
+            'delivery_location'  => ['required', 'string', 'max:255'],
+            'quantity_kg'        => ['required', 'numeric', 'min:0.01'],
+            'quantity_unit'      => ['nullable', 'in:kg,gram,bag,carton,piece,packet,ton'],
+            'business_type'      => ['nullable', 'in:shop,restaurant,dealer,retailer,other'],
+            'product_variant_id' => ['nullable', 'integer', 'exists:product_variants,id'],
+            'customer_whatsapp'  => ['nullable', 'string', 'max:20'],
+            'message'            => ['nullable', 'string', 'max:1000'],
         ], [
             'customer_phone.regex' => 'সঠিক ফোন নম্বর দিন।',
         ]);
+
+        // Resolve the selected variant — only an active variant of THIS product counts.
+        $variant = ! empty($validated['product_variant_id'])
+            ? $product->activeVariants()->find($validated['product_variant_id'])
+            : null;
 
         // Enforce the product's Minimum Order Quantity, if set.
         if ($product->min_order_quantity && (float) $validated['quantity_kg'] < (float) $product->min_order_quantity) {
@@ -171,19 +207,21 @@ class ProductController extends Controller
             : null;
 
         $enquiry = WholesaleEnquiry::create([
-            'customer_id'       => $customer?->id,
-            'product_id'        => $product->id,
-            'vendor_id'         => $product->vendor_id,
-            'quantity_kg'       => $validated['quantity_kg'],
-            'quantity_unit'     => $validated['quantity_unit'] ?? ($product->min_order_unit ?: 'kg'),
-            'delivery_location' => $validated['delivery_location'],
-            'business_type'     => $validated['business_type'] ?? 'other',
-            'message'           => $validated['message'] ?? null,
-            'customer_name'     => $validated['customer_name'],
-            'customer_phone'    => $validated['customer_phone'],
-            'customer_whatsapp' => $validated['customer_whatsapp'] ?? null,
-            'product_name'      => $product->name_bn ?: $product->name_en,
-            'status'            => 'pending',
+            'customer_id'        => $customer?->id,
+            'product_id'         => $product->id,
+            'product_variant_id' => $variant?->id,
+            'vendor_id'          => $product->vendor_id,
+            'quantity_kg'        => $validated['quantity_kg'],
+            'quantity_unit'      => $validated['quantity_unit'] ?? ($product->min_order_unit ?: 'kg'),
+            'delivery_location'  => $validated['delivery_location'],
+            'business_type'      => $validated['business_type'] ?? 'other',
+            'message'            => $validated['message'] ?? null,
+            'customer_name'      => $validated['customer_name'],
+            'customer_phone'     => $validated['customer_phone'],
+            'customer_whatsapp'  => $validated['customer_whatsapp'] ?? null,
+            'product_name'       => $product->name_bn ?: $product->name_en,
+            'variant_name'       => $variant?->name,
+            'status'             => 'pending',
         ]);
 
         // Alerts: admin + assigned supplier; confirmation to a logged-in customer.

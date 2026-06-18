@@ -36,7 +36,14 @@
                 </div>
 
                 <div class="space-y-3">
-                    <div><dt class="text-gray-400 text-xs uppercase tracking-wider">পণ্য</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->product_name }}</dd></div>
+                    <div>
+                        <dt class="text-gray-400 text-xs uppercase tracking-wider">পণ্য</dt>
+                        <dd class="font-semibold text-gray-800 mt-0.5 flex items-center gap-2">
+                            @php $vThumb = $enquiry->variant?->imageUrl(); @endphp
+                            @if($vThumb)<img src="{{ $vThumb }}" alt="{{ $enquiry->variant_name }}" class="w-9 h-9 rounded-md object-cover border border-gray-100">@endif
+                            <span>{{ $enquiry->productLabel() }}</span>
+                        </dd>
+                    </div>
                     <div><dt class="text-gray-400 text-xs uppercase tracking-wider">পরিমাণ</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ rtrim(rtrim(number_format((float)$enquiry->quantity_kg,2),'0'),'.') }} {{ $enquiry->quantity_unit ?: 'kg' }}</dd></div>
                     <div><dt class="text-gray-400 text-xs uppercase tracking-wider">ডেলিভারি লোকেশন</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->delivery_location }}</dd></div>
                     <div><dt class="text-gray-400 text-xs uppercase tracking-wider">ব্যবসার ধরন</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->businessTypeLabel() }}</dd></div>

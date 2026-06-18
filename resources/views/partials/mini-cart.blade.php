@@ -175,15 +175,18 @@
     };
     window.msBagCount = function () { return msBagGet().length; };
     window.msBagBadge = function () { msBadges(); };   // back-compat alias
-    window.msBagAdd  = function (id, slug, name, image, qty, unit, minQty, minUnit) {
+    window.msBagAdd  = function (id, slug, name, image, qty, unit, minQty, minUnit, variantId, variantName) {
         const items = msBagGet();
-        const ex = items.find(function (x) { return x.product_id === id; });
+        const vId = variantId != null && variantId !== '' ? parseInt(variantId, 10) : null;
+        // A product+variant pair is its own bag line (same product, different variant = separate row).
+        const ex = items.find(function (x) { return x.product_id === id && (x.variant_id || null) === vId; });
         if (ex) {
             const cfg = msBagUnitCfg(ex.unit);
             ex.quantity = (parseFloat(ex.quantity) || 0) + (parseFloat(qty) || cfg.step);
         } else {
             const it = { product_id: id, slug: slug, name: name, image: image,
                          unit: unit || 'kg',
+                         variant_id: vId, variant_name: variantName || null,
                          min_qty: parseFloat(minQty) || null, min_unit: minUnit || null };
             // Never start below the wholesale minimum for the chosen unit.
             it.quantity = Math.max(parseFloat(qty) || 0, msBagMin(it)) || msBagMin(it);
@@ -394,7 +397,8 @@
                 if (bagEmpty) bagEmpty.style.display = 'none';
                 if (bagFoot)  bagFoot.style.display  = 'block';
                 bagList.innerHTML = bag.map(function (it, i) {
-                    const variant = it.variant ? '<span class="text-gray-400"> · ' + it.variant + '</span>' : '';
+                    const vName = it.variant_name || it.variant || '';
+                    const variant = vName ? '<span class="text-gray-400"> · ' + vName + '</span>' : '';
                     const cfg = msBagUnitCfg(it.unit);
                     const min = msBagMin(it);
                     const qty = parseFloat(it.quantity) || min;

@@ -44,7 +44,7 @@
             @foreach($enquiries as $enquiry)
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-3 text-gray-400 text-xs">#{{ $enquiry->id }}</td>
-                <td class="px-4 py-3 font-medium text-gray-800">{{ $enquiry->product_name }}</td>
+                <td class="px-4 py-3 font-medium text-gray-800">{{ $enquiry->productLabel() }}</td>
                 <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">{{ rtrim(rtrim(number_format((float)$enquiry->quantity_kg,2),'0'),'.') }} {{ $enquiry->quantity_unit ?: 'kg' }}</td>
                 <td class="px-4 py-3 text-gray-500 text-xs hidden md:table-cell">{{ $enquiry->delivery_location }}</td>
                 <td class="px-4 py-3 hidden lg:table-cell">

@@ -23,17 +23,6 @@
         @enderror
     </div>
 
-    {{-- name_en --}}
-    <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">English Name</label>
-        <input type="text" name="name_en" id="name_en"
-               value="{{ old('name_en', $product?->name_en) }}"
-               class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 @error('name_en') border-red-400 @enderror">
-        @error('name_en')
-            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-        @enderror
-    </div>
-
     {{-- slug --}}
     <div class="md:col-span-2">
         <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -66,18 +55,6 @@
                class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 @error('retail_price_1kg') border-red-400 @enderror">
         <p class="text-xs text-gray-400 mt-1">সব প্যাকের দাম এই মূল্য থেকে স্বয়ংক্রিয়ভাবে হিসাব হবে।</p>
         @error('retail_price_1kg')
-            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-        @enderror
-    </div>
-
-    {{-- wholesale_price_1kg --}}
-    <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">পাইকারি দাম — ১ কেজি (৳)</label>
-        <input type="number" name="wholesale_price_1kg"
-               value="{{ old('wholesale_price_1kg', $product?->wholesale_price_1kg) }}"
-               step="0.01" min="0"
-               class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400">
-        @error('wholesale_price_1kg')
             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
         @enderror
     </div>
@@ -290,11 +267,14 @@
         @enderror
     </div>
 
+    {{-- ── ভ্যারিয়েন্ট (WooCommerce-style, ঐচ্ছিক) ─────────────────────────── --}}
+    @include('partials.admin.variant-manager', ['product' => $product])
+
 </div>
 
 <script>
 (function () {
-    const nameEn  = document.getElementById('name_en');
+    const nameBn  = document.getElementById('name_bn');
     const slugEl  = document.getElementById('slug');
     const btnGen  = document.getElementById('btn-gen-slug');
 
@@ -307,9 +287,9 @@
             .replace(/^-|-$/g, '');
     }
 
-    if (nameEn && slugEl) {
-        nameEn.addEventListener('input', function () {
-            if (!slugEl.dataset.edited && this.value) {
+    if (nameBn && slugEl) {
+        nameBn.addEventListener('input', function () {
+            if (!slugEl.dataset.edited && this.value && !slugEl.value) {
                 slugEl.value = toSlug(this.value);
             }
         });
@@ -320,8 +300,7 @@
 
     if (btnGen && slugEl) {
         btnGen.addEventListener('click', function () {
-            const source = (nameEn && nameEn.value) ? nameEn.value
-                         : (document.getElementById('name_bn')?.value ?? '');
+            const source = nameBn?.value ?? '';
             if (source) {
                 slugEl.value = toSlug(source);
                 slugEl.dataset.edited = '';

@@ -21,7 +21,7 @@ class PaykariComboEnquiryController extends Controller
 
     public function show(PaykariComboEnquiry $enquiry)
     {
-        $enquiry->load(['items.product', 'vendor', 'quotes.vendor', 'customer']);
+        $enquiry->load(['items.product', 'items.variant', 'vendor', 'quotes.vendor', 'customer']);
         $vendors = Vendor::where('is_approved', true)->orderBy('business_name')->get();
 
         return view('admin.paykari-combo.show', compact('enquiry', 'vendors'));

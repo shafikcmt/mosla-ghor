@@ -49,7 +49,7 @@
                     {{-- Products --}}
                     <div class="text-sm text-gray-700 font-medium mb-1">
                         @foreach($enquiry->items->take(3) as $item)
-                            <span class="font-serif-bn">{{ $item->product_name }}</span>
+                            <span class="font-serif-bn">{{ $item->productLabel() }}</span>
                             <span class="text-amber-600">{{ $item->quantity_kg }} kg</span>
                             @if(!$loop->last)<span class="text-gray-300 mx-1">·</span>@endif
                         @endforeach

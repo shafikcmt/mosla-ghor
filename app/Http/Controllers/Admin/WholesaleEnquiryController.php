@@ -24,7 +24,7 @@ class WholesaleEnquiryController extends Controller
     // Admin sees full customer contact info
     public function show(WholesaleEnquiry $enquiry)
     {
-        $enquiry->load(['customer', 'product', 'vendor', 'quotes.vendor', 'chatMessages']);
+        $enquiry->load(['customer', 'product', 'variant', 'vendor', 'quotes.vendor', 'chatMessages']);
 
         $vendors = Vendor::where('status', 'approved')->orderBy('shop_name')->get();
 

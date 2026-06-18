@@ -7,7 +7,7 @@
     <span class="text-gray-300">|</span>
     <a href="{{ route('admin.wholesale.enquiry.show', $enquiry->id) }}" class="text-gray-500 hover:text-gray-700 text-sm">Enquiry #{{ $enquiry->id }}</a>
     <span class="text-gray-300">|</span>
-    <span class="text-gray-600 text-sm font-semibold">{{ $enquiry->product_name }}</span>
+    <span class="text-gray-600 text-sm font-semibold">{{ $enquiry->productLabel() }}</span>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">

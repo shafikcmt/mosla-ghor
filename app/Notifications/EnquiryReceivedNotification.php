@@ -20,7 +20,7 @@ class EnquiryReceivedNotification extends Notification
     public function toArray(object $notifiable): array
     {
         $id      = $this->enquiry->id;
-        $product = $this->enquiry->product_name;
+        $product = $this->enquiry->productLabel();
 
         [$title, $body, $route] = match ($this->audience) {
             'vendor' => [

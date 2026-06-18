@@ -14,6 +14,10 @@ class WebsiteSettingController extends Controller
         'whatsapp_number', 'messenger_url', 'facebook_page_url', 'footer_text',
         'vendor_registration_enabled', 'vendor_login_enabled',
         'show_vendor_links_in_header', 'show_vendor_links_in_footer',
+        // Header announcement / marquee
+        'announcement_enabled', 'announcement_text_1', 'announcement_text_2',
+        'announcement_link_url', 'announcement_link_label',
+        'announcement_bg_color', 'announcement_text_color', 'announcement_speed',
     ];
 
     public function index()
@@ -37,11 +41,24 @@ class WebsiteSettingController extends Controller
             'messenger_url'    => 'nullable|string|max:300',
             'facebook_page_url' => 'nullable|string|max:300',
             'footer_text'      => 'nullable|string|max:200',
+            // Header announcement / marquee.
+            // If the bar is enabled, the primary text is required.
+            'announcement_text_1'   => 'nullable|string|max:255|required_if:announcement_enabled,1',
+            'announcement_text_2'   => 'nullable|string|max:255',
+            'announcement_link_url' => 'nullable|url|max:300',
+            'announcement_link_label' => 'nullable|string|max:60',
+            'announcement_bg_color'   => 'nullable|string|max:20',
+            'announcement_text_color' => 'nullable|string|max:20',
+            'announcement_speed'      => 'nullable|in:slow,normal,fast',
+        ], [
+            'announcement_text_1.required_if' => 'অ্যানাউন্সমেন্ট বার চালু থাকলে টেক্সট দেওয়া আবশ্যক।',
+            'announcement_link_url.url'        => 'লিংক একটি বৈধ URL হতে হবে (https:// সহ)।',
         ]);
 
         $boolFields = [
             'vendor_registration_enabled', 'vendor_login_enabled',
             'show_vendor_links_in_header', 'show_vendor_links_in_footer',
+            'announcement_enabled',
         ];
 
         foreach (self::FIELDS as $key) {

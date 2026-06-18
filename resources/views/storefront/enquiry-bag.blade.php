@@ -90,9 +90,26 @@
 
 @section('scripts')
 <script>
+    // Per-product active variants: { productId: [{id, name}, …] }. Fetched once on load.
+    let bagVariants = {};
+
     function bagImg(it) {
         return it.image || ('https://placehold.co/80x80/f1f5f3/14532d?text=' + encodeURIComponent((it.name || '').slice(0, 6)));
     }
+    function escAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+    function variantSelectHtml(it, i) {
+        const list = bagVariants[it.product_id] || [];
+        if (!list.length) return '';   // no variants → no dropdown
+        const opts = ['<option value="">ভ্যারিয়েন্ট নির্বাচন করুন</option>'].concat(
+            list.map(function (v) {
+                return '<option value="' + v.id + '"' + (String(it.variant_id) === String(v.id) ? ' selected' : '') + '>' + v.name + '</option>';
+            })
+        ).join('');
+        return '<select onchange="bagSetVariant(' + i + ', this.value)" ' +
+               'class="mt-2 w-full border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white">' + opts + '</select>';
+    }
+
     function renderBag() {
         const items = msBagGet();
         const wrap  = document.getElementById('bag-items');
@@ -112,10 +129,11 @@
                 return '<option value="' + u + '"' + (it.unit === u ? ' selected' : '') + '>' + u + '</option>';
             }).join('');
             return '' +
-            '<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex items-center gap-3">' +
+            '<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex items-start gap-3">' +
                 '<img src="' + bagImg(it) + '" alt="" class="w-16 h-16 rounded-lg object-cover border border-gray-100 flex-shrink-0">' +
                 '<div class="flex-1 min-w-0">' +
                     '<a href="/wholesale/products/' + it.slug + '" class="text-sm font-semibold text-gray-800 hover:underline truncate block">' + (it.name || '') + '</a>' +
+                    variantSelectHtml(it, i) +
                     '<div class="flex items-center gap-2 mt-2">' +
                         '<input type="number" min="0.1" step="0.1" value="' + it.quantity + '" onchange="bagSetQty(' + i + ', this.value)" class="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm">' +
                         '<select onchange="bagSetUnit(' + i + ', this.value)" class="border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white">' + opts + '</select>' +
@@ -127,10 +145,30 @@
     }
     function bagSetQty(i, val) { const items = msBagGet(); if (items[i]) { items[i].quantity = Math.max(0.1, parseFloat(val) || 0.1); msBagSave(items); } }
     function bagSetUnit(i, val) { const items = msBagGet(); if (items[i]) { items[i].unit = val; msBagSave(items); } }
+    function bagSetVariant(i, val) {
+        const items = msBagGet();
+        if (!items[i]) return;
+        const list = bagVariants[items[i].product_id] || [];
+        const v = list.find(function (x) { return String(x.id) === String(val); });
+        items[i].variant_id = v ? v.id : null;
+        items[i].variant_name = v ? v.name : null;
+        msBagSave(items);
+    }
     function bagRemove(i) { const items = msBagGet(); items.splice(i, 1); msBagSave(items); renderBag(); }
 
+    // Load active variants for every product in the bag, then render.
+    function loadVariantsThenRender() {
+        const items = msBagGet();
+        const ids = items.map(function (it) { return it.product_id; }).filter(Boolean);
+        if (!ids.length) { renderBag(); return; }
+        fetch('{{ route('wholesale.variants') }}?ids=' + ids.join(','))
+            .then(function (r) { return r.ok ? r.json() : {}; })
+            .then(function (map) { bagVariants = map || {}; renderBag(); })
+            .catch(function () { renderBag(); });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
-        renderBag();
+        loadVariantsThenRender();
         const form = document.getElementById('bag-form');
         if (form) form.addEventListener('submit', function (e) {
             const items = msBagGet();
@@ -142,9 +180,13 @@
             if (!name || !phone || !loc) { return; } // let HTML5 required handle it
             const hidden = document.getElementById('bag-items-hidden');
             hidden.innerHTML = items.map(function (it, i) {
-                return '<input type="hidden" name="items[' + i + '][product_id]" value="' + it.product_id + '">' +
+                let html = '<input type="hidden" name="items[' + i + '][product_id]" value="' + it.product_id + '">' +
                        '<input type="hidden" name="items[' + i + '][quantity_kg]" value="' + it.quantity + '">' +
                        '<input type="hidden" name="items[' + i + '][quantity_unit]" value="' + (it.unit || 'kg') + '">';
+                if (it.variant_id) {
+                    html += '<input type="hidden" name="items[' + i + '][product_variant_id]" value="' + it.variant_id + '">';
+                }
+                return html;
             }).join('');
             // Items are now serialized into the form; clear the bag so it isn't resubmitted.
             try { localStorage.removeItem(MS_BAG_KEY); } catch (e) {}

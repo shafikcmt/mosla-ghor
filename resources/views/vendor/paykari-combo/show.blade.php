@@ -57,7 +57,7 @@
                 <div class="space-y-2">
                     @foreach($enquiry->items as $item)
                     <div class="flex justify-between items-center py-2 border-b border-amber-50 last:border-0 text-sm">
-                        <span class="font-serif-bn font-bold text-gray-800">{{ $item->product_name }}</span>
+                        <span class="font-serif-bn font-bold text-gray-800">{{ $item->productLabel() }}</span>
                         <span class="font-bold text-amber-700">{{ $item->quantity_kg }} kg</span>
                     </div>
                     @endforeach

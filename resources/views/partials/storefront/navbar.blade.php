@@ -36,6 +36,9 @@
     $mActive = 'flex items-center gap-3 px-5 py-3 text-[15px] font-semibold text-[#14532d] bg-green-50 border-r-4 border-[#c9a227]';
 @endphp
 
+{{-- Admin-controlled top announcement marquee (shows on every storefront page). --}}
+@include('partials.storefront.announcement', ['ws' => $ws])
+
 <header class="bg-[#0f3d22]/95 backdrop-blur sticky top-0 z-50 shadow-md border-b border-green-900/60">
     <div class="max-w-7xl mx-auto px-3 sm:px-5 h-16 flex items-center gap-2">
 

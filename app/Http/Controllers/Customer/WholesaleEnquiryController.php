@@ -37,19 +37,23 @@ class WholesaleEnquiryController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'product_id'        => ['required', 'exists:products,id'],
-            'quantity_kg'       => ['required', 'numeric', 'min:1'],
-            'business_type'     => ['required', 'in:shop,restaurant,dealer,retailer,other'],
-            'delivery_location' => ['required', 'string', 'max:255'],
-            'customer_name'     => ['required', 'string', 'max:100'],
-            'customer_phone'    => ['required', 'string', 'max:20'],
-            'customer_whatsapp' => ['nullable', 'string', 'max:20'],
-            'message'           => ['nullable', 'string', 'max:1000'],
-            'redirect_to_chat'  => ['nullable', 'boolean'],
+            'product_id'         => ['required', 'exists:products,id'],
+            'product_variant_id' => ['nullable', 'integer', 'exists:product_variants,id'],
+            'quantity_kg'        => ['required', 'numeric', 'min:1'],
+            'business_type'      => ['required', 'in:shop,restaurant,dealer,retailer,other'],
+            'delivery_location'  => ['required', 'string', 'max:255'],
+            'customer_name'      => ['required', 'string', 'max:100'],
+            'customer_phone'     => ['required', 'string', 'max:20'],
+            'customer_whatsapp'  => ['nullable', 'string', 'max:20'],
+            'message'            => ['nullable', 'string', 'max:1000'],
+            'redirect_to_chat'   => ['nullable', 'boolean'],
         ]);
 
         $customer = Auth::user()->customer ?? abort(403);
         $product  = Product::findOrFail($validated['product_id']);
+        $variant  = ! empty($validated['product_variant_id'])
+            ? $product->activeVariants()->find($validated['product_variant_id'])
+            : null;
 
         // Enforce the product's Minimum Order Quantity, if set.
         if ($product->min_order_quantity && (float) $validated['quantity_kg'] < (float) $product->min_order_quantity) {
@@ -62,18 +66,20 @@ class WholesaleEnquiryController extends Controller
         }
 
         $enquiry = WholesaleEnquiry::create([
-            'customer_id'       => $customer->id,
-            'product_id'        => $product->id,
-            'vendor_id'         => $product->vendor_id,
-            'quantity_kg'       => $validated['quantity_kg'],
-            'business_type'     => $validated['business_type'],
-            'delivery_location' => $validated['delivery_location'],
-            'customer_name'     => $validated['customer_name'],
-            'customer_phone'    => $validated['customer_phone'],
-            'customer_whatsapp' => $validated['customer_whatsapp'] ?? null,
-            'message'           => $validated['message'] ?? null,
-            'product_name'      => $product->name_bn ?: $product->name_en,
-            'status'            => 'pending',
+            'customer_id'        => $customer->id,
+            'product_id'         => $product->id,
+            'product_variant_id' => $variant?->id,
+            'vendor_id'          => $product->vendor_id,
+            'quantity_kg'        => $validated['quantity_kg'],
+            'business_type'      => $validated['business_type'],
+            'delivery_location'  => $validated['delivery_location'],
+            'customer_name'      => $validated['customer_name'],
+            'customer_phone'     => $validated['customer_phone'],
+            'customer_whatsapp'  => $validated['customer_whatsapp'] ?? null,
+            'message'            => $validated['message'] ?? null,
+            'product_name'       => $product->name_bn ?: $product->name_en,
+            'variant_name'       => $variant?->name,
+            'status'             => 'pending',
         ]);
 
         Notify::admins(new EnquiryReceivedNotification($enquiry, 'admin'));

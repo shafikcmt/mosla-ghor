@@ -43,7 +43,7 @@
                     <td class="px-5 py-3">
                         <div class="text-gray-700">
                             @foreach($enq->items->take(2) as $item)
-                                <span class="text-xs">{{ $item->product_name }} ({{ $item->quantity_kg }}kg)</span><br>
+                                <span class="text-xs">{{ $item->productLabel() }} ({{ $item->quantity_kg }}kg)</span><br>
                             @endforeach
                             @if($enq->items->count() > 2)
                             <span class="text-gray-400 text-xs">+ {{ $enq->items->count() - 2 }} more</span>

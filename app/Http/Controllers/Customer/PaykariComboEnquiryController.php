@@ -40,10 +40,11 @@ class PaykariComboEnquiryController extends Controller
             : null;
 
         $validated = $request->validate([
-            'items'                  => ['required', 'array', 'min:1', 'max:20'],
-            'items.*.product_id'     => ['required', 'exists:products,id'],
-            'items.*.quantity_kg'    => ['required', 'numeric', 'min:0.1'],
-            'items.*.quantity_unit'  => ['nullable', 'string', 'in:kg,bag,carton,piece'],
+            'items'                        => ['required', 'array', 'min:1', 'max:20'],
+            'items.*.product_id'           => ['required', 'exists:products,id'],
+            'items.*.product_variant_id'   => ['nullable', 'integer', 'exists:product_variants,id'],
+            'items.*.quantity_kg'          => ['required', 'numeric', 'min:0.1'],
+            'items.*.quantity_unit'        => ['nullable', 'string', 'in:kg,bag,carton,piece'],
             'delivery_location'      => ['required', 'string', 'max:255'],
             'business_type'          => ['nullable', 'in:shop,restaurant,dealer,retailer,other'],
             'customer_name'          => ['required', 'string', 'max:100'],
@@ -67,11 +68,18 @@ class PaykariComboEnquiryController extends Controller
 
         foreach ($validated['items'] as $itemData) {
             $product = Product::find($itemData['product_id']);
+            // Only accept a variant that actually belongs to this product and is active.
+            $variant = ($product && ! empty($itemData['product_variant_id']))
+                ? $product->activeVariants()->find($itemData['product_variant_id'])
+                : null;
+
             $enquiry->items()->create([
-                'product_id'    => $itemData['product_id'],
-                'product_name'  => $product ? ($product->name_bn ?: $product->name_en) : 'N/A',
-                'quantity_kg'   => $itemData['quantity_kg'],
-                'quantity_unit' => $itemData['quantity_unit'] ?? 'kg',
+                'product_id'         => $itemData['product_id'],
+                'product_variant_id' => $variant?->id,
+                'product_name'       => $product ? ($product->name_bn ?: $product->name_en) : 'N/A',
+                'variant_name'       => $variant?->name,
+                'quantity_kg'        => $itemData['quantity_kg'],
+                'quantity_unit'      => $itemData['quantity_unit'] ?? 'kg',
             ]);
         }
 

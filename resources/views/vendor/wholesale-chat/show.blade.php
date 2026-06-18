@@ -5,7 +5,7 @@
 <div class="mb-4 flex items-center gap-3">
     <a href="{{ route('vendor.wholesale.enquiry.show', $enquiry->id) }}" class="text-gray-500 hover:text-gray-700 text-sm">← Enquiry</a>
     <span class="text-gray-300">|</span>
-    <span class="text-gray-600 text-sm font-semibold">{{ $enquiry->product_name }}</span>
+    <span class="text-gray-600 text-sm font-semibold">{{ $enquiry->productLabel() }}</span>
 </div>
 
 <div class="mb-4 bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-xs text-indigo-800 leading-relaxed">

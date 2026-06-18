@@ -236,6 +236,39 @@
         </dl>
         @endif
 
+        {{-- ── (b2) VARIANT selector (always visible when variants exist) ──── --}}
+        @if($product->activeVariants->isNotEmpty())
+        <div id="pd-variant-block" class="mt-5">
+            <h2 class="text-sm font-bold text-gray-800 mb-2">ভ্যারিয়েন্ট নির্বাচন করুন <span class="text-red-500">*</span></h2>
+            <div class="flex flex-wrap gap-2">
+                @foreach($product->activeVariants as $i => $variant)
+                    @php
+                        $vUrl   = $variant->imageUrl();
+                        $vPrice = $isWholesale ? null : $variant->effectiveRetailPrice();
+                        $isSel  = $i === 0; // activeVariants is ordered default-first
+                    @endphp
+                    <button type="button"
+                            class="pd-variant flex items-center gap-2 border rounded-xl px-3 py-2 text-sm transition-colors {{ $isSel ? 'border-[#14532d] bg-[#f0faf4] text-[#14532d] font-semibold' : 'border-gray-200 text-gray-700 hover:border-[#14532d]' }}"
+                            data-id="{{ $variant->id }}"
+                            data-name="{{ $variant->name }}"
+                            data-image="{{ $vUrl ?: '' }}"
+                            data-price="{{ $vPrice !== null ? $vPrice : '' }}"
+                            onclick="pdSelectVariant(this)">
+                        @if($vUrl)
+                            <img src="{{ $vUrl }}" alt="{{ $variant->name }}" class="w-7 h-7 rounded-md object-cover border border-gray-100">
+                        @endif
+                        <span>{{ $variant->name }}</span>
+                        @if($vPrice !== null)
+                            <span class="text-[11px] text-[#c9a227] font-bold">৳{{ number_format($vPrice, 0) }}</span>
+                        @endif
+                    </button>
+                @endforeach
+            </div>
+            <input type="hidden" id="pd-variant-id" value="{{ $product->activeVariants->first()->id }}">
+            <input type="hidden" id="pd-variant-name" value="{{ $product->activeVariants->first()->name }}">
+        </div>
+        @endif
+
         {{-- ── (c) RETAIL purchase block ──────────────────────────────────── --}}
         @if($hasRetail)
         <div class="mt-6">
@@ -347,6 +380,13 @@
                 <form action="{{ route('products.enquiry.store', $product->slug) }}" method="POST" class="space-y-3">
                     @csrf
                     @if($wholesaleView)<input type="hidden" name="from_wholesale" value="1">@endif
+
+                    {{-- Selected variant is mirrored here from the variant selector above. --}}
+                    @if($product->activeVariants->isNotEmpty())
+                    <input type="hidden" name="product_variant_id" id="pd-enquiry-variant-id"
+                           value="{{ old('product_variant_id', $product->activeVariants->first()->id) }}">
+                    <p class="text-xs text-gray-500">নির্বাচিত ভ্যারিয়েন্ট: <span id="pd-enquiry-variant-label" class="font-semibold text-[#14532d]">{{ $product->activeVariants->first()->name }}</span></p>
+                    @endif
 
                     {{-- Quantity + unit (required) --}}
                     <div class="grid grid-cols-2 gap-3">
@@ -614,6 +654,39 @@
         else { d.style.maxHeight = d.scrollHeight + 'px'; d.dataset.open = '1'; btn.textContent = 'কম দেখুন ▴'; }
     }
 
+    // ── Variant selection (image swap + carry id into cart/enquiry) ────────
+    const pdMainDefaultSrc = (document.getElementById('pd-main-image') || {}).src || '';
+    let pdSelectedVariantId   = (document.getElementById('pd-variant-id') || {}).value || null;
+    let pdSelectedVariantName = (document.getElementById('pd-variant-name') || {}).value || null;
+    function pdSelectVariant(btn) {
+        document.querySelectorAll('.pd-variant').forEach(b => {
+            b.classList.remove('border-[#14532d]', 'bg-[#f0faf4]', 'text-[#14532d]', 'font-semibold');
+            b.classList.add('border-gray-200', 'text-gray-700');
+        });
+        btn.classList.add('border-[#14532d]', 'bg-[#f0faf4]', 'text-[#14532d]', 'font-semibold');
+        btn.classList.remove('border-gray-200', 'text-gray-700');
+
+        pdSelectedVariantId   = btn.dataset.id || null;
+        pdSelectedVariantName = btn.dataset.name || null;
+
+        // Mirror into the enquiry form + its label.
+        const hid = document.getElementById('pd-enquiry-variant-id');
+        if (hid) hid.value = pdSelectedVariantId || '';
+        const lbl = document.getElementById('pd-enquiry-variant-label');
+        if (lbl) lbl.textContent = pdSelectedVariantName || '';
+        const vid = document.getElementById('pd-variant-id');   if (vid) vid.value = pdSelectedVariantId || '';
+        const vnm = document.getElementById('pd-variant-name'); if (vnm) vnm.value = pdSelectedVariantName || '';
+
+        // Swap the main image to the variant photo (restore product image when none).
+        const img = document.getElementById('pd-main-image');
+        if (img) {
+            pdHideAllPanes();
+            img.classList.remove('hidden');
+            img.src = btn.dataset.image ? btn.dataset.image : pdMainDefaultSrc;
+            pdSetActiveThumb(null);
+        }
+    }
+
     // ── Retail pack selection ─────────────────────────────────────────────
     let pdSelectedPriceId = @json($hasRetail ? $retailPacks->first()->id : null);
     function pdSelectPack(btn) {
@@ -637,8 +710,8 @@
             msCart.add({
                 productId:   @json($product->id),
                 priceId:     pdSelectedPriceId,
-                variantId:   null,
-                variantName: null,
+                variantId:   pdSelectedVariantId ? parseInt(pdSelectedVariantId, 10) : null,
+                variantName: pdSelectedVariantName,
                 sellType:    'retail',
                 nameBn:      @json($product->name),
                 label:       lblEl ? lblEl.textContent.trim() : '',
@@ -702,7 +775,8 @@
             const unit = (uEl && uEl.value) ? uEl.value : (b.dataset.unit || 'kg');
             msBagAdd(parseInt(b.dataset.id, 10), b.dataset.slug, b.dataset.name, b.dataset.image,
                      qty, unit,
-                     parseFloat(b.dataset.min) || null, b.dataset.minUnit || null);
+                     parseFloat(b.dataset.min) || null, b.dataset.minUnit || null,
+                     pdSelectedVariantId ? parseInt(pdSelectedVariantId, 10) : null, pdSelectedVariantName);
             if (window.msCartOpen) msCartOpen('paykari');
         });
     })();

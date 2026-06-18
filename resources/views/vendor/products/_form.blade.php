@@ -16,13 +16,6 @@
         @error('name_bn')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
     </div>
 
-    <div>
-        <label class="block text-sm font-medium text-gray-400 mb-1">English Name <span class="font-normal">(ঐচ্ছিক)</span></label>
-        <input type="text" name="name_en" id="name_en" value="{{ old('name_en', $product?->name_en) }}"
-               class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
-        <p class="text-xs text-gray-400 mt-1">ঐচ্ছিক — ইংরেজি নাম না জানলে খালি রাখুন।</p>
-    </div>
-
     {{-- slug: advanced/optional, auto-generated from name --}}
     <div class="md:col-span-2">
         <details {{ $errors->has('slug') ? 'open' : '' }} class="border border-gray-200 rounded bg-gray-50/60">
@@ -48,12 +41,6 @@
                class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 @error('retail_price_1kg') border-red-400 @enderror">
         <p class="text-xs text-gray-400 mt-1">সব প্যাকের দাম এই মূল্য থেকে স্বয়ংক্রিয়ভাবে হিসাব হবে।</p>
         @error('retail_price_1kg')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
-    </div>
-
-    <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">পাইকারি দাম — ১ কেজি (৳)</label>
-        <input type="number" name="wholesale_price_1kg" value="{{ old('wholesale_price_1kg', $product?->wholesale_price_1kg) }}" step="0.01" min="0"
-               class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">
     </div>
 
     <div>
@@ -248,11 +235,13 @@
                   class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400">{{ old('description', $product?->description) }}</textarea>
     </div>
 
+    {{-- ── ভ্যারিয়েন্ট (WooCommerce-style, ঐচ্ছিক) ─────────────────────────── --}}
+    @include('partials.admin.variant-manager', ['product' => $product])
+
 </div>
 
 <script>
 (function () {
-    const nameEn = document.getElementById('name_en');
     const nameBn = document.getElementById('name_bn');
     const slugEl = document.getElementById('slug');
     const btnGen = document.getElementById('btn-gen-slug');
@@ -275,18 +264,15 @@
     function toSlug(str) {
         return (str || '').toLowerCase().replace(/[^\w\s-]/g,'').trim().replace(/[\s_]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
     }
-    // Primary source = English name; fall back to a transliterated Bangla name.
+    // Build the slug from a transliterated Bangla name.
     function genSlug() {
-        const en = nameEn ? nameEn.value.trim() : '';
-        const base = en !== '' ? en : translit(nameBn ? nameBn.value : '');
-        let s = toSlug(base);
+        let s = toSlug(translit(nameBn ? nameBn.value : ''));
         if (!s && nameBn && nameBn.value.trim() !== '') s = 'product-' + Date.now();
         return s;
     }
     function autofill() {
         if (slugEl && !slugEl.dataset.edited) slugEl.value = genSlug();
     }
-    if (nameEn) nameEn.addEventListener('input', autofill);
     if (nameBn) nameBn.addEventListener('input', autofill);
     if (slugEl) slugEl.addEventListener('input', function () { this.dataset.edited = '1'; });
     if (btnGen && slugEl) {

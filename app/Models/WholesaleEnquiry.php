@@ -10,10 +10,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class WholesaleEnquiry extends Model
 {
     protected $fillable = [
-        'customer_id', 'product_id', 'vendor_id',
+        'customer_id', 'product_id', 'product_variant_id', 'vendor_id',
         'quantity_kg', 'quantity_unit', 'delivery_location', 'business_type', 'message',
         'customer_name', 'customer_phone', 'customer_whatsapp',
-        'product_name', 'status', 'vendor_note', 'admin_note',
+        'product_name', 'variant_name', 'status', 'vendor_note', 'admin_note',
     ];
 
     protected $casts = [
@@ -30,9 +30,22 @@ class WholesaleEnquiry extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
+    }
+
     public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
+    }
+
+    /** Product name with the selected variant appended, e.g. "জিরা — ইরানি জিরা". */
+    public function productLabel(): string
+    {
+        return $this->variant_name
+            ? $this->product_name . ' — ' . $this->variant_name
+            : (string) $this->product_name;
     }
 
     public function quotes(): HasMany
@@ -123,7 +136,8 @@ class WholesaleEnquiry extends Model
     {
         return [
             'id'               => $this->id,
-            'product_name'     => $this->product_name,
+            'product_name'     => $this->productLabel(),
+            'variant_name'     => $this->variant_name,
             'quantity_kg'      => $this->quantity_kg,
             'delivery_location'=> $this->delivery_location,
             'business_type'    => $this->businessTypeLabel(),

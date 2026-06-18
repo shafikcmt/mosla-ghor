@@ -105,11 +105,12 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class)->orderBy('sort_order');
     }
 
-    // Active variants only
+    // Active variants only — default variant first, then sort order.
     public function activeVariants(): HasMany
     {
         return $this->hasMany(ProductVariant::class)
             ->where('is_active', true)
+            ->orderByDesc('is_default')
             ->orderBy('sort_order');
     }
 

@@ -27,7 +27,7 @@
             @php $unread = $enquiry->chatMessages->where('is_read_by_admin', false)->count(); @endphp
             <tr class="hover:bg-gray-50 {{ $unread > 0 ? 'bg-yellow-50' : '' }}">
                 <td class="px-4 py-3 text-gray-400 text-xs">#{{ $enquiry->id }}</td>
-                <td class="px-4 py-3 font-medium text-gray-800">{{ $enquiry->product_name }}</td>
+                <td class="px-4 py-3 font-medium text-gray-800">{{ $enquiry->productLabel() }}</td>
                 <td class="px-4 py-3 text-gray-600 text-xs hidden sm:table-cell">{{ $enquiry->customer_name }}</td>
                 <td class="px-4 py-3 text-gray-600 text-xs hidden md:table-cell">{{ $enquiry->vendor?->shop_name ?? $enquiry->vendor?->name }}</td>
                 <td class="px-4 py-3">

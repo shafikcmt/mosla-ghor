@@ -118,10 +118,6 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
         /* Nav backdrop */
         .nav-blur { backdrop-filter: blur(8px); background-color: rgba(15,61,34,.96); }
 
-        /* Announcement marquee */
-        @keyframes marquee { 0% { transform:translateX(100%) } 100% { transform:translateX(-100%) } }
-        .marquee-text { animation: marquee 30s linear infinite; white-space: nowrap; }
-
         /* Product card hover */
         .product-card { transition: transform .22s ease, box-shadow .22s ease; }
         .product-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(20,83,45,.18); }
@@ -182,10 +178,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 <div class="fixed top-4 left-1/2 -translate-x-1/2 z-[200] max-w-md w-[92%] bg-red-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg">{{ session('error') }}</div>
 @endif
 
-{{-- ━━━━━━━━━━━━━━━━  ANNOUNCEMENT BAR  ━━━━━━━━━━━━━━━━ --}}
-@include('partials.storefront.announcement')
-
-{{-- ━━━━━━━━━━━━━━━━  NAVBAR  ━━━━━━━━━━━━━━━━ --}}
+{{-- ━━━━━━━━━━━━━━━━  NAVBAR (renders the announcement marquee at its top) ━━━━━━━━━━━━━━━━ --}}
 @include("partials.storefront.navbar")
 
 {{-- ━━━━━━━━━━━━━━━━  HERO  ━━━━━━━━━━━━━━━━ --}}
@@ -400,52 +393,49 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                     @endphp
                     @if($showRow)
                     <div id="picker-row-{{ $product->id }}"
-                         class="bg-white border border-green-100 rounded-xl p-3 sm:p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 shadow-sm transition-colors duration-300"
+                         class="bg-white border border-green-100 rounded-2xl p-3.5 sm:p-4 shadow-sm transition-colors duration-300"
                          style="{{ (!$hasVariants && $pickerRetailPrices->isEmpty()) ? 'display:none;' : '' }}">
 
-                        {{-- Initial avatar --}}
-                        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#14532d] to-[#1a6b3a] flex items-center justify-center flex-shrink-0 shadow">
-                            <span class="text-[#c9a227] font-serif-bn font-bold text-lg">{{ mb_substr($product->name_bn, 0, 1) }}</span>
+                        {{-- Header: avatar + name + price --}}
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#14532d] to-[#1a6b3a] flex items-center justify-center flex-shrink-0 shadow">
+                                <span class="text-[#c9a227] font-serif-bn font-bold text-lg">{{ mb_substr($product->name_bn, 0, 1) }}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-serif-bn text-[#14532d] font-bold text-sm sm:text-base leading-tight truncate">{{ $product->name_bn }}</div>
+                            </div>
+                            <div id="picker-price-{{ $product->id }}"
+                                 class="text-[#c9a227] font-bold font-serif-bn text-base sm:text-lg flex-shrink-0 text-right">
+                                {{ $pickerRetailPrices->isNotEmpty() ? '৳' . number_format($pickerRetailPrices->first()->final_price, 0) : '' }}
+                            </div>
                         </div>
 
-                        {{-- Name --}}
-                        <div class="flex-1 min-w-0 sm:min-w-[130px]">
-                            <div class="font-serif-bn text-[#14532d] font-bold text-sm sm:text-base leading-tight">{{ $product->name_bn }}</div>
+                        {{-- Controls: variant + qty + add — stacked on mobile, inline from sm --}}
+                        <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                            @if($hasVariants)
+                            <select id="picker-variant-{{ $product->id }}"
+                                    onchange="pickerVariantChange({{ $product->id }})" aria-label="ভ্যারিয়েন্ট"
+                                    class="w-full sm:flex-1 sm:min-w-0 border border-purple-200 bg-white rounded-xl px-3 py-2.5 text-sm text-purple-800 font-medium focus:outline-none focus:ring-2 focus:ring-purple-400">
+                                @foreach($product->activeVariants as $variant)
+                                <option value="{{ $variant->id }}">{{ $variant->name }}</option>
+                                @endforeach
+                            </select>
+                            @endif
+
+                            <select id="picker-qty-{{ $product->id }}"
+                                    onchange="pickerPriceUpdate({{ $product->id }})" aria-label="পরিমাণ"
+                                    class="w-full sm:w-auto border border-green-200 bg-white rounded-xl px-3 py-2.5 text-sm text-[#14532d] font-medium focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+                                @foreach($pickerRetailPrices as $price)
+                                    <option value="{{ $price->id }}" data-price="{{ $price->final_price }}">{{ $price->label }}</option>
+                                @endforeach
+                            </select>
+
+                            <button id="picker-btn-{{ $product->id }}"
+                                    onclick="addToCombo({{ $product->id }})"
+                                    class="w-full sm:w-auto sm:ml-auto bg-[#14532d] hover:bg-[#166534] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm whitespace-nowrap">
+                                + যোগ করুন
+                            </button>
                         </div>
-
-                        {{-- Variant selector (only for products with variants) --}}
-                        @if($hasVariants)
-                        <select id="picker-variant-{{ $product->id }}"
-                                onchange="pickerVariantChange({{ $product->id }})"
-                                class="border border-purple-200 bg-white rounded-xl px-3 py-2 text-sm text-purple-800 font-medium focus:outline-none focus:ring-2 focus:ring-purple-400 w-full sm:w-auto flex-shrink-0">
-                            @foreach($product->activeVariants as $variant)
-                            <option value="{{ $variant->id }}">{{ $variant->name }}</option>
-                            @endforeach
-                        </select>
-                        @endif
-
-                        {{-- Qty select --}}
-                        <select id="picker-qty-{{ $product->id }}"
-                                onchange="pickerPriceUpdate({{ $product->id }})"
-                                class="border border-green-200 bg-white rounded-xl px-3 py-2 text-sm text-[#14532d] font-medium focus:outline-none focus:ring-2 focus:ring-[#14532d] w-full sm:w-auto flex-shrink-0">
-                            @foreach($pickerRetailPrices as $price)
-                                <option value="{{ $price->id }}" data-price="{{ $price->final_price }}">{{ $price->label }}</option>
-                            @endforeach
-                        </select>
-
-                        {{-- Price display --}}
-                        <div id="picker-price-{{ $product->id }}"
-                             class="text-[#c9a227] font-bold font-serif-bn text-base sm:text-lg min-w-[72px] text-right flex-shrink-0">
-                            {{ $pickerRetailPrices->isNotEmpty() ? '৳' . number_format($pickerRetailPrices->first()->final_price, 0) : '' }}
-                        </div>
-
-                        {{-- Add button --}}
-                        <button id="picker-btn-{{ $product->id }}"
-                                onclick="addToCombo({{ $product->id }})"
-                                class="flex-shrink-0 bg-[#14532d] hover:bg-[#166534] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm whitespace-nowrap w-full sm:w-auto">
-                            + যোগ করুন
-                        </button>
-
                     </div>
                     @endif
                 @endforeach
@@ -549,24 +539,39 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                                 @endif
                             </div>
                         </div>
-                        {{-- Controls: unit + qty stepper + add --}}
-                        <div class="flex items-center gap-2 mt-3">
-                            <select id="paykari-unit-{{ $product->id }}" onchange="paykariUnitChange({{ $product->id }})" aria-label="একক"
-                                    class="border border-amber-200 rounded-lg px-2 py-2 text-xs bg-white text-amber-900 font-medium focus:outline-none focus:ring-1 focus:ring-amber-400">
-                                <option value="kg">কেজি (kg)</option>
-                                <option value="bag">বস্তা</option>
-                                <option value="carton">কার্টন</option>
+                        {{-- Variant selector (only when the product has active variants) --}}
+                        @if($product->activeVariants->isNotEmpty())
+                        <div class="mt-3">
+                            <label class="block text-[11px] font-semibold text-amber-800 mb-1">ভ্যারিয়েন্ট</label>
+                            <select id="paykari-variant-{{ $product->id }}" aria-label="ভ্যারিয়েন্ট"
+                                    class="w-full border border-amber-200 rounded-lg px-2 py-2 text-xs bg-white text-amber-900 font-medium focus:outline-none focus:ring-1 focus:ring-amber-400">
+                                <option value="">ভ্যারিয়েন্ট নির্বাচন করুন</option>
+                                @foreach($product->activeVariants as $variant)
+                                <option value="{{ $variant->id }}">{{ $variant->name }}</option>
+                                @endforeach
                             </select>
-                            <div class="flex items-center gap-1">
-                                <button type="button" onclick="paykariStep({{ $product->id }}, -1)" aria-label="কমান"
-                                        class="w-8 h-8 rounded-lg border border-amber-200 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-50 transition">−</button>
-                                <input type="number" id="paykari-qty-{{ $product->id }}" inputmode="decimal" min="5" step="5" value="5"
-                                       class="w-14 text-center border border-amber-200 rounded-lg px-1 py-1.5 text-sm font-bold text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-400">
-                                <button type="button" onclick="paykariStep({{ $product->id }}, 1)" aria-label="বাড়ান"
-                                        class="w-8 h-8 rounded-lg border border-amber-200 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-50 transition">+</button>
+                        </div>
+                        @endif
+                        {{-- Controls: unit + qty stepper (one row) + add button (full width on mobile) --}}
+                        <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                            <div class="flex items-center gap-2">
+                                <select id="paykari-unit-{{ $product->id }}" onchange="paykariUnitChange({{ $product->id }})" aria-label="একক"
+                                        class="flex-shrink-0 border border-amber-200 rounded-lg px-2 py-2.5 text-xs bg-white text-amber-900 font-medium focus:outline-none focus:ring-1 focus:ring-amber-400">
+                                    <option value="kg">কেজি (kg)</option>
+                                    <option value="bag">বস্তা</option>
+                                    <option value="carton">কার্টন</option>
+                                </select>
+                                <div class="flex items-center gap-1 flex-shrink-0">
+                                    <button type="button" onclick="paykariStep({{ $product->id }}, -1)" aria-label="কমান"
+                                            class="w-9 h-9 rounded-lg border border-amber-200 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-50 transition">−</button>
+                                    <input type="number" id="paykari-qty-{{ $product->id }}" inputmode="decimal" min="5" step="5" value="5"
+                                           class="w-12 h-9 text-center border border-amber-200 rounded-lg px-1 text-sm font-bold text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-400">
+                                    <button type="button" onclick="paykariStep({{ $product->id }}, 1)" aria-label="বাড়ান"
+                                            class="w-9 h-9 rounded-lg border border-amber-200 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-50 transition">+</button>
+                                </div>
                             </div>
                             <button id="paykari-btn-{{ $product->id }}" onclick="addToPaykari({{ $product->id }})"
-                                    class="ml-auto flex-shrink-0 bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl transition-colors shadow-sm whitespace-nowrap">
+                                    class="w-full sm:w-auto sm:ml-auto bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm whitespace-nowrap">
                                 + যোগ করুন
                             </button>
                         </div>
@@ -697,12 +702,24 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 
 {{-- ━━━━━━━━━━━━━━━━  MOSLAMART APP PROMO (replaces the homepage FAQ)  ━━━━━━━━━━━━━━━━ --}}
 @php
-    // Spice-themed mini product cards for the phone mockup (no photo assets needed).
+    // Real spice photos for the phone mockup. Drop optimized square images into
+    //   public/images/spices/<key>.webp  (jpg/jpeg/png/avif also accepted)
+    // The card shows the photo when present and gracefully falls back to the
+    // brand gradient otherwise, so the section never breaks if a file is missing.
+    $spiceImg = function (string $key): ?string {
+        foreach (['webp', 'jpg', 'jpeg', 'png', 'avif'] as $ext) {
+            $rel = "images/spices/{$key}.{$ext}";
+            if (is_file(public_path($rel))) {
+                return asset($rel);
+            }
+        }
+        return null;
+    };
     $appMockProducts = [
-        ['জিরা',      'from-amber-600 to-amber-900',   'খুচরা'],
-        ['এলাচ',      'from-emerald-600 to-green-900', 'পাইকারি'],
-        ['দারুচিনি',  'from-orange-700 to-red-900',    'খুচরা'],
-        ['লবঙ্গ',     'from-amber-800 to-stone-800',   'পাইকারি'],
+        ['name' => 'জিরা',      'key' => 'cumin',    'tag' => 'খুচরা',   'grad' => 'from-amber-600 to-amber-900'],
+        ['name' => 'এলাচ',      'key' => 'cardamom', 'tag' => 'পাইকারি', 'grad' => 'from-emerald-600 to-green-900'],
+        ['name' => 'দারুচিনি',  'key' => 'cinnamon', 'tag' => 'খুচরা',   'grad' => 'from-orange-700 to-red-900'],
+        ['name' => 'লবঙ্গ',     'key' => 'clove',    'tag' => 'পাইকারি', 'grad' => 'from-amber-800 to-stone-800'],
     ];
 @endphp
 <section id="app-promo" class="py-16 md:py-20 px-5">
@@ -724,16 +741,28 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                             <span class="flex-1 text-center text-[10px] font-bold bg-[#14532d] text-white py-1.5 rounded-lg">খুচরা</span>
                             <span class="flex-1 text-center text-[10px] font-bold bg-orange-100 text-orange-700 py-1.5 rounded-lg">পাইকারি</span>
                         </div>
-                        {{-- Spice product cards --}}
-                        <div class="grid grid-cols-2 gap-2 px-3">
+                        {{-- Spice product cards (real photos with graceful gradient fallback) --}}
+                        <div class="grid grid-cols-2 gap-2.5 px-3">
                             @foreach($appMockProducts as $mp)
-                            <div class="bg-white rounded-xl border border-green-50 p-1.5 shadow-sm">
-                                <div class="h-14 rounded-lg bg-gradient-to-br {{ $mp[1] }} mb-1 flex items-center justify-center relative overflow-hidden">
-                                    <div class="w-8 h-8 rounded-full shadow-inner" style="background:radial-gradient(circle at 30% 30%, #fde68a, transparent 70%);"></div>
-                                    <span class="absolute top-1 left-1 text-[7px] font-bold px-1 rounded-full {{ $mp[2] === 'খুচরা' ? 'bg-[#c9a227] text-[#0f3d22]' : 'bg-orange-600 text-white' }}">{{ $mp[2] }}</span>
+                            @php $mpImg = $spiceImg($mp['key']); @endphp
+                            <div class="bg-white rounded-xl border border-green-50 shadow-sm overflow-hidden">
+                                {{-- Image: square, object-cover so every spice photo crops uniformly --}}
+                                <div class="relative aspect-square bg-[#f6fdf8]">
+                                    @if($mpImg)
+                                    <img src="{{ $mpImg }}" alt="{{ $mp['name'] }}" loading="lazy"
+                                         class="w-full h-full object-cover">
+                                    @else
+                                    <div class="w-full h-full bg-gradient-to-br {{ $mp['grad'] }} flex items-center justify-center">
+                                        <span class="font-serif-bn text-[#fef9ee]/90 text-2xl font-bold drop-shadow-sm">{{ mb_substr($mp['name'], 0, 1) }}</span>
+                                    </div>
+                                    @endif
+                                    <span class="absolute top-1 left-1 text-[7px] font-bold px-1.5 py-0.5 rounded-full shadow-sm {{ $mp['tag'] === 'খুচরা' ? 'bg-[#c9a227] text-[#0f3d22]' : 'bg-orange-600 text-white' }}">{{ $mp['tag'] }}</span>
                                 </div>
-                                <div class="text-[9px] font-bold text-[#14532d] truncate">{{ $mp[0] }}</div>
-                                <div class="text-[8px] text-[#c9a227] font-semibold">দর দেখুন</div>
+                                {{-- Caption --}}
+                                <div class="px-2 py-1.5">
+                                    <div class="text-[9px] font-bold text-[#14532d] truncate leading-tight">{{ $mp['name'] }}</div>
+                                    <div class="text-[8px] text-[#c9a227] font-semibold mt-0.5">দর দেখুন</div>
+                                </div>
                             </div>
                             @endforeach
                         </div>
@@ -2109,18 +2138,36 @@ function paykariStep(id, dir) {
 function addToPaykari(productId) {
     const p = PRODUCTS[productId];
     if (!p) return;
+
+    // Variant: required when the product has active variants.
+    const hasVariants = Array.isArray(p.variants) && p.variants.length > 0;
+    let variantId = null, variantName = null;
+    if (hasVariants) {
+        const vEl = document.getElementById('paykari-variant-' + productId);
+        const val = vEl ? vEl.value : '';
+        if (!val) {
+            if (window.msToast) msToast('অনুগ্রহ করে ভ্যারিয়েন্ট নির্বাচন করুন');
+            if (vEl) vEl.focus();
+            return;
+        }
+        variantId = parseInt(val, 10);
+        const v = p.variants.find(function (x) { return String(x.id) === String(val); });
+        variantName = v ? v.name : null;
+    }
+
     const unit = pkUnitOf(productId), cfg = pkCfg(unit), min = pkMin(p, unit);
     const el = document.getElementById('paykari-qty-' + productId);
     let qty = el ? parseFloat(el.value) : min;
     if (!qty || qty < min) { qty = min; if (el) el.value = min; if (window.msToast) msToast('পাইকারি অর্ডারের জন্য কমপক্ষে ' + fmt(min) + cfg.suffix + ' নির্বাচন করুন'); }
 
-    // Write into the shared bag (re-add = replace this product's qty/unit).
+    // Write into the shared bag (re-add = replace qty/unit for this product+variant line).
     const items = (window.msBagGet ? msBagGet() : []);
-    const ex = items.find(function (x) { return x.product_id === p.id; });
+    const ex = items.find(function (x) { return x.product_id === p.id && (x.variant_id || null) === variantId; });
     if (ex) { ex.quantity = qty; ex.unit = unit; }
     else {
         items.push({ product_id: p.id, slug: p.slug, name: p.name_bn, image: p.main_image,
                      quantity: qty, unit: unit,
+                     variant_id: variantId, variant_name: variantName,
                      min_qty: p.min_order_quantity || null, min_unit: p.min_order_unit || null });
     }
     if (window.msBagSave) msBagSave(items);  // fires ms-bag-changed → basket + drawer + badges
@@ -2132,15 +2179,17 @@ function addToPaykari(productId) {
         setTimeout(function () { btn.textContent = orig; btn.style.background = ''; }, 1300);
     }
 }
-function removeFromPaykari(productId) {
-    const items = (window.msBagGet ? msBagGet() : []).filter(function (x) { return x.product_id !== productId; });
+function removeFromPaykari(index) {
+    const items = (window.msBagGet ? msBagGet() : []);
+    if (index < 0 || index >= items.length) return;
+    items.splice(index, 1);
     if (window.msBagSave) msBagSave(items);
 }
-function editPaykariQty(productId, val) {
+function editPaykariQty(index, val) {
     const items = (window.msBagGet ? msBagGet() : []);
-    const it = items.find(function (x) { return x.product_id === productId; });
+    const it = items[index];
     if (!it) return;
-    const min = pkMin(PRODUCTS[productId], it.unit);
+    const min = pkMin(PRODUCTS[it.product_id], it.unit);
     let q = parseFloat(val);
     if (!q || q < min) { q = min; if (window.msToast) msToast('পাইকারি অর্ডারের জন্য কমপক্ষে ' + fmt(min) + pkCfg(it.unit).suffix + ' নির্বাচন করুন'); }
     it.quantity = q;
@@ -2168,19 +2217,20 @@ function renderPaykariBasket() {
     if (badgeEl) { badgeEl.style.display = ''; badgeEl.textContent = n; }
     if (btnEl) btnEl.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
 
-    listEl.innerHTML = items.map(function (it) {
+    listEl.innerHTML = items.map(function (it, i) {
         const cfg = pkCfg(it.unit), min = pkMin(PRODUCTS[it.product_id], it.unit);
+        const vName = it.variant_name ? '<span class="text-amber-300 font-normal"> — ' + it.variant_name + '</span>' : '';
         return '' +
         '<div class="flex items-center justify-between py-2 border-b border-amber-700 last:border-0">' +
             '<div class="flex-1 min-w-0 mr-2">' +
-                '<span class="font-serif-bn text-white text-sm font-semibold">' + (it.name || '') + '</span>' +
+                '<span class="font-serif-bn text-white text-sm font-semibold">' + (it.name || '') + vName + '</span>' +
             '</div>' +
             '<div class="flex items-center gap-1.5 flex-shrink-0">' +
                 '<input type="number" value="' + (parseFloat(it.quantity) || 0) + '" min="' + min + '" step="' + cfg.step + '" ' +
-                    'onchange="editPaykariQty(' + it.product_id + ', this.value)" ' +
+                    'onchange="editPaykariQty(' + i + ', this.value)" ' +
                     'class="w-14 text-center text-xs border border-amber-600 rounded-lg bg-amber-900 text-amber-200 py-1 focus:outline-none">' +
                 '<span class="text-amber-400 text-xs">' + pkUnitName(it.unit) + '</span>' +
-                '<button onclick="removeFromPaykari(' + it.product_id + ')" class="text-amber-500 hover:text-red-400 transition-colors text-xl leading-none ml-1 font-bold">&times;</button>' +
+                '<button onclick="removeFromPaykari(' + i + ')" class="text-amber-500 hover:text-red-400 transition-colors text-xl leading-none ml-1 font-bold">&times;</button>' +
             '</div>' +
         '</div>';
     }).join('');
@@ -2193,8 +2243,9 @@ function openPaykariEnquiryForm() {
     const preview = document.getElementById('paykari-form-items-preview');
     if (preview) {
         preview.innerHTML = items.map(function (it) {
+            const vName = it.variant_name ? ' <span class="text-amber-500">— ' + it.variant_name + '</span>' : '';
             return '<div class="flex justify-between text-amber-800 py-0.5">' +
-                '<span class="font-serif-bn font-semibold text-sm">' + (it.name || '') + '</span>' +
+                '<span class="font-serif-bn font-semibold text-sm">' + (it.name || '') + vName + '</span>' +
                 '<span class="text-amber-600 font-medium text-sm">' + (parseFloat(it.quantity) || 0) + ' ' + pkUnitName(it.unit) + '</span>' +
                 '</div>';
         }).join('');
@@ -2202,9 +2253,13 @@ function openPaykariEnquiryForm() {
     const hiddenContainer = document.getElementById('paykari-form-items-hidden');
     if (hiddenContainer) {
         hiddenContainer.innerHTML = items.map(function (it, i) {
-            return '<input type="hidden" name="items[' + i + '][product_id]" value="' + it.product_id + '">' +
+            let html = '<input type="hidden" name="items[' + i + '][product_id]" value="' + it.product_id + '">' +
                    '<input type="hidden" name="items[' + i + '][quantity_kg]" value="' + (parseFloat(it.quantity) || 0) + '">' +
                    '<input type="hidden" name="items[' + i + '][quantity_unit]" value="' + (it.unit || 'kg') + '">';
+            if (it.variant_id) {
+                html += '<input type="hidden" name="items[' + i + '][product_variant_id]" value="' + it.variant_id + '">';
+            }
+            return html;
         }).join('');
     }
     document.getElementById('paykari-enq-overlay').style.display = 'block';

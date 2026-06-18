@@ -42,7 +42,7 @@
                     <td class="px-5 py-3 font-mono text-gray-400 text-xs">#{{ $enq->id }}</td>
                     <td class="px-5 py-3">
                         @foreach($enq->items->take(2) as $item)
-                        <div class="text-xs text-gray-700">{{ $item->product_name }} — {{ $item->quantity_kg }}kg</div>
+                        <div class="text-xs text-gray-700">{{ $item->productLabel() }} — {{ $item->quantity_kg }}kg</div>
                         @endforeach
                         @if($enq->items->count() > 2)
                         <div class="text-xs text-gray-400">+ {{ $enq->items->count() - 2 }} more</div>

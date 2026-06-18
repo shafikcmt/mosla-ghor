@@ -63,11 +63,17 @@
                 <div class="space-y-2">
                     @foreach($enquiry->items as $item)
                     <div class="flex justify-between items-center py-2 border-b border-amber-50 last:border-0 text-sm">
-                        <div>
-                            <span class="font-serif-bn font-bold text-gray-800">{{ $item->product_name }}</span>
-                            @if($item->product)
-                            <span class="text-gray-400 text-xs ml-2">{{ $item->product->name_en }}</span>
+                        <div class="flex items-center gap-2 min-w-0">
+                            @php $vThumb = $item->variant?->imageUrl(); @endphp
+                            @if($vThumb)
+                            <img src="{{ $vThumb }}" alt="{{ $item->variant_name }}" class="w-9 h-9 rounded-md object-cover border border-gray-100 flex-shrink-0">
                             @endif
+                            <div class="min-w-0">
+                                <span class="font-serif-bn font-bold text-gray-800">{{ $item->product_name }}</span>
+                                @if($item->variant_name)
+                                <span class="text-purple-600 text-xs ml-2">— {{ $item->variant_name }}</span>
+                                @endif
+                            </div>
                         </div>
                         <span class="font-bold text-amber-700">{{ $item->quantity_kg }} kg</span>
                     </div>
