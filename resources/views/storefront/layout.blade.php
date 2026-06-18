@@ -29,7 +29,7 @@
         .btn-gold:hover { background-position: right center; box-shadow: 0 8px 24px rgba(201,162,39,.45); }
 
         /* Leave room for the app-like mobile bottom navigation (lg:hidden). */
-        @media (max-width: 1023px) { body { padding-bottom: calc(60px + env(safe-area-inset-bottom)); } }
+        @media (max-width: 1023px) { body { padding-bottom: calc(74px + env(safe-area-inset-bottom)); } }
     </style>
 
     @yield('head')

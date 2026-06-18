@@ -161,7 +161,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 
         /* Room for the app-like mobile bottom navigation (lg:hidden).
            The combo-bar JS overrides this inline with 76px when a box is active. */
-        @media (max-width: 1023px) { body { padding-bottom: calc(60px + env(safe-area-inset-bottom)); } }
+        @media (max-width: 1023px) { body { padding-bottom: calc(74px + env(safe-area-inset-bottom)); } }
     </style>
 </head>
 <body class="min-h-screen">
@@ -345,7 +345,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 @endif
 
 {{-- ━━━━━━━━━━━━━━━━  COMBO BUILDER  ━━━━━━━━━━━━━━━━ --}}
-<section id="combo-builder" class="py-16 md:py-20 px-5 bg-[#f6fdf8]">
+<section id="combo-builder" class="py-12 sm:py-16 md:py-20 px-4 sm:px-5 bg-[#f6fdf8] overflow-x-hidden">
     @php
         // Combo mode is URL-driven only (no sticky localStorage): default retail
         // unless ?combo=paykari|wholesale (e.g. the cart drawer "পাইকারি কম্বো" link).
@@ -355,13 +355,13 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 
         {{-- Section Label + Combo Mode Tabs --}}
         <x-storefront.section-heading eyebrow="আপনার পছন্দে তৈরি" margin="mb-8">
-            <div class="inline-flex bg-white rounded-xl border border-green-200 overflow-hidden shadow-sm mt-4">
+            <div class="inline-flex max-w-full bg-white rounded-xl border border-green-200 overflow-hidden shadow-sm mt-4">
                 <button id="combo-tab-retail" onclick="switchComboTab('retail')"
-                        class="px-6 py-2.5 text-sm font-semibold transition-colors {{ $comboMode === 'retail' ? 'bg-[#14532d] text-[#c9a227]' : 'text-gray-600 hover:bg-gray-50' }}">
+                        class="px-5 sm:px-6 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors {{ $comboMode === 'retail' ? 'bg-[#14532d] text-[#c9a227]' : 'text-gray-600 hover:bg-gray-50' }}">
                     নিজের বাক্স
                 </button>
                 <button id="combo-tab-paykari" onclick="switchComboTab('paykari')"
-                        class="px-6 py-2.5 text-sm font-semibold transition-colors {{ $comboMode === 'paykari' ? 'bg-amber-700 text-white' : 'text-gray-600 hover:bg-amber-50' }}">
+                        class="px-5 sm:px-6 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors {{ $comboMode === 'paykari' ? 'bg-amber-700 text-white' : 'text-gray-600 hover:bg-amber-50' }}">
                     পাইকারি অর্ডার
                 </button>
             </div>
@@ -374,7 +374,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                 subtitle="আপনার পছন্দের মশলা বেছে নিন, পরিমাণ ঠিক করুন — আমরা পৌঁছে দেব।"
                 margin="mb-8" />
 
-        <div class="flex flex-col lg:flex-row gap-8 items-start">
+        <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-start">
 
             {{-- ── Product Picker ── --}}
             <div class="flex-1 min-w-0">
@@ -508,8 +508,8 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 
         {{-- ══════════  PAYKARI COMBO  ══════════ --}}
         <div id="combo-paykari-section" style="{{ $comboMode === 'paykari' ? '' : 'display:none;' }}">
-            <div class="text-center mb-8">
-                <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">পাইকারি অর্ডার তৈরি করুন</h2>
+            <div class="text-center mb-6 sm:mb-8">
+                <h2 class="font-serif-bn text-[#14532d] text-2xl sm:text-3xl md:text-4xl font-bold">পাইকারি অর্ডার তৈরি করুন</h2>
                 <p class="text-gray-500 text-sm mt-2 max-w-lg mx-auto leading-relaxed">
                     আপনার প্রয়োজন অনুযায়ী একাধিক মসলা ও quantity নির্বাচন করুন। MoslaMart আপনাকে best wholesale quote পাঠাবে।
                 </p>
@@ -518,7 +518,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                 </p>
             </div>
 
-            <div class="flex flex-col lg:flex-row gap-8 items-start">
+            <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-start">
 
                 {{-- Paykari Product Picker --}}
                 <div class="flex-1 min-w-0">
