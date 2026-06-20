@@ -5,21 +5,139 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Admin') — মসলা স্টোর</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @stack('styles')
     <style>
         [x-cloak] { display: none !important; }
         #sidebar { transition: transform .2s ease; }
+        /* Single (parent-less) link, e.g. Dashboard */
         .nav-link       { display:flex; align-items:center; gap:.6rem; padding:.5rem .75rem; border-radius:.4rem; font-size:.8125rem; color:#a7c8a7; transition:background .15s,color .15s; }
         .nav-link:hover { background:#14532d; color:#fff; }
         .nav-link.active{ background:#1a6b3a; color:#fff; font-weight:600; }
-        .nav-group-label{ font-size:.625rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#4d7a5a; padding:.75rem .75rem .25rem; }
+        /* Accordion parent (group toggle) */
+        .nav-parent       { display:flex; align-items:center; gap:.6rem; width:100%; padding:.55rem .75rem; border-radius:.4rem; font-size:.8125rem; color:#bcd9bc; transition:background .15s,color .15s; text-align:left; }
+        .nav-parent:hover { background:#14532d; color:#fff; }
+        .nav-parent.active{ color:#fff; font-weight:600; }
+        .nav-parent .chevron { margin-left:auto; width:.85rem; height:.85rem; flex-shrink:0; transition:transform .2s ease; }
+        .nav-parent.open .chevron { transform:rotate(90deg); }
+        /* Accordion children */
+        .nav-sub        { margin:.15rem 0 .35rem; padding-left:.45rem; border-left:1px solid #14532d; }
+        .nav-child      { display:flex; align-items:center; gap:.5rem; padding:.4rem .75rem .4rem 1.75rem; border-radius:.4rem; font-size:.78125rem; color:#9bbf9b; transition:background .15s,color .15s; }
+        .nav-child:hover{ background:#14532d; color:#fff; }
+        .nav-child.active{ background:#1a6b3a; color:#fff; font-weight:600; }
+        .nav-child .dot { width:.35rem; height:.35rem; border-radius:9999px; background:currentColor; flex-shrink:0; opacity:.55; }
+        /* Slim scrollbar */
+        #sidebar nav::-webkit-scrollbar { width:5px; }
+        #sidebar nav::-webkit-scrollbar-thumb { background:#1a6b3a; border-radius:9999px; }
+        #sidebar nav::-webkit-scrollbar-track { background:transparent; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
 
 @php
     $active = fn(string|array $p) => request()->routeIs($p);
+
+    // ── Sidebar menu config ─────────────────────────────────────────────
+    // Each group: label, icon (svg path d), items[ label, route, active(pattern) ].
+    // Add 'show' => false to hide an item/group conditionally.
+    $icons = [
+        'box'      => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+        'tag'      => 'M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z',
+        'combo'    => 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
+        'clip'     => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+        'users'    => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
+        'truck'    => 'M8 17l4 4 4-4m0-5l-4-4-4 4M12 3v13',
+        'receipt'  => 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z',
+        'key'      => 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z',
+        'pin'      => 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z',
+        'stock'    => 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4',
+        'card'     => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+        'sliders'  => 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4',
+        'gear'     => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
+        'globe'    => 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9',
+        'chat'     => 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z',
+        'coin'     => 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+        'shop'     => 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+        'return'   => 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6',
+        'faq'      => 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+        'star'     => 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z',
+        'review'   => 'M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z',
+        'wallet'   => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+    ];
+
+    $menuGroups = [
+        [
+            'label' => 'Catalog', 'icon' => $icons['box'],
+            'items' => [
+                ['label' => 'পণ্যসমূহ',  'route' => 'admin.products.index',   'active' => 'admin.products.*'],
+                ['label' => 'ক্যাটাগরি', 'route' => 'admin.categories.index', 'active' => 'admin.categories.*'],
+                ['label' => 'কম্বো',     'route' => 'admin.combos.index',     'active' => 'admin.combos.*'],
+            ],
+        ],
+        [
+            'label' => 'Sales', 'icon' => $icons['clip'],
+            'items' => [
+                ['label' => 'অর্ডার',   'route' => 'admin.orders.index',    'active' => 'admin.orders.*'],
+                ['label' => 'কাস্টমার', 'route' => 'admin.customers.index', 'active' => 'admin.customers.*'],
+            ],
+        ],
+        [
+            'label' => 'Wholesale', 'icon' => $icons['chat'],
+            'items' => [
+                ['label' => 'Enquiry সমূহ',     'route' => 'admin.wholesale.enquiry.index', 'active' => 'admin.wholesale.enquiry.*'],
+                ['label' => 'কোটেশন অনুমোদন',  'route' => 'admin.wholesale.quote.index',   'active' => 'admin.wholesale.quote.*'],
+                ['label' => 'Chat Monitor',     'route' => 'admin.wholesale.chat.index',    'active' => 'admin.wholesale.chat.*'],
+            ],
+        ],
+        [
+            'label' => 'Vendor Management', 'icon' => $icons['shop'],
+            'items' => [
+                ['label' => 'ভেন্ডর / মার্চেন্ট', 'route' => 'admin.vendors.index',          'active' => 'admin.vendors.*'],
+                ['label' => 'ভেন্ডর স্টক',        'route' => 'admin.vendor-stock.index',     'active' => 'admin.vendor-stock.*'],
+                ['label' => 'ভেন্ডর কাস্টমার',    'route' => 'admin.vendor-customers.index', 'active' => 'admin.vendor-customers.*'],
+                ['label' => 'পেআউট রিকুয়েস্ট',   'route' => 'admin.vendor-payouts.index',   'active' => 'admin.vendor-payouts.*'],
+                ['label' => 'Vendor Wallet',       'route' => 'admin.vendor-wallet.index',    'active' => 'admin.vendor-wallet.*'],
+                ['label' => 'Commission সেটিং',   'route' => 'admin.commission.settings.index', 'active' => 'admin.commission.*'],
+            ],
+        ],
+        [
+            'label' => 'Delivery', 'icon' => $icons['truck'],
+            'items' => [
+                ['label' => 'কুরিয়ার',        'route' => 'admin.couriers.index',             'active' => 'admin.couriers.*'],
+                ['label' => 'ডেলিভারি রেট',    'route' => 'admin.delivery-rates.index',       'active' => 'admin.delivery-rates.*'],
+                ['label' => 'API সেটিং',       'route' => 'admin.courier-api-settings.index', 'active' => 'admin.courier-api-settings.*'],
+                ['label' => 'পার্সেল অর্ডার',  'route' => 'admin.courier-orders.index',        'active' => 'admin.courier-orders.*'],
+                ['label' => 'ভেন্ডর পিকআপ',    'route' => 'admin.vendor-pickup-points.index', 'active' => 'admin.vendor-pickup-points.*'],
+                ['label' => 'ডেলিভারি জোন',    'route' => 'admin.delivery-zones.index',        'active' => 'admin.delivery-zones.*'],
+            ],
+        ],
+        [
+            'label' => 'Customer Service', 'icon' => $icons['return'],
+            'items' => [
+                ['label' => 'রিটার্ন রিকোয়েস্ট', 'route' => 'admin.return-requests.index', 'active' => 'admin.return-requests.*'],
+                ['label' => 'সাপোর্ট টিকেট',      'route' => 'admin.support-tickets.index', 'active' => 'admin.support-tickets.*'],
+            ],
+        ],
+        [
+            'label' => 'Content & Reviews', 'icon' => $icons['star'],
+            'items' => [
+                ['label' => 'FAQ',           'route' => 'admin.faqs.index',            'active' => 'admin.faqs.*'],
+                ['label' => 'রিভিউ',         'route' => 'admin.reviews.index',         'active' => 'admin.reviews.*'],
+                ['label' => 'পণ্য রিভিউ',     'route' => 'admin.product-reviews.index', 'active' => 'admin.product-reviews.*'],
+                ['label' => 'ওয়েবসাইট সেটিং', 'route' => 'admin.website-settings.index', 'active' => 'admin.website-settings.*'],
+            ],
+        ],
+        [
+            'label' => 'Settings', 'icon' => $icons['gear'],
+            'items' => [
+                ['label' => 'পেমেন্ট সেটিং',  'route' => 'admin.payment-settings.index',  'active' => 'admin.payment-settings.*'],
+                ['label' => 'ডেলিভারি সেটিং',  'route' => 'admin.delivery-settings.index', 'active' => 'admin.delivery-settings.*'],
+                ['label' => 'জেনারেল সেটিং',   'route' => 'admin.general-settings.index',   'active' => 'admin.general-settings.*'],
+                ['label' => 'লগইন সেটিং',      'route' => 'admin.auth-settings.index',      'active' => 'admin.auth-settings.*'],
+            ],
+        ],
+    ];
 @endphp
 
 {{-- ── Mobile overlay ────────────────────────────────────────────── --}}
@@ -29,11 +147,11 @@
 
 {{-- ── Sidebar ────────────────────────────────────────────────────── --}}
 <aside id="sidebar"
-       class="fixed inset-y-0 left-0 z-30 w-60 bg-[#0d3520] flex flex-col overflow-y-auto
+       class="fixed inset-y-0 left-0 z-30 w-60 bg-[#0d3520] flex flex-col
               -translate-x-full lg:translate-x-0">
 
-    {{-- Brand --}}
-    <div class="flex items-center gap-2.5 px-4 py-5 border-b border-[#14532d]">
+    {{-- Brand (fixed top) --}}
+    <div class="flex items-center gap-2.5 px-4 py-5 border-b border-[#14532d] flex-shrink-0">
         <div class="w-7 h-7 rounded-md bg-[#c9a227] flex items-center justify-center flex-shrink-0">
             <span class="text-[#0d3520] text-xs font-black">ম</span>
         </div>
@@ -43,10 +161,10 @@
         </div>
     </div>
 
-    {{-- Nav --}}
-    <nav class="flex-1 px-2 py-3 space-y-0.5">
+    {{-- Nav (only this scrolls) --}}
+    <nav class="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
 
-        {{-- Dashboard --}}
+        {{-- Dashboard (single) --}}
         <a href="{{ route('admin.dashboard') }}"
            class="nav-link {{ $active('admin.dashboard') ? 'active' : '' }}">
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,295 +174,42 @@
             ড্যাশবোর্ড
         </a>
 
-        {{-- Catalog --}}
-        <p class="nav-group-label">Catalog</p>
-
-        <a href="{{ route('admin.products.index') }}"
-           class="nav-link {{ $active('admin.products.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-            </svg>
-            পণ্যসমূহ
-        </a>
-
-        <a href="{{ route('admin.categories.index') }}"
-           class="nav-link {{ $active('admin.categories.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z"/>
-            </svg>
-            ক্যাটাগরি
-        </a>
-
-        <a href="{{ route('admin.combos.index') }}"
-           class="nav-link {{ $active('admin.combos.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-            </svg>
-            কম্বো
-        </a>
-
-        {{-- Sales --}}
-        <p class="nav-group-label">Sales</p>
-
-        <a href="{{ route('admin.orders.index') }}"
-           class="nav-link {{ $active('admin.orders.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-            অর্ডার
-        </a>
-
-        <a href="{{ route('admin.customers.index') }}"
-           class="nav-link {{ $active('admin.customers.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            কাস্টমার
-        </a>
-
-        {{-- Delivery --}}
-        <p class="nav-group-label">Delivery</p>
-
-        <a href="{{ route('admin.couriers.index') }}"
-           class="nav-link {{ $active('admin.couriers.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M8 17l4 4 4-4m0-5l-4-4-4 4M12 3v13"/>
-            </svg>
-            কুরিয়ার
-        </a>
-
-        <a href="{{ route('admin.delivery-rates.index') }}"
-           class="nav-link {{ $active('admin.delivery-rates.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            ডেলিভারি রেট
-        </a>
-
-        <a href="{{ route('admin.courier-api-settings.index') }}"
-           class="nav-link {{ $active('admin.courier-api-settings.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-            </svg>
-            API সেটিং
-        </a>
-
-        <a href="{{ route('admin.courier-orders.index') }}"
-           class="nav-link {{ $active('admin.courier-orders.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-            </svg>
-            পার্সেল অর্ডার
-        </a>
-
-        <a href="{{ route('admin.vendor-pickup-points.index') }}"
-           class="nav-link {{ $active('admin.vendor-pickup-points.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            ভেন্ডর পিকআপ
-        </a>
-
-        <a href="{{ route('admin.vendor-stock.index') }}"
-           class="nav-link {{ $active('admin.vendor-stock.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-            </svg>
-            ভেন্ডর স্টক
-        </a>
-
-        <a href="{{ route('admin.vendor-customers.index') }}"
-           class="nav-link {{ $active('admin.vendor-customers.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 00-3-3.87"/>
-            </svg>
-            ভেন্ডর কাস্টমার
-        </a>
-
-        {{-- Settings --}}
-        <p class="nav-group-label">Settings</p>
-
-        <a href="{{ route('admin.payment-settings.index') }}"
-           class="nav-link {{ $active('admin.payment-settings.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-            </svg>
-            পেমেন্ট সেটিং
-        </a>
-
-        <a href="{{ route('admin.delivery-settings.index') }}"
-           class="nav-link {{ $active('admin.delivery-settings.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            ডেলিভারি সেটিং
-        </a>
-
-        <a href="{{ route('admin.delivery-zones.index') }}"
-           class="nav-link {{ $active('admin.delivery-zones.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            ডেলিভারি জোন
-        </a>
-
-        <a href="{{ route('admin.general-settings.index') }}"
-           class="nav-link {{ $active('admin.general-settings.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
-            </svg>
-            জেনারেল সেটিং
-        </a>
-
-        <a href="{{ route('admin.auth-settings.index') }}"
-           class="nav-link {{ $active('admin.auth-settings.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-            </svg>
-            লগইন সেটিং
-        </a>
-
-        {{-- Wholesale --}}
-        <p class="nav-group-label">Wholesale</p>
-
-        <a href="{{ route('admin.wholesale.enquiry.index') }}"
-           class="nav-link {{ $active('admin.wholesale.enquiry.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
-            </svg>
-            Enquiry সমূহ
-        </a>
-
-        <a href="{{ route('admin.wholesale.quote.index') }}"
-           class="nav-link {{ $active('admin.wholesale.quote.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-            কোটেশন অনুমোদন
-        </a>
-
-        <a href="{{ route('admin.wholesale.chat.index') }}"
-           class="nav-link {{ $active('admin.wholesale.chat.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12z"/>
-            </svg>
-            Chat Monitor
-        </a>
-
-        <a href="{{ route('admin.commission.settings.index') }}"
-           class="nav-link {{ $active('admin.commission.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            Commission সেটিং
-        </a>
-
-        <a href="{{ route('admin.vendor-wallet.index') }}"
-           class="nav-link {{ $active('admin.vendor-wallet.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-            </svg>
-            Vendor Wallet
-        </a>
-
-        {{-- Multivendor --}}
-        <p class="nav-group-label">Marketplace</p>
-
-        <a href="{{ route('admin.vendors.index') }}"
-           class="nav-link {{ $active('admin.vendors.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-            </svg>
-            মার্চেন্ট / ভেন্ডর
-        </a>
-
-        <a href="{{ route('admin.vendor-payouts.index') }}"
-           class="nav-link {{ $active('admin.vendor-payouts.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-            </svg>
-            পেআউট রিকুয়েস্ট
-        </a>
-
-        {{-- Customer Service --}}
-        <p class="nav-group-label">Customer Service</p>
-
-        <a href="{{ route('admin.return-requests.index') }}"
-           class="nav-link {{ $active('admin.return-requests.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-            </svg>
-            রিটার্ন রিকোয়েস্ট
-        </a>
-
-        <a href="{{ route('admin.support-tickets.index') }}"
-           class="nav-link {{ $active('admin.support-tickets.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
-            </svg>
-            সাপোর্ট টিকেট
-        </a>
-
-        {{-- Content --}}
-        <p class="nav-group-label">Content</p>
-
-        <a href="{{ route('admin.faqs.index') }}"
-           class="nav-link {{ $active('admin.faqs.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            FAQ
-        </a>
-
-        <a href="{{ route('admin.reviews.index') }}"
-           class="nav-link {{ $active('admin.reviews.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
-            </svg>
-            রিভিউ
-        </a>
-
-        <a href="{{ route('admin.product-reviews.index') }}"
-           class="nav-link {{ $active('admin.product-reviews.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-            </svg>
-            পণ্য রিভিউ
-        </a>
-
-        <a href="{{ route('admin.website-settings.index') }}"
-           class="nav-link {{ $active('admin.website-settings.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
-            </svg>
-            ওয়েবসাইট সেটিং
-        </a>
+        {{-- Accordion groups --}}
+        @foreach($menuGroups as $group)
+            @php
+                $items = array_filter($group['items'], fn($i) => ($i['show'] ?? true));
+                $groupActive = collect($items)->contains(fn($i) => $active($i['active']));
+            @endphp
+            @if(count($items))
+            <div x-data="{ open: {{ $groupActive ? 'true' : 'false' }} }" class="pt-0.5">
+                <button type="button" @click="open = !open"
+                        class="nav-parent {{ $groupActive ? 'active' : '' }}"
+                        :class="{ 'open': open }">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $group['icon'] }}"/>
+                    </svg>
+                    <span>{{ $group['label'] }}</span>
+                    <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="open" x-collapse x-cloak class="nav-sub">
+                    @foreach($items as $item)
+                        <a href="{{ route($item['route']) }}"
+                           class="nav-child {{ $active($item['active']) ? 'active' : '' }}">
+                            <span class="dot"></span>
+                            <span>{{ $item['label'] }}</span>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+            @endif
+        @endforeach
 
     </nav>
 
-    {{-- Sidebar footer --}}
-    <div class="px-4 py-3 border-t border-[#14532d] space-y-2.5">
+    {{-- Sidebar footer (fixed bottom) --}}
+    <div class="px-4 py-3 border-t border-[#14532d] space-y-2.5 flex-shrink-0">
 
         {{-- Logged-in user --}}
         <div class="flex items-center gap-2.5">

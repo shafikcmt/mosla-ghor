@@ -5,29 +5,104 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'ভেন্ডর') — মসলা মার্ট</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @stack('styles')
     <style>
+        [x-cloak] { display: none !important; }
         #sidebar { transition: transform .2s ease; }
         .nav-link       { display:flex; align-items:center; gap:.6rem; padding:.5rem .75rem; border-radius:.4rem; font-size:.8125rem; color:#a78bfa; transition:background .15s,color .15s; }
         .nav-link:hover { background:#3730a3; color:#fff; }
         .nav-link.active{ background:#4338ca; color:#fff; font-weight:600; }
-        .nav-group-label{ font-size:.625rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#6d5fad; padding:.75rem .75rem .25rem; }
+        .nav-parent       { display:flex; align-items:center; gap:.6rem; width:100%; padding:.55rem .75rem; border-radius:.4rem; font-size:.8125rem; color:#b9a8f5; transition:background .15s,color .15s; text-align:left; }
+        .nav-parent:hover { background:#3730a3; color:#fff; }
+        .nav-parent.active{ color:#fff; font-weight:600; }
+        .nav-parent .chevron { margin-left:auto; width:.85rem; height:.85rem; flex-shrink:0; transition:transform .2s ease; }
+        .nav-parent.open .chevron { transform:rotate(90deg); }
+        .nav-sub        { margin:.15rem 0 .35rem; padding-left:.45rem; border-left:1px solid #3730a3; }
+        .nav-child      { display:flex; align-items:center; gap:.5rem; padding:.4rem .75rem .4rem 1.75rem; border-radius:.4rem; font-size:.78125rem; color:#a78bfa; transition:background .15s,color .15s; }
+        .nav-child:hover{ background:#3730a3; color:#fff; }
+        .nav-child.active{ background:#4338ca; color:#fff; font-weight:600; }
+        .nav-child .dot { width:.35rem; height:.35rem; border-radius:9999px; background:currentColor; flex-shrink:0; opacity:.55; }
+        #sidebar nav::-webkit-scrollbar { width:5px; }
+        #sidebar nav::-webkit-scrollbar-thumb { background:#4338ca; border-radius:9999px; }
+        #sidebar nav::-webkit-scrollbar-track { background:transparent; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
 
 @php
-    $active = fn(string|array $p) => request()->routeIs($p);
+    $active = fn($p) => request()->routeIs(...(array) $p);
     $vendor = $authVendor ?? null;
+
+    $canStock    = \App\Support\VendorSettings::vendorCanManageStock();
+    $canOrder    = \App\Support\VendorSettings::vendorCanCreateOrder();
+    $canCustomer = \App\Support\VendorSettings::vendorCanCreateCustomer();
+    $canPickup   = \App\Models\CourierSetting::current()->vendorCanSetupPickup();
+
+    $icons = [
+        'box'    => 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+        'cart'   => 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z',
+        'clip'   => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+        'chat'   => 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z',
+        'wallet' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+        'user'   => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+    ];
+
+    $menuGroups = [
+        [
+            'label' => 'পণ্য', 'icon' => $icons['box'],
+            'items' => [
+                ['label' => 'আমার পণ্য',        'route' => 'vendor.products.index',  'active' => 'vendor.products.*'],
+                ['label' => 'পণ্য যোগ করুন',     'route' => 'vendor.products.create', 'active' => 'vendor.products.create'],
+                ['label' => 'আমার কম্বো',        'route' => 'vendor.combos.index',    'active' => 'vendor.combos.*'],
+                ['label' => 'স্টক ম্যানেজমেন্ট', 'route' => 'vendor.stock.index',     'active' => 'vendor.stock.*', 'show' => $canStock],
+            ],
+        ],
+        [
+            'label' => 'বিক্রয় ও কাস্টমার', 'icon' => $icons['cart'],
+            'items' => [
+                ['label' => 'নতুন বিক্রয় (POS)', 'route' => 'vendor.pos.create',    'active' => 'vendor.pos.create', 'show' => $canOrder],
+                ['label' => 'বিক্রয় তালিকা',     'route' => 'vendor.pos.index',     'active' => ['vendor.pos.index', 'vendor.pos.show'], 'show' => $canOrder],
+                ['label' => 'কাস্টমার',          'route' => 'vendor.customers.index', 'active' => 'vendor.customers.*', 'show' => $canCustomer],
+            ],
+        ],
+        [
+            'label' => 'অর্ডার', 'icon' => $icons['clip'],
+            'items' => [
+                ['label' => 'অর্ডারসমূহ',     'route' => 'vendor.orders.index',        'active' => 'vendor.orders.*'],
+                ['label' => 'পিকআপ পয়েন্ট',  'route' => 'vendor.pickup-points.index', 'active' => 'vendor.pickup-points.*', 'show' => $canPickup],
+            ],
+        ],
+        [
+            'label' => 'পাইকারি', 'icon' => $icons['chat'],
+            'items' => [
+                ['label' => 'নতুন Enquiry', 'route' => 'vendor.wholesale.enquiry.index', 'active' => 'vendor.wholesale.enquiry.*'],
+                ['label' => 'কোটেশন',       'route' => 'vendor.wholesale.quote.index',   'active' => 'vendor.wholesale.quote.*'],
+            ],
+        ],
+        [
+            'label' => 'আয়', 'icon' => $icons['wallet'],
+            'items' => [
+                ['label' => 'আয় / কমিশন',    'route' => 'vendor.wholesale.earnings.index', 'active' => 'vendor.wholesale.earnings.*'],
+                ['label' => 'পেআউট / উত্তোলন', 'route' => 'vendor.payouts.index',            'active' => 'vendor.payouts.*'],
+            ],
+        ],
+        [
+            'label' => 'অ্যাকাউন্ট', 'icon' => $icons['user'],
+            'items' => [
+                ['label' => 'শপ প্রোফাইল', 'route' => 'vendor.profile.index', 'active' => 'vendor.profile.*'],
+            ],
+        ],
+    ];
 @endphp
 
 <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden" onclick="closeSidebar()"></div>
 
-<aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-60 bg-[#1e1b4b] flex flex-col overflow-y-auto -translate-x-full lg:translate-x-0">
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-60 bg-[#1e1b4b] flex flex-col -translate-x-full lg:translate-x-0">
 
-    {{-- Brand --}}
-    <div class="flex items-center gap-2.5 px-4 py-5 border-b border-[#3730a3]">
+    {{-- Brand (fixed top) --}}
+    <div class="flex items-center gap-2.5 px-4 py-5 border-b border-[#3730a3] flex-shrink-0">
         <div class="w-7 h-7 rounded-md bg-[#c9a227] flex items-center justify-center flex-shrink-0">
             <span class="text-[#1e1b4b] text-xs font-black">ভ</span>
         </div>
@@ -39,7 +114,7 @@
 
     {{-- Vendor status badge --}}
     @if($vendor)
-    <div class="mx-3 mt-3 px-3 py-2 rounded-lg
+    <div class="mx-3 mt-3 px-3 py-2 rounded-lg flex-shrink-0
         @if($vendor->status === 'approved') bg-green-900/40 border border-green-700
         @elseif($vendor->status === 'pending') bg-yellow-900/40 border border-yellow-600
         @elseif($vendor->status === 'suspended') bg-red-900/40 border border-red-700
@@ -58,8 +133,10 @@
     </div>
     @endif
 
-    <nav class="flex-1 px-2 py-3 space-y-0.5">
+    {{-- Nav (only this scrolls) --}}
+    <nav class="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
 
+        {{-- Dashboard (single) --}}
         <a href="{{ route('vendor.dashboard') }}"
            class="nav-link {{ $active('vendor.dashboard') ? 'active' : '' }}">
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,142 +145,42 @@
             ড্যাশবোর্ড
         </a>
 
-        <p class="nav-group-label">পণ্য</p>
-
-        <a href="{{ route('vendor.products.index') }}"
-           class="nav-link {{ $active('vendor.products.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-            </svg>
-            আমার পণ্য
-        </a>
-
-        <a href="{{ route('vendor.products.create') }}"
-           class="nav-link {{ $active('vendor.products.create') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            পণ্য যোগ করুন
-        </a>
-
-        <a href="{{ route('vendor.combos.index') }}"
-           class="nav-link {{ $active('vendor.combos.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-            </svg>
-            আমার কম্বো
-        </a>
-
-        @if(\App\Support\VendorSettings::vendorCanManageStock())
-        <a href="{{ route('vendor.stock.index') }}"
-           class="nav-link {{ $active('vendor.stock.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-            </svg>
-            স্টক ম্যানেজমেন্ট
-        </a>
-        @endif
-
-        <p class="nav-group-label">বিক্রয় ও কাস্টমার</p>
-
-        @if(\App\Support\VendorSettings::vendorCanCreateOrder())
-        <a href="{{ route('vendor.pos.create') }}"
-           class="nav-link {{ $active('vendor.pos.create') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-            </svg>
-            নতুন বিক্রয় (POS)
-        </a>
-
-        <a href="{{ route('vendor.pos.index') }}"
-           class="nav-link {{ $active('vendor.pos.index') || $active('vendor.pos.show') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
-            বিক্রয় তালিকা
-        </a>
-        @endif
-
-        @if(\App\Support\VendorSettings::vendorCanCreateCustomer())
-        <a href="{{ route('vendor.customers.index') }}"
-           class="nav-link {{ $active('vendor.customers.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 00-3-3.87"/>
-            </svg>
-            কাস্টমার
-        </a>
-        @endif
-
-        <p class="nav-group-label">অর্ডার</p>
-
-        <a href="{{ route('vendor.orders.index') }}"
-           class="nav-link {{ $active('vendor.orders.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-            অর্ডারসমূহ
-        </a>
-
-        @if(\App\Models\CourierSetting::current()->vendorCanSetupPickup())
-        <a href="{{ route('vendor.pickup-points.index') }}"
-           class="nav-link {{ $active('vendor.pickup-points.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            পিকআপ পয়েন্ট
-        </a>
-        @endif
-
-        <p class="nav-group-label">পাইকারি</p>
-
-        <a href="{{ route('vendor.wholesale.enquiry.index') }}"
-           class="nav-link {{ $active('vendor.wholesale.enquiry.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
-            </svg>
-            নতুন Enquiry
-        </a>
-
-        <a href="{{ route('vendor.wholesale.quote.index') }}"
-           class="nav-link {{ $active('vendor.wholesale.quote.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-            কোটেশন
-        </a>
-
-        <p class="nav-group-label">আয়</p>
-
-        <a href="{{ route('vendor.wholesale.earnings.index') }}"
-           class="nav-link {{ $active('vendor.wholesale.earnings.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-            </svg>
-            আয় / কমিশন
-        </a>
-
-        <a href="{{ route('vendor.payouts.index') }}"
-           class="nav-link {{ $active('vendor.payouts.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-            </svg>
-            পেআউট / উত্তোলন
-        </a>
-
-        <p class="nav-group-label">অ্যাকাউন্ট</p>
-
-        <a href="{{ route('vendor.profile.index') }}"
-           class="nav-link {{ $active('vendor.profile.*') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-            </svg>
-            শপ প্রোফাইল
-        </a>
+        {{-- Accordion groups --}}
+        @foreach($menuGroups as $group)
+            @php
+                $items = array_filter($group['items'], fn($i) => ($i['show'] ?? true));
+                $groupActive = collect($items)->contains(fn($i) => $active($i['active']));
+            @endphp
+            @if(count($items))
+            <div x-data="{ open: {{ $groupActive ? 'true' : 'false' }} }" class="pt-0.5">
+                <button type="button" @click="open = !open"
+                        class="nav-parent {{ $groupActive ? 'active' : '' }}"
+                        :class="{ 'open': open }">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $group['icon'] }}"/>
+                    </svg>
+                    <span>{{ $group['label'] }}</span>
+                    <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="open" x-collapse x-cloak class="nav-sub">
+                    @foreach($items as $item)
+                        <a href="{{ route($item['route']) }}"
+                           class="nav-child {{ $active($item['active']) ? 'active' : '' }}">
+                            <span class="dot"></span>
+                            <span>{{ $item['label'] }}</span>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+            @endif
+        @endforeach
 
     </nav>
 
-    <div class="px-4 py-3 border-t border-[#3730a3] space-y-2.5">
+    {{-- Footer (fixed bottom) --}}
+    <div class="px-4 py-3 border-t border-[#3730a3] space-y-2.5 flex-shrink-0">
         <div class="flex items-center gap-2.5">
             <div class="w-7 h-7 rounded-full bg-[#4338ca] flex items-center justify-center flex-shrink-0">
                 <span class="text-white text-xs font-bold">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>

@@ -5,15 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'আমার অ্যাকাউন্ট') — মসলা ঘর</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans Bengali', sans-serif; background: #fef9ee; }
-        .sidebar-link { @apply flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg transition-colors; }
-        .sidebar-link.active { @apply bg-[#14532d] text-white font-semibold; }
-        .sidebar-link:not(.active) { @apply text-gray-600 hover:bg-gray-100; }
+        [x-cloak] { display: none !important; }
+        .c-link        { display:flex; align-items:center; gap:.65rem; padding:.65rem 1rem; font-size:.875rem; border-radius:.5rem; transition:background .15s,color .15s; }
+        .c-link.active { background:#14532d; color:#fff; font-weight:600; }
+        .c-link:not(.active){ color:#374151; }
+        .c-link:not(.active):hover { background:#ecfdf5; }
+        .c-parent      { display:flex; align-items:center; gap:.65rem; width:100%; padding:.65rem 1rem; font-size:.875rem; border-radius:.5rem; color:#374151; transition:background .15s; text-align:left; }
+        .c-parent:hover{ background:#f3f4f6; }
+        .c-parent.active{ color:#14532d; font-weight:600; }
+        .c-parent .chevron { margin-left:auto; width:.9rem; height:.9rem; flex-shrink:0; transition:transform .2s ease; }
+        .c-parent.open .chevron { transform:rotate(90deg); }
+        .c-sub         { margin:.1rem 0 .25rem 1.55rem; padding-left:.5rem; border-left:1px solid #e5e7eb; }
+        .c-child       { display:flex; align-items:center; gap:.55rem; padding:.5rem .75rem; font-size:.8125rem; border-radius:.5rem; transition:background .15s,color .15s; }
+        .c-child.active{ background:#14532d; color:#fff; font-weight:600; }
+        .c-child:not(.active){ color:#4b5563; }
+        .c-child:not(.active):hover { background:#ecfdf5; }
     </style>
 </head>
 <body class="min-h-screen">
+
+@php
+    $active = fn($p) => request()->routeIs(...(array) $p);
+
+    $singles = [
+        ['route' => 'customer.account',            'active' => 'customer.account',            'label' => 'ড্যাশবোর্ড',   'icon' => '🏠'],
+        ['route' => 'customer.notifications.index', 'active' => 'customer.notifications.*',     'label' => 'নোটিফিকেশন',    'icon' => '🔔'],
+    ];
+
+    $menuGroups = [
+        [
+            'label' => 'শপিং', 'icon' => '🛍️',
+            'items' => [
+                ['route' => 'customer.orders.index',   'active' => 'customer.orders.*',   'label' => 'আমার অর্ডার',     'icon' => '📦'],
+                ['route' => 'customer.returns.index',  'active' => 'customer.returns.*',  'label' => 'রিটার্ন/রিফান্ড', 'icon' => '↩️'],
+                ['route' => 'customer.wishlist.index', 'active' => 'customer.wishlist.*', 'label' => 'উইশলিস্ট',        'icon' => '❤️'],
+            ],
+        ],
+        [
+            'label' => 'পাইকারি', 'icon' => '🏭',
+            'items' => [
+                ['route' => 'customer.wholesale.enquiry.index', 'active' => 'customer.wholesale.enquiry.*', 'label' => 'পাইকারি Enquiry', 'icon' => '🏭'],
+                ['route' => 'customer.wholesale.quote.index',   'active' => 'customer.wholesale.quote.*',   'label' => 'কোটেশন',          'icon' => '📋'],
+            ],
+        ],
+        [
+            'label' => 'অ্যাকাউন্ট', 'icon' => '👤',
+            'items' => [
+                ['route' => 'customer.profile.edit',    'active' => 'customer.profile.*',   'label' => 'প্রোফাইল', 'icon' => '👤'],
+                ['route' => 'customer.addresses.index', 'active' => 'customer.addresses.*', 'label' => 'ঠিকানা',   'icon' => '📍'],
+                ['route' => 'customer.support.index',   'active' => 'customer.support.*',   'label' => 'সাপোর্ট',  'icon' => '💬'],
+            ],
+        ],
+    ];
+@endphp
 
 {{-- Top Header --}}
 <header class="bg-[#14532d] shadow-md sticky top-0 z-40">
@@ -55,35 +104,48 @@
     {{-- Sidebar --}}
     <aside id="sidebar"
            class="fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 overflow-y-auto pt-20
-                  -translate-x-full md:translate-x-0 md:static md:inset-auto md:w-52 md:pt-0 md:bg-transparent md:border-none
+                  -translate-x-full md:translate-x-0 md:static md:inset-auto md:w-56 md:pt-0 md:bg-transparent md:border-none
                   transition-transform duration-200 shrink-0">
-        <nav class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden md:block">
-            @php
-            $r = request()->route()?->getName();
-            $navItems = [
-                ['route' => 'customer.account',                        'label' => 'ড্যাশবোর্ড',        'icon' => '🏠'],
-                ['route' => 'customer.notifications.index',             'label' => 'নোটিফিকেশন',         'icon' => '🔔'],
-                ['route' => 'customer.orders.index',                   'label' => 'আমার অর্ডার',       'icon' => '📦'],
-                ['route' => 'customer.wholesale.enquiry.index',        'label' => 'পাইকারি Enquiry',   'icon' => '🏭'],
-                ['route' => 'customer.wholesale.quote.index',          'label' => 'কোটেশন',            'icon' => '📋'],
-                ['route' => 'customer.returns.index',                  'label' => 'রিটার্ন/রিফান্ড',  'icon' => '↩️'],
-                ['route' => 'customer.wishlist.index',                 'label' => 'উইশলিস্ট',          'icon' => '❤️'],
-                ['route' => 'customer.addresses.index',                'label' => 'ঠিকানা',             'icon' => '📍'],
-                ['route' => 'customer.profile.edit',                   'label' => 'প্রোফাইল',           'icon' => '👤'],
-                ['route' => 'customer.support.index',                  'label' => 'সাপোর্ট',            'icon' => '💬'],
-            ];
-            @endphp
-            @foreach($navItems as $item)
+        <nav class="bg-white rounded-xl border border-gray-100 shadow-sm p-2 space-y-0.5">
+
+            {{-- Single items --}}
+            @foreach($singles as $item)
             <a href="{{ route($item['route']) }}"
-               class="flex items-center gap-3 px-4 py-3 text-sm border-b border-gray-50 transition-colors
-                      {{ str_starts_with($r ?? '', rtrim($item['route'], '.index')) ? 'bg-[#14532d] text-white font-semibold' : 'text-gray-700 hover:bg-green-50' }}">
+               class="c-link {{ $active($item['active']) ? 'active' : '' }}">
                 <span class="text-base">{{ $item['icon'] }}</span>
                 <span>{{ $item['label'] }}</span>
             </a>
             @endforeach
-            <form method="POST" action="{{ route('customer.logout') }}">
+
+            {{-- Accordion groups --}}
+            @foreach($menuGroups as $group)
+                @php $groupActive = collect($group['items'])->contains(fn($i) => $active($i['active'])); @endphp
+                <div x-data="{ open: {{ $groupActive ? 'true' : 'false' }} }">
+                    <button type="button" @click="open = !open"
+                            class="c-parent {{ $groupActive ? 'active' : '' }}"
+                            :class="{ 'open': open }">
+                        <span class="text-base">{{ $group['icon'] }}</span>
+                        <span>{{ $group['label'] }}</span>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                    <div x-show="open" x-collapse x-cloak class="c-sub">
+                        @foreach($group['items'] as $item)
+                        <a href="{{ route($item['route']) }}"
+                           class="c-child {{ $active($item['active']) ? 'active' : '' }}">
+                            <span class="text-sm">{{ $item['icon'] }}</span>
+                            <span>{{ $item['label'] }}</span>
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
+
+            {{-- Logout --}}
+            <form method="POST" action="{{ route('customer.logout') }}" class="pt-1 border-t border-gray-100 mt-1">
                 @csrf
-                <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                <button type="submit" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                     <span class="text-base">🚪</span><span>লগআউট</span>
                 </button>
             </form>
