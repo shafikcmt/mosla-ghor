@@ -96,10 +96,16 @@
                         <span class="text-gray-400 text-xs">থেকে শুরু</span>
                     </div>
 
-                    {{-- Pack price chips --}}
+                    {{-- Pack price chips (clickable; selection is scoped to THIS card) --}}
                     <div id="card-chips-{{ $product->id }}" class="mt-3 grid grid-cols-3 gap-1.5">
                         @foreach($initRetailPrices as $price)
-                            <div class="p-chip p-1.5 text-center">
+                            <button type="button"
+                                    class="p-chip card-chip p-1.5 text-center {{ $loop->first ? 'active' : '' }}"
+                                    data-price-id="{{ $price->id }}"
+                                    data-price="{{ (float) $price->final_price }}"
+                                    data-label="{{ $price->label }}"
+                                    data-variant-id="{{ $price->product_variant_id }}"
+                                    onclick="cardSelectPack(this)">
                                 <div class="chip-lbl text-gray-400 text-[10px] leading-tight">{{ $price->label }}</div>
                                 <div class="chip-val text-[#14532d] text-[13px] font-semibold leading-tight mt-0.5">
                                     ৳{{ number_format($price->final_price, 0) }}
@@ -107,7 +113,7 @@
                                 @if($price->is_manual_override)
                                     <div class="text-[#c9a227] text-[9px] leading-none mt-0.5">★</div>
                                 @endif
-                            </div>
+                            </button>
                         @endforeach
                     </div>
 
@@ -124,13 +130,21 @@
                     {{-- Retail mode buttons --}}
                     <div id="card-retail-btns-{{ $product->id }}" class="mt-4 flex gap-2">
                         <a href="{{ route('products.show', $product->slug) }}"
-                           class="flex-1 bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
-                            বিস্তারিত দেখুন
+                           class="flex-1 border border-[#14532d] text-[#14532d] hover:bg-[#14532d] hover:text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                            বিস্তারিত
                         </a>
-                        <button onclick="goToCombo({{ $product->id }})"
-                                class="flex-1 border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                            বাক্সে যোগ
-                        </button>
+                        @if($initRetailPrices->isNotEmpty())
+                            {{-- Adds the variant/pack currently selected on THIS card. --}}
+                            <button type="button" onclick="cardAddToBag(this, {{ $product->id }})" {{ $product->isInStock() ? '' : 'disabled' }}
+                                    class="flex-1 bg-[#14532d] hover:bg-[#166534] text-white py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                                🛍️ ব্যাগে যোগ
+                            </button>
+                        @else
+                            <button onclick="goToCombo({{ $product->id }})"
+                                    class="flex-1 border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                                বাক্সে যোগ
+                            </button>
+                        @endif
                     </div>
 
                     {{-- Wholesale mode button (hidden in retail mode): Details only --}}

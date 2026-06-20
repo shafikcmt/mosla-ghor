@@ -48,9 +48,15 @@
                         @else
                         <div id="list-prices-{{ $product->id }}" class="mt-2 flex flex-wrap gap-1">
                             @foreach($initRetailPrices as $price)
-                                <span class="text-[11px] bg-green-50 border border-green-100 text-[#14532d] px-2 py-0.5 rounded-full whitespace-nowrap">
+                                <button type="button"
+                                        class="list-chip card-chip text-[11px] border px-2 py-0.5 rounded-full whitespace-nowrap transition-colors {{ $loop->first ? 'active' : '' }}"
+                                        data-price-id="{{ $price->id }}"
+                                        data-price="{{ (float) $price->final_price }}"
+                                        data-label="{{ $price->label }}"
+                                        data-variant-id="{{ $price->product_variant_id }}"
+                                        onclick="cardSelectPack(this)">
                                     {{ $price->label }} · ৳{{ number_format($price->final_price, 0) }}
-                                </span>
+                                </button>
                             @endforeach
                         </div>
                         @endif
@@ -72,10 +78,17 @@
                                 বিস্তারিত
                             </a>
                             @unless($product->is_wholesale)
-                            <button onclick="goToCombo({{ $product->id }})"
-                                    class="border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
-                                বাক্সে যোগ
-                            </button>
+                                @if($initRetailPrices->isNotEmpty())
+                                <button type="button" onclick="cardAddToBag(this, {{ $product->id }})" {{ $product->isInStock() ? '' : 'disabled' }}
+                                        class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed">
+                                    🛍️ ব্যাগে
+                                </button>
+                                @else
+                                <button onclick="goToCombo({{ $product->id }})"
+                                        class="border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
+                                    বাক্সে যোগ
+                                </button>
+                                @endif
                             @endunless
                         </div>
                     </div>

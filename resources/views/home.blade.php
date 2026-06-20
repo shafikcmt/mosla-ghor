@@ -139,6 +139,11 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
         .p-chip.active .chip-lbl { color: #86efac; }
         .p-chip.active .chip-val { color: #fff; }
 
+        /* Compact selectable price pills used in the list (row) view */
+        .list-chip { background:#f0fdf4; border-color:#bbf7d0; color:#14532d; cursor:pointer; user-select:none; }
+        .list-chip:hover { background:#dcfce7; border-color:#166534; }
+        .list-chip.active { background:var(--green-main); border-color:var(--green-main); color:#fff; }
+
         /* Modal */
         #modal-overlay  { display:none; }
         #modal-wrapper  { display:none; }
@@ -1910,15 +1915,23 @@ function refreshCardsForTab() {
             if (retailBtns) retailBtns.style.display  = 'none';
             if (wholeBtns)  wholeBtns.style.display   = ''; // show "বিস্তারিত দেখুন" button
         } else {
+            // Prices may come from a variant (when the product has no direct prices);
+            // carry that variant id on each chip so add-to-bag sends the right payload.
+            let variantId = null;
+            if (!(p.retail_prices && p.retail_prices.length) && p.variants && p.variants.length) {
+                variantId = p.variants[0].id;
+            }
             if (wrap) wrap.style.display = prices.length ? '' : 'none';
             if (cc)   cc.style.display   = '';
             if (fp)   fp.textContent = prices.length ? '৳' + fmt(prices[0].final_price) : '';
-            if (cc)   cc.innerHTML = prices.map(function(pr) {
-                return '<div class="p-chip p-1.5 text-center">' +
+            if (cc)   cc.innerHTML = prices.map(function(pr, i) {
+                return '<button type="button" class="p-chip card-chip p-1.5 text-center' + (i === 0 ? ' active' : '') + '"' +
+                    ' data-price-id="' + pr.id + '" data-price="' + pr.final_price + '" data-label="' + pr.label + '"' +
+                    ' data-variant-id="' + (variantId || '') + '" onclick="cardSelectPack(this)">' +
                     '<div class="chip-lbl text-gray-400 text-[10px] leading-tight">' + pr.label + '</div>' +
                     '<div class="chip-val text-[#14532d] text-[13px] font-semibold leading-tight mt-0.5">৳' + fmt(pr.final_price) + '</div>' +
                     (pr.is_manual_override ? '<div style="color:#c9a227;font-size:9px;">★</div>' : '') +
-                    '</div>';
+                    '</button>';
             }).join('');
             if (wUI)        wUI.style.display         = 'none';
             if (retailBtns) retailBtns.style.display  = '';
@@ -1940,8 +1953,15 @@ function refreshListViewForTab() {
             return;
         }
         const prices = activeTabPrices(p);
-        if (pc) pc.innerHTML = prices.map(function(pr) {
-            return '<span class="text-[11px] bg-green-50 border border-green-100 text-[#14532d] px-2 py-0.5 rounded-full whitespace-nowrap">' + pr.label + ' · ৳' + fmt(pr.final_price) + '</span>';
+        let variantId = null;
+        if (!(p.retail_prices && p.retail_prices.length) && p.variants && p.variants.length) {
+            variantId = p.variants[0].id;
+        }
+        if (pc) pc.innerHTML = prices.map(function(pr, i) {
+            return '<button type="button" class="list-chip card-chip text-[11px] border px-2 py-0.5 rounded-full whitespace-nowrap transition-colors' + (i === 0 ? ' active' : '') + '"' +
+                ' data-price-id="' + pr.id + '" data-price="' + pr.final_price + '" data-label="' + pr.label + '"' +
+                ' data-variant-id="' + (variantId || '') + '" onclick="cardSelectPack(this)">' +
+                pr.label + ' · ৳' + fmt(pr.final_price) + '</button>';
         }).join('');
         if (lf) lf.textContent = prices.length ? '৳' + fmt(prices[0].final_price) : '';
     });
@@ -2639,6 +2659,79 @@ function addToCombo(productId) {
 function removeFromCombo(uid) {
     comboItems = comboItems.filter(x => x.uid !== uid);
     renderCombo();
+}
+
+// ── Product-card / list quick add (selectable weight chips) ────────────────
+// Each card owns its own selection: we only ever read/write the chip that lives
+// inside the SAME card element, so one product never affects another.
+function cardSelectPack(btn) {
+    const card = btn.closest('[data-card-product], [data-list-product]');
+    if (!card) return;
+    card.querySelectorAll('.card-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    // Reflect the picked price in this card's "from" amount (if shown).
+    const priceEl = card.querySelector('[id^="card-from-"], [id^="list-from-"]');
+    if (priceEl && btn.dataset.price) priceEl.textContent = '৳' + fmt(parseFloat(btn.dataset.price));
+}
+
+// Resolve a card's retail prices for a given variant (or direct prices).
+function cardRetailPrices(p, variantId) {
+    if (variantId) {
+        const v = (p.variants || []).find(x => x.id === variantId);
+        return v ? (v.retail_prices || []) : [];
+    }
+    if ((p.retail_prices || []).length) return p.retail_prices;
+    if (p.variants && p.variants.length) return p.variants[0].retail_prices || [];
+    return [];
+}
+
+// Adds the chip currently selected on THIS card into the shared retail box
+// (comboItems → window.msCart). Mirrors addToCombo() so the cart data shape and
+// dedup rules stay identical to the product-detail page and combo builder.
+function cardAddToBag(btn, productId) {
+    const p = PRODUCTS[productId];
+    if (!p) return;
+    const card = btn.closest('[data-card-product], [data-list-product]');
+    const sel  = card ? card.querySelector('.card-chip.active') : null;
+    if (!sel) { if (window.msToast) msToast('অনুগ্রহ করে ওজন/পরিমাণ নির্বাচন করুন'); return; }
+
+    const priceId   = parseInt(sel.dataset.priceId, 10);
+    const variantId = sel.dataset.variantId ? parseInt(sel.dataset.variantId, 10) : null;
+    if (!priceId) { if (window.msToast) msToast('অনুগ্রহ করে ওজন/পরিমাণ নির্বাচন করুন'); return; }
+
+    let variantName = null;
+    if (variantId) {
+        const v = (p.variants || []).find(x => x.id === variantId);
+        if (v) variantName = v.name;
+    }
+    const price = cardRetailPrices(p, variantId).find(x => x.id === priceId);
+    if (!price) { if (window.msToast) msToast('অনুগ্রহ করে ওজন/পরিমাণ নির্বাচন করুন'); return; }
+
+    // Same product + same variant + same pack → already in the box (one line).
+    const dup = comboItems.find(x => x.productId === productId && x.priceId === priceId && (x.variantId || null) === (variantId || null));
+    if (dup) {
+        renderCombo();
+        if (window.flashComboItem) flashComboItem(dup.uid);
+        if (window.msToast) msToast('এই পণ্যটি ইতিমধ্যে ব্যাগে আছে');
+        if (window.msCartOpen) msCartOpen('retail');
+        return;
+    }
+
+    comboUid++;
+    comboItems.push({ uid: comboUid, productId, priceId, variantId, variantName,
+                      sellType: 'retail', quantity_gram: price.quantity_gram,
+                      nameBn: p.name_bn, label: price.label, price: price.final_price });
+    renderCombo();
+
+    // Confirm flash on the add button.
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ যোগ হয়েছে';
+    btn.style.background = '#16a34a';
+    btn.style.color = '#fff';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.style.color = ''; }, 1300);
+
+    if (window.msToast) msToast('🛍️ ব্যাগে যোগ হয়েছে');
+    if (window.msCartOpen) msCartOpen('retail');
 }
 
 function changeComboItem(uid, newPriceIdStr) {
