@@ -35,6 +35,8 @@ class Product extends Model
         'low_stock_threshold',
         'sort_order',
         'is_active',
+        'show_in_retail',
+        'show_in_wholesale',
         'is_wholesale',
         'wholesale_enquiry_enabled',
         'min_order_quantity',
@@ -54,6 +56,8 @@ class Product extends Model
         'low_stock_threshold'       => 'decimal:3',
         'sort_order'                => 'integer',
         'is_active'                 => 'boolean',
+        'show_in_retail'            => 'boolean',
+        'show_in_wholesale'         => 'boolean',
         'is_wholesale'              => 'boolean',
         'wholesale_enquiry_enabled' => 'boolean',
         'min_order_quantity'        => 'decimal:2',
@@ -185,10 +189,14 @@ class Product extends Model
     }
 
     // ── Wholesale (Paykari) ───────────────────────────────────────────────────
-    /** A wholesale product hides its price publicly and is enquiry-only. */
+    /**
+     * Wholesale-only product: shown solely on the পাইকারি listing, price hidden,
+     * enquiry-only. A product visible in BOTH retail and wholesale is NOT
+     * wholesale-only — it keeps its retail price/cart and defaults to retail.
+     */
     public function isWholesale(): bool
     {
-        return (bool) $this->is_wholesale;
+        return (bool) $this->show_in_wholesale && ! $this->show_in_retail;
     }
 
     /** Human MOQ label, e.g. "৫০ kg" — null when no MOQ is configured. */

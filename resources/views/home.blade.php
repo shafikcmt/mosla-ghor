@@ -31,7 +31,8 @@ $productsForJs = $products->map(function ($p) {
         'video_url'         => $p->video_url,
         'video_path'        => ($p->video_path ?? null) ? asset($p->video_path) : null,
         'stock'             => (int) $p->stock,
-        'is_wholesale'      => (bool) $p->is_wholesale,
+        'show_in_retail'    => (bool) $p->show_in_retail,
+        'show_in_wholesale' => (bool) $p->show_in_wholesale,
         'retail_prices'     => $directPrices->where('sell_type', 'retail')->map($mapPrice)->values()->all(),
         'wholesale_prices'  => $directPrices->where('sell_type', 'wholesale')->map($mapPrice)->values()->all(),
         'variants'          => $variants,
@@ -393,8 +394,8 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                             : $product->activePrices->filter(fn($pr) => is_null($pr->product_variant_id))->where('sell_type', 'retail');
                         $hasAnyRetail = $pickerRetailPrices->isNotEmpty()
                             || (!$hasVariants && $product->activePrices->filter(fn($pr) => is_null($pr->product_variant_id))->where('sell_type', 'wholesale')->isNotEmpty());
-                        // Wholesale (Paykari) products are enquiry-only — never orderable via the box.
-                        $showRow = ($product->activePrices->isNotEmpty() || $hasVariants) && ! $product->is_wholesale;
+                        // The retail box builder lists only retail-visible products.
+                        $showRow = ($product->activePrices->isNotEmpty() || $hasVariants) && $product->show_in_retail;
                     @endphp
                     @if($showRow)
                     <div id="picker-row-{{ $product->id }}"
@@ -529,7 +530,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                 <div class="flex-1 min-w-0">
                     <div class="space-y-2.5">
                     @foreach($products as $product)
-                    @if($product->activePrices->isNotEmpty() || $product->activeVariants->isNotEmpty() || $product->is_wholesale)
+                    @if($product->show_in_wholesale && ($product->activePrices->isNotEmpty() || $product->activeVariants->isNotEmpty() || $product->isWholesale()))
                     <div id="paykari-row-{{ $product->id }}"
                          class="bg-white border border-amber-100 rounded-xl p-3 sm:p-4 shadow-sm">
                         {{-- Top: avatar + name + MOQ --}}
@@ -1862,16 +1863,16 @@ function updateModeLinks() {
     });
 }
 
-// Show only the products that belong to the active mode:
-//   retail  → non-wholesale products (is_wholesale = false)
-//   পাইকারি  → wholesale-only products (is_wholesale = true)
-// Toggles both the card-view <article> and the list-view <article> for each product,
-// and surfaces a friendly empty state when পাইকারি has no products.
+// Show only the products that belong to the active mode (visibility is independent):
+//   retail  → products with show_in_retail
+//   পাইকারি  → products with show_in_wholesale
+// A product can belong to both. Toggles both the card-view <article> and the
+// list-view <article>, and surfaces a friendly empty state when a tab is empty.
 function filterCardsByMode() {
     const isWholesale = activeTab === 'wholesale';
     let visible = 0;
     Object.values(PRODUCTS).forEach(function (p) {
-        const show = isWholesale ? !!p.is_wholesale : !p.is_wholesale;
+        const show = isWholesale ? !!p.show_in_wholesale : !!p.show_in_retail;
         if (show) visible++;
         document
             .querySelectorAll('[data-card-product="' + p.id + '"], [data-list-product="' + p.id + '"]')
@@ -1898,7 +1899,7 @@ function filterCardsByMode() {
 function refreshCardsForTab() {
     const isWholesale = activeTab === 'wholesale';
     Object.values(PRODUCTS).forEach(function(p) {
-        if (p.is_wholesale) return; // Paykari cards are static (no price/box toggling)
+        if (!p.show_in_retail) return; // wholesale-only cards are static (no toggle UI)
         const prices     = activeTabPrices(p);
         const fp         = document.getElementById('card-from-' + p.id);
         const wrap       = document.getElementById('card-price-wrap-' + p.id);
@@ -1943,7 +1944,7 @@ function refreshCardsForTab() {
 function refreshListViewForTab() {
     const isWholesale = activeTab === 'wholesale';
     Object.values(PRODUCTS).forEach(function(p) {
-        if (p.is_wholesale) return; // Paykari rows are static (no price chips)
+        if (!p.show_in_retail) return; // wholesale-only rows are static (no price chips)
         const pc = document.getElementById('list-prices-' + p.id);
         const lf = document.getElementById('list-from-' + p.id);
         if (isWholesale) {
@@ -1969,7 +1970,7 @@ function refreshListViewForTab() {
 
 function refreshPickerForTab() {
     Object.values(PRODUCTS).forEach(function(p) {
-        if (p.is_wholesale) return; // Paykari products are not orderable via the box
+        if (!p.show_in_retail) return; // box builder is retail-only
         const row = document.getElementById('picker-row-' + p.id);
         if (!row) return;
 

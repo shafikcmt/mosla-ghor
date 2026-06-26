@@ -317,8 +317,8 @@
         @if($showWholesale)
         <div id="enquiry" class="mt-6 rounded-xl border border-orange-100 bg-orange-50/40 p-4">
             <h2 class="text-sm font-bold text-orange-800 mb-1">পাইকারি / Wholesale</h2>
-            <p class="text-sm text-gray-700">পাইকারি মূল্য অর্ডারের পরিমাণ অনুযায়ী জানানো হবে।</p>
-            <p class="text-xs text-gray-500 mt-1">Wholesale price available on request. Bulk quantity অনুযায়ী price change হতে পারে।</p>
+            <p class="text-sm text-gray-700">বড় পরিমাণে কিনতে চাইলে পাইকারি দাম জানতে পারবেন।</p>
+            <p class="text-xs text-gray-500 mt-1">পাইকারি দামের জন্য quantity অনুযায়ী আমাদের team quote দিবে।</p>
 
             {{-- MOQ / delivery / payment info --}}
             @if($moqLabel || $product->delivery_time || $product->payment_terms)
@@ -346,16 +346,16 @@
 
             <div class="flex flex-wrap gap-3 mt-3">
                 <button type="button" onclick="pdToggleEnquiry(true)"
-                        class="btn-gold text-[#0f3d22] font-bold text-sm px-5 py-2.5 rounded-xl">
-                    Get Best Price
+                        class="btn-gold text-[#0f3d22] font-bold text-sm px-5 py-2.5 rounded-xl whitespace-nowrap">
+                    পাইকারি দাম জানুন
                 </button>
                 <button type="button" onclick="pdToggleEnquiry(true)"
-                        class="bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
-                    Enquiry Now
+                        class="bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                    দাম জিজ্ঞাসা করুন
                 </button>
                 <button type="button" onclick="pdToggleEnquiry(true)"
-                        class="border border-[#14532d] text-[#14532d] hover:bg-green-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
-                    Contact Supplier
+                        class="border border-[#14532d] text-[#14532d] hover:bg-green-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                    বিক্রেতার সাথে কথা বলুন
                 </button>
                 <button type="button" id="pd-add-bag"
                         data-id="{{ $product->id }}" data-slug="{{ $product->slug }}"
@@ -363,16 +363,16 @@
                         data-qty="{{ $product->min_order_quantity ?: 1 }}" data-unit="{{ $product->min_order_unit ?: 'kg' }}"
                         data-min="{{ $product->min_order_quantity ?: '' }}" data-min-unit="{{ $product->min_order_unit ?: '' }}"
                         class="border border-amber-500 text-amber-700 hover:bg-amber-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
-                    🛍️ পাইকারি ব্যাগে যোগ করুন
+                    🛍️ পাইকারি তালিকায় যোগ করুন
                 </button>
             </div>
 
             {{-- Bulk pricing note + platform-safety message --}}
             <p class="text-xs text-gray-500 mt-3">
-                Bulk quantity অনুযায়ী price change হতে পারে। MoslaMart team quote জানাবে।
+                পরিমাণ বেশি হলে দাম কম হতে পারে। আপনার চাহিদা অনুযায়ী আমরা দাম জানাবো।
             </p>
             <p class="text-[11px] text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2 mt-2 leading-snug">
-                আপনার তথ্য, quote এবং payment record নিরাপদ রাখার জন্য MoslaMart chatbox এবং order process ব্যবহার করুন।
+                আপনার তথ্য, দাম এবং payment record নিরাপদ রাখতে MoslaMart chatbox এবং order process ব্যবহার করুন।
             </p>
 
             {{-- In-page enquiry form (slide section, NOT a popup) — guest + logged-in --}}
@@ -602,7 +602,7 @@
                     <p class="text-sm text-[#c9a227] font-bold font-serif-bn mt-0.5">৳{{ number_format($rpPrice, 0) }} <span class="text-gray-400 text-[10px] font-sans">থেকে</span></p>
                 @endif
                 <p class="text-xs {{ $relatedWholesale ? 'text-orange-700' : 'text-[#14532d]' }} mt-1 font-semibold">
-                    {{ $relatedWholesale ? 'Get Best Price →' : 'বিস্তারিত দেখুন →' }}
+                    {{ $relatedWholesale ? 'পাইকারি দাম জানুন →' : 'বিস্তারিত দেখুন →' }}
                 </p>
             </div>
         </a>
@@ -620,7 +620,7 @@
                 class="flex-1 btn-gold text-[#0f3d22] font-bold text-sm py-2.5 rounded-xl disabled:opacity-40">এখনই কিনুন</button>
     @elseif($showWholesale)
         <button type="button" onclick="pdToggleEnquiry(true)"
-                class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl">Get Best Price / Enquiry</button>
+                class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl">পাইকারি দাম জানুন</button>
     @endif
 </div>
 <div class="lg:hidden h-16"></div>{{-- spacer so sticky bar never covers content --}}

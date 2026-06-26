@@ -173,7 +173,13 @@ class ProductController extends Controller
             'min_order_unit'      => ['nullable', Rule::in(\App\Models\Product::UNITS)],
             'delivery_time'       => 'nullable|string|max:255',
             'payment_terms'       => 'nullable|string|max:255',
+            'is_active'           => 'nullable|boolean',
+            'show_in_retail'      => 'nullable|boolean',
+            'show_in_wholesale'   => 'nullable|boolean',
         ]);
+
+        $showInRetail    = $request->boolean('show_in_retail');
+        $showInWholesale = $request->boolean('show_in_wholesale');
 
         return [
             'name_bn'                   => $request->name_bn,
@@ -192,7 +198,10 @@ class ProductController extends Controller
             'selling_price'             => $request->selling_price !== null && $request->selling_price !== '' ? $request->selling_price : null,
             'low_stock_threshold'       => $request->low_stock_threshold !== null && $request->low_stock_threshold !== '' ? $request->low_stock_threshold : 0,
             'is_active'                 => $request->boolean('is_active'),
-            'is_wholesale'              => $request->boolean('is_wholesale'),
+            'show_in_retail'            => $showInRetail,
+            'show_in_wholesale'         => $showInWholesale,
+            // Legacy flag kept in sync: "wholesale-only" = wholesale but not retail.
+            'is_wholesale'              => $showInWholesale && ! $showInRetail,
             'wholesale_enquiry_enabled' => $request->boolean('wholesale_enquiry_enabled'),
             'min_order_quantity'        => $request->min_order_quantity !== null && $request->min_order_quantity !== '' ? $request->min_order_quantity : null,
             'min_order_unit'            => $request->min_order_unit ?: 'kg',

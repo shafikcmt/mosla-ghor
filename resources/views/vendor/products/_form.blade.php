@@ -107,19 +107,35 @@
         </label>
     </div>
 
+    {{-- ── পণ্য দৃশ্যমানতা / Visibility ──────────────────────────────────── --}}
+    <div class="md:col-span-2 border border-green-200 bg-green-50/50 rounded-lg p-4 space-y-3">
+        <h3 class="text-sm font-bold text-green-800">পণ্য কোথায় দেখাবে</h3>
+        <p class="text-xs text-gray-500">খুচরা ও পাইকারি দৃশ্যমানতা স্বাধীন — একটি পণ্য চাইলে দুই জায়গাতেই দেখাতে পারে।</p>
+
+        <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" name="show_in_retail" id="show_in_retail" value="1"
+                   {{ old('show_in_retail', $product?->show_in_retail ?? true) ? 'checked' : '' }}
+                   class="w-4 h-4 rounded cursor-pointer mt-0.5">
+            <span class="text-sm text-gray-700">
+                খুচরা পণ্যে দেখাবে
+                <span class="block text-xs text-gray-400 font-normal">খুচরা (retail) তালিকায় দাম, ভ্যারিয়েন্ট ও কার্ট সহ দেখাবে।</span>
+            </span>
+        </label>
+
+        <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" name="show_in_wholesale" id="show_in_wholesale" value="1"
+                   {{ old('show_in_wholesale', $product?->show_in_wholesale ?? false) ? 'checked' : '' }}
+                   class="w-4 h-4 rounded cursor-pointer mt-0.5">
+            <span class="text-sm text-gray-700">
+                পাইকারি পণ্যে দেখাবে
+                <span class="block text-xs text-gray-400 font-normal">পাইকারি (Paykari) তালিকায় দাম লুকানো থাকবে — গ্রাহক শুধু enquiry পাঠাবে, আপনি/admin quote দেবেন।</span>
+            </span>
+        </label>
+    </div>
+
     {{-- ── পাইকারি / Wholesale settings ──────────────────────────────────── --}}
     <div class="md:col-span-2 border border-amber-200 bg-amber-50/50 rounded-lg p-4 space-y-4">
         <h3 class="text-sm font-bold text-amber-800">পাইকারি / Wholesale সেটিংস</h3>
-
-        <label class="flex items-start gap-3 cursor-pointer">
-            <input type="checkbox" name="is_wholesale" id="is_wholesale" value="1"
-                   {{ old('is_wholesale', $product?->is_wholesale ?? false) ? 'checked' : '' }}
-                   class="w-4 h-4 rounded cursor-pointer mt-0.5">
-            <span class="text-sm text-gray-700">
-                এই পণ্যটি পাইকারি (Paykari)
-                <span class="block text-xs text-gray-400 font-normal">দাম পাবলিক পেজে লুকানো থাকবে — গ্রাহক শুধু enquiry পাঠাবে, আপনি/admin quote দেবেন।</span>
-            </span>
-        </label>
 
         <label class="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" name="wholesale_enquiry_enabled" id="wholesale_enquiry_enabled" value="1"

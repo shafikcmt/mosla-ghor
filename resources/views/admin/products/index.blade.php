@@ -45,11 +45,19 @@
                     @endif
                 </td>
                 <td class="px-4 py-3 text-center">
-                    @if($product->is_active)
-                        <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">সক্রিয়</span>
-                    @else
-                        <span class="bg-gray-100 text-gray-500 text-xs px-2 py-1 rounded-full">নিষ্ক্রিয়</span>
-                    @endif
+                    <div class="flex flex-wrap items-center justify-center gap-1">
+                        @if($product->is_active)
+                            <span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">সক্রিয়</span>
+                        @else
+                            <span class="bg-gray-100 text-gray-500 text-xs px-2 py-1 rounded-full">নিষ্ক্রিয়</span>
+                        @endif
+                        @if($product->show_in_retail)
+                            <span class="bg-green-50 text-green-700 border border-green-200 text-[10px] px-2 py-0.5 rounded-full">খুচরা</span>
+                        @endif
+                        @if($product->show_in_wholesale)
+                            <span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] px-2 py-0.5 rounded-full">পাইকারি</span>
+                        @endif
+                    </div>
                 </td>
                 <td class="px-4 py-3 text-center whitespace-nowrap">
                     <a href="{{ route('admin.products.edit', $product) }}"

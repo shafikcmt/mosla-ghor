@@ -64,7 +64,7 @@ class ProductController extends Controller
                 ->where('id', '!=', $product->id)
                 ->with(['category', 'activeRetailPrices']);
             if (! $relatedWholesale) {
-                $q->where('is_wholesale', false); // retail page: only retail-capable products
+                $q->where('show_in_retail', true); // retail page: only retail-visible products
             }
             return $q;
         };

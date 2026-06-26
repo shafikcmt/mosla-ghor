@@ -7,11 +7,13 @@
                 $initRetailPrices = $directRetail->isNotEmpty()
                     ? $directRetail
                     : ($product->activeVariants->first()?->activePrices->where('sell_type', 'retail') ?? collect());
-                $detailUrl = $product->is_wholesale
+                $wholesaleOnly = ! $product->show_in_retail;
+                $visibleInMode = $listMode === 'wholesale' ? $product->show_in_wholesale : $product->show_in_retail;
+                $detailUrl = $wholesaleOnly
                     ? route('products.show', ['product' => $product->slug, 'mode' => 'wholesale'])
                     : route('products.show', $product->slug);
             @endphp
-            <article data-list-product="{{ $product->id }}" style="{{ (($listMode === 'wholesale') === (bool) $product->is_wholesale) ? '' : 'display:none;' }}" class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
+            <article data-list-product="{{ $product->id }}" style="{{ $visibleInMode ? '' : 'display:none;' }}" class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
 
                 {{-- Thumb --}}
                 <div class="w-28 sm:w-36 flex-shrink-0 relative min-h-[110px]">
@@ -41,7 +43,7 @@
                             <p class="text-gray-500 text-sm mt-0.5 line-clamp-1">{{ $product->short_description }}</p>
                         @endif
 
-                        @if($product->is_wholesale)
+                        @if($wholesaleOnly)
                         <div class="mt-2">
                             <span class="text-[11px] font-semibold text-orange-700 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full">পাইকারি — দাম জানতে enquiry</span>
                         </div>
@@ -64,7 +66,7 @@
 
                     {{-- Price + buttons --}}
                     <div class="flex sm:flex-col items-center sm:items-end justify-between gap-2 flex-shrink-0">
-                        @if($product->activePrices->isNotEmpty() && ! $product->is_wholesale)
+                        @if($product->activePrices->isNotEmpty() && ! $wholesaleOnly)
                             <div class="text-right">
                                 <div id="list-from-{{ $product->id }}" class="text-[#c9a227] font-bold text-xl font-serif-bn">
                                     {{ $initRetailPrices->isNotEmpty() ? '৳' . number_format($initRetailPrices->first()->final_price, 0) : '' }}
@@ -77,7 +79,7 @@
                                class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
                                 বিস্তারিত
                             </a>
-                            @unless($product->is_wholesale)
+                            @unless($wholesaleOnly)
                                 @if($initRetailPrices->isNotEmpty())
                                 <button type="button" onclick="cardAddToBag(this, {{ $product->id }})" {{ $product->isInStock() ? '' : 'disabled' }}
                                         class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed">

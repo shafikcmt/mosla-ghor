@@ -8,12 +8,15 @@
                 $initRetailPrices = $directRetail->isNotEmpty()
                     ? $directRetail
                     : ($product->activeVariants->first()?->activePrices->where('sell_type', 'retail') ?? collect());
-                // Wholesale products link to the wholesale detail page; others to retail.
-                $detailUrl = $product->is_wholesale
+                // Wholesale-only products render the static enquiry card and link to
+                // the wholesale detail page; retail-visible products use the dual card.
+                $wholesaleOnly = ! $product->show_in_retail;
+                $visibleInMode = $listMode === 'wholesale' ? $product->show_in_wholesale : $product->show_in_retail;
+                $detailUrl = $wholesaleOnly
                     ? route('products.show', ['product' => $product->slug, 'mode' => 'wholesale'])
                     : route('products.show', $product->slug);
             @endphp
-            <article data-card-product="{{ $product->id }}" style="{{ (($listMode === 'wholesale') === (bool) $product->is_wholesale) ? '' : 'display:none;' }}" class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
+            <article data-card-product="{{ $product->id }}" style="{{ $visibleInMode ? '' : 'display:none;' }}" class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
 
                 {{-- Image slideshow / placeholder --}}
                 @php
@@ -71,7 +74,7 @@
                         <p class="text-gray-500 text-sm mt-2 leading-relaxed line-clamp-2">{{ $product->short_description }}</p>
                     @endif
 
-                    @if($product->is_wholesale)
+                    @if($wholesaleOnly)
                     {{-- Paykari product: price hidden on card, enquiry-only --}}
                     <div class="mt-3 flex flex-wrap items-center gap-1.5">
                         <span class="inline-flex items-center gap-1 text-xs font-semibold text-orange-700 bg-orange-50 px-2.5 py-1 rounded-full">পাইকারি</span>
