@@ -15,7 +15,7 @@
     @endif
 </div>
 
-<form action="{{ route('vendor.products.update', $product) }}" method="POST" enctype="multipart/form-data">
+<form id="product-edit-form" action="{{ route('vendor.products.update', $product) }}" method="POST" enctype="multipart/form-data">
     @csrf
     @method('PUT')
 
@@ -68,24 +68,28 @@
     </div>
     @endif
 
-    <div class="flex gap-3 items-center">
-        <button type="submit"
-                class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 transition-colors text-sm font-medium">
-            পণ্য আপডেট করুন
-        </button>
-        <a href="{{ route('vendor.products.index') }}"
-           class="bg-gray-100 text-gray-600 px-5 py-2 rounded hover:bg-gray-200 transition-colors text-sm">
-            বাতিল
-        </a>
-        <form method="POST" action="{{ route('vendor.products.destroy', $product) }}"
-              onsubmit="return confirm('সত্যিই এই পণ্যটি মুছে ফেলবেন?')"
-              class="ml-auto">
-            @csrf @method('DELETE')
-            <button type="submit" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded text-sm transition-colors">
-                পণ্য মুছুন
-            </button>
-        </form>
-    </div>
 </form>
+
+{{-- Action bar sits OUTSIDE the edit form so the delete form is a sibling,
+     not an (invalid) nested form. The update button targets the edit form via
+     its id. --}}
+<div class="flex gap-3 items-center">
+    <button type="submit" form="product-edit-form"
+            class="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 transition-colors text-sm font-medium">
+        পণ্য আপডেট করুন
+    </button>
+    <a href="{{ route('vendor.products.index') }}"
+       class="bg-gray-100 text-gray-600 px-5 py-2 rounded hover:bg-gray-200 transition-colors text-sm">
+        বাতিল
+    </a>
+    <form method="POST" action="{{ route('vendor.products.destroy', $product) }}"
+          onsubmit="return confirm('সত্যিই এই পণ্যটি মুছে ফেলবেন?')"
+          class="ml-auto">
+        @csrf @method('DELETE')
+        <button type="submit" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded text-sm transition-colors">
+            পণ্য মুছুন
+        </button>
+    </form>
+</div>
 
 @endsection

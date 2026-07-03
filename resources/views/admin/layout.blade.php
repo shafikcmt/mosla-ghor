@@ -142,7 +142,7 @@
 
 {{-- ── Mobile overlay ────────────────────────────────────────────── --}}
 <div id="sidebar-overlay"
-     class="fixed inset-0 bg-black/50 z-20 hidden"
+     class="fixed inset-0 bg-black/50 z-20 hidden lg:hidden"
      onclick="closeSidebar()"></div>
 
 {{-- ── Sidebar ────────────────────────────────────────────────────── --}}
@@ -342,6 +342,9 @@ function closeSidebar() {
     document.getElementById('sidebar-overlay').classList.add('hidden');
     document.body.style.overflow = '';
 }
+// Reset the mobile menu on every page show (incl. bfcache back/forward) so a
+// restored overlay can never sit on top of the content and block form inputs.
+window.addEventListener('pageshow', closeSidebar);
 </script>
 
 </body>

@@ -97,7 +97,7 @@
     ];
 @endphp
 
-<div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden" onclick="closeSidebar()"></div>
+<div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden lg:hidden" onclick="closeSidebar()"></div>
 
 <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-60 bg-[#1e1b4b] flex flex-col -translate-x-full lg:translate-x-0">
 
@@ -277,6 +277,11 @@ function closeSidebar() {
     document.getElementById('sidebar-overlay').classList.add('hidden');
     document.body.style.overflow = '';
 }
+// Reliably reset the mobile menu state whenever the page is shown — including
+// back/forward (bfcache) restores. Without this, a page navigated-away-from
+// with the menu open is restored with the overlay still on top of the content,
+// which silently swallows every click so no form input can be focused/typed.
+window.addEventListener('pageshow', closeSidebar);
 </script>
 @stack('scripts')
 </body>

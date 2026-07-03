@@ -194,7 +194,11 @@
     function closeSidebar() {
         sidebar.classList.add('-translate-x-full');
         overlay.classList.add('hidden');
+        document.body.style.overflow = '';
     }
+    // Reset the mobile menu on every page show (incl. bfcache back/forward) so a
+    // restored overlay can never sit on top of the content and block inputs.
+    window.addEventListener('pageshow', closeSidebar);
 </script>
 @yield('scripts')
 </body>
