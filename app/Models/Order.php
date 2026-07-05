@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Order extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'order_number', 'customer_name', 'mobile_number', 'alternative_number',
         'full_address', 'district', 'area', 'delivery_area',
@@ -39,6 +42,8 @@ class Order extends Model
         'discount_amount', 'partial_paid_amount', 'due_amount',
         'invoice_token', 'payment_link_token', 'reorder_token',
         'whatsapp_sent_at', 'customer_confirmed_at', 'invoice_disabled_at',
+        // Soft delete / trash
+        'deleted_by', 'delete_reason',
     ];
 
     protected $casts = [
@@ -204,5 +209,22 @@ class Order extends Model
             return false;
         }
         return true;
+    }
+
+    // ── Soft delete / trash ──────────────────────────────────────────────────
+
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
+    }
+
+    /**
+     * Paid / delivered / completed orders are business-critical and must never be
+     * permanently (hard) deleted. They can still be soft-deleted (trashed).
+     */
+    public function isDeleteProtected(): bool
+    {
+        return $this->payment_status === 'verified'
+            || in_array($this->order_status, ['delivered', 'completed'], true);
     }
 }

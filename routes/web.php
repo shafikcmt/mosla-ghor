@@ -380,6 +380,13 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::put('customers/{customer}', [AdminCustomerController::class, 'update'])->name('customers.update');
 
     Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    // Trash / soft-delete management — declared before {order} so "trash" isn't
+    // captured as an order id by route-model binding.
+    Route::get('orders/trash', [AdminOrderController::class, 'trash'])->name('orders.trash');
+    Route::delete('orders/bulk-destroy', [AdminOrderController::class, 'bulkDestroy'])->name('orders.bulkDestroy');
+    Route::post('orders/{id}/restore', [AdminOrderController::class, 'restore'])->name('orders.restore');
+    Route::delete('orders/{id}/force-delete', [AdminOrderController::class, 'forceDelete'])->name('orders.forceDelete');
+    Route::delete('orders/{order}', [AdminOrderController::class, 'destroy'])->name('orders.destroy');
     Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::get('orders/{order}/invoice', [AdminOrderController::class, 'invoice'])->name('orders.invoice');
     Route::post('orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.updateStatus');

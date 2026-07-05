@@ -10,13 +10,35 @@ use App\Models\Product;
 use App\Models\WebsiteSetting;
 use App\Services\CourierService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::with('selectedCourier')->latest()->paginate(25);
-        return view('admin.orders.index', compact('orders'));
+        $status = $request->query('status', 'all');
+        $search = trim((string) $request->query('q', ''));
+
+        $orders = Order::with('selectedCourier')
+            ->when($status === 'pending',   fn ($q) => $q->where('order_status', 'pending'))
+            ->when($status === 'paid',      fn ($q) => $q->where('payment_status', 'verified'))
+            ->when($status === 'delivered', fn ($q) => $q->where('order_status', 'delivered'))
+            ->when($status === 'cancelled', fn ($q) => $q->where('order_status', 'cancelled'))
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('order_number', 'like', "%{$search}%")
+                        ->orWhere('customer_name', 'like', "%{$search}%")
+                        ->orWhere('mobile_number', 'like', "%{$search}%");
+                });
+            })
+            ->latest()
+            ->paginate(25)
+            ->withQueryString();
+
+        $trashCount = Order::onlyTrashed()->count();
+
+        return view('admin.orders.index', compact('orders', 'status', 'search', 'trashCount'));
     }
 
     public function show(Order $order)
@@ -258,5 +280,121 @@ class OrderController extends Controller
         }
 
         $order->update(['stock_restored_at' => now()]);
+    }
+
+    // ── Soft delete / trash management ───────────────────────────────────────
+
+    /**
+     * Soft-delete (trash) a single order. Order items are preserved.
+     */
+    public function destroy(Request $request, Order $order)
+    {
+        $data = $request->validate([
+            'delete_reason' => 'nullable|string|max:500',
+        ]);
+
+        $order->forceFill([
+            'deleted_by'    => Auth::id(),
+            'delete_reason' => $data['delete_reason'] ?? null,
+        ])->save();
+
+        $order->delete();
+
+        return redirect()->route('admin.orders.index')
+            ->with('success', 'অর্ডার সফলভাবে Trash এ পাঠানো হয়েছে।');
+    }
+
+    /**
+     * Bulk soft-delete selected orders.
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $data = $request->validate([
+            'ids'           => 'required|array|min:1',
+            'ids.*'         => 'integer|exists:orders,id',
+            'delete_reason' => 'nullable|string|max:500',
+        ]);
+
+        DB::transaction(function () use ($data) {
+            Order::whereIn('id', $data['ids'])->get()->each(function (Order $order) use ($data) {
+                $order->forceFill([
+                    'deleted_by'    => Auth::id(),
+                    'delete_reason' => $data['delete_reason'] ?? null,
+                ])->save();
+                $order->delete();
+            });
+        });
+
+        $count = count($data['ids']);
+
+        return redirect()->route('admin.orders.index')
+            ->with('success', "{$count} টি অর্ডার সফলভাবে Trash এ পাঠানো হয়েছে।");
+    }
+
+    /**
+     * Trash page — list soft-deleted orders.
+     */
+    public function trash(Request $request)
+    {
+        $search = trim((string) $request->query('q', ''));
+
+        $orders = Order::onlyTrashed()
+            ->with(['selectedCourier', 'deletedBy'])
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('order_number', 'like', "%{$search}%")
+                        ->orWhere('customer_name', 'like', "%{$search}%")
+                        ->orWhere('mobile_number', 'like', "%{$search}%");
+                });
+            })
+            ->orderByDesc('deleted_at')
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('admin.orders.trash', compact('orders', 'search'));
+    }
+
+    /**
+     * Restore a soft-deleted order back to the active list.
+     */
+    public function restore($id)
+    {
+        $order = Order::onlyTrashed()->findOrFail($id);
+
+        $order->restore();
+        $order->forceFill([
+            'deleted_by'    => null,
+            'delete_reason' => null,
+        ])->save();
+
+        return redirect()->route('admin.orders.trash')
+            ->with('success', 'অর্ডার সফলভাবে Restore হয়েছে।');
+    }
+
+    /**
+     * Permanently delete a trashed order. Blocked for paid/delivered/completed
+     * orders. Order items are hard-deleted alongside the order.
+     */
+    public function forceDelete($id)
+    {
+        if (! Auth::user()->isSuperAdmin()) {
+            return redirect()->route('admin.orders.trash')
+                ->with('error', 'স্থায়ীভাবে মুছে ফেলার অনুমতি শুধুমাত্র সুপার অ্যাডমিনের রয়েছে।');
+        }
+
+        $order = Order::onlyTrashed()->findOrFail($id);
+
+        if ($order->isDeleteProtected()) {
+            return redirect()->route('admin.orders.trash')
+                ->with('error', 'পেইড / ডেলিভারড অর্ডার স্থায়ীভাবে মুছে ফেলা যাবে না।');
+        }
+
+        DB::transaction(function () use ($order) {
+            $order->items()->delete();
+            $order->forceDelete();
+        });
+
+        return redirect()->route('admin.orders.trash')
+            ->with('success', 'অর্ডার স্থায়ীভাবে মুছে ফেলা হয়েছে।');
     }
 }

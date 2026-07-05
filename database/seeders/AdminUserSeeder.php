@@ -21,7 +21,8 @@ class AdminUserSeeder extends Seeder
             $attributes['is_admin'] = true;
         }
         if (Schema::hasColumn('users', 'role')) {
-            $attributes['role'] = 'admin';
+            // Primary admin is a super admin (can permanently delete orders).
+            $attributes['role'] = 'super_admin';
         }
         if (Schema::hasColumn('users', 'phone')) {
             $attributes['phone'] = '01700000000';

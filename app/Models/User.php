@@ -62,4 +62,13 @@ class User extends Authenticatable
     {
         return $this->role === 'vendor';
     }
+
+    /**
+     * Super admins have elevated privileges such as permanently (hard) deleting
+     * orders from Trash. Regular admins can trash/restore but not force-delete.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->is_admin && $this->role === 'super_admin';
+    }
 }
