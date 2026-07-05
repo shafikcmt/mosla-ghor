@@ -19,7 +19,14 @@ class ProductController extends Controller
     {
         $products = Product::orderBy('sort_order')->orderBy('id')->paginate(20);
 
-        return view('admin.products.index', compact('products'));
+        $stats = [
+            'total'     => Product::count(),
+            'active'    => Product::where('is_active', true)->count(),
+            'retail'    => Product::where('is_active', true)->where('show_in_retail', true)->count(),
+            'wholesale' => Product::where('is_active', true)->where('show_in_wholesale', true)->count(),
+        ];
+
+        return view('admin.products.index', compact('products', 'stats'));
     }
 
     /** Active top-level categories with their children, for the product form select. */

@@ -12,6 +12,25 @@
     </a>
 </div>
 
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+    <div class="bg-white rounded shadow px-4 py-3">
+        <div class="text-xs text-gray-500">মোট পণ্য</div>
+        <div class="text-2xl font-bold text-gray-800">{{ $stats['total'] }}</div>
+    </div>
+    <div class="bg-white rounded shadow px-4 py-3">
+        <div class="text-xs text-gray-500">সক্রিয় পণ্য</div>
+        <div class="text-2xl font-bold text-green-600">{{ $stats['active'] }}</div>
+    </div>
+    <div class="bg-white rounded shadow px-4 py-3">
+        <div class="text-xs text-gray-500">খুচরা (frontend)</div>
+        <div class="text-2xl font-bold text-blue-600">{{ $stats['retail'] }}</div>
+    </div>
+    <div class="bg-white rounded shadow px-4 py-3">
+        <div class="text-xs text-gray-500">পাইকারি</div>
+        <div class="text-2xl font-bold text-orange-600">{{ $stats['wholesale'] }}</div>
+    </div>
+</div>
+
 <div class="bg-white shadow rounded overflow-x-auto">
     <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b text-gray-600 font-medium">
