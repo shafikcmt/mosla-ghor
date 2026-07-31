@@ -2666,8 +2666,8 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 // localStorage['ms_cart']). Hydrate from it so the cart survives reload/login
 // and stays in sync with the header mini-cart drawer.
 var msCartReady = false; // var (hoisted) so the early setTab() restore is TDZ-safe
-let comboItems = (window.msCart ? window.msCart.get() : []);
-let comboUid   = comboItems.reduce(function (m, x) { return Math.max(m, x.uid || 0); }, 0);
+var comboItems = (window.msCart ? window.msCart.get() : []); // var (hoisted) so the early setTab() call is TDZ-safe
+var comboUid   = comboItems.reduce(function (m, x) { return Math.max(m, x.uid || 0); }, 0); // var (hoisted) — TDZ-safe
 
 // Let the shared drawer drive the builder (so removing from the drawer updates
 // the box, and vice-versa). Then mark the store live and paint the restored box.
