@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\WholesaleEnquiry;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class EnquiryReceivedNotification extends Notification
@@ -14,7 +15,28 @@ class EnquiryReceivedNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        $channels = ['database'];
+
+        // Email admins only. TODO: extend to vendor/customer once their User.email
+        // fields are reliably populated (currently phone-first).
+        if ($this->audience === 'admin' && filled($notifiable->email ?? null)) {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        $id      = $this->enquiry->id;
+        $product = $this->enquiry->productLabel();
+
+        return (new MailMessage)
+            ->subject("নতুন Enquiry — #{$id}")
+            ->greeting('নতুন Enquiry এসেছে')
+            ->line("Enquiry #{$id} — {$product}")
+            ->action('Enquiry দেখুন', route('admin.wholesale.enquiry.show', $id))
+            ->line('MoslaMart Admin');
     }
 
     public function toArray(object $notifiable): array

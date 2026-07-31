@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Order;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class OrderPlacedNotification extends Notification
@@ -13,7 +14,33 @@ class OrderPlacedNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        $channels = ['database'];
+
+        // Email admins only (they have real inboxes). TODO: extend to vendor/customer
+        // once their User.email fields are reliably populated (currently phone-first).
+        if ($this->audience === 'admin' && filled($notifiable->email ?? null)) {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        $total = number_format((float) $this->order->grand_total, 0);
+        $url   = $this->order->invoiceUrl();
+
+        $mail = (new MailMessage)
+            ->subject('নতুন অর্ডার — #' . $this->order->order_number)
+            ->greeting('নতুন অর্ডার এসেছে')
+            ->line("অর্ডার নম্বর: #{$this->order->order_number}")
+            ->line("মোট: ৳{$total}");
+
+        if ($url) {
+            $mail->action('অর্ডার দেখুন', $url);
+        }
+
+        return $mail->line('MoslaMart Admin');
     }
 
     public function toArray(object $notifiable): array

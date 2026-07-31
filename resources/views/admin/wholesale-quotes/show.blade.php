@@ -36,6 +36,7 @@
                 <div><dt class="text-gray-400 text-xs uppercase tracking-wider">ডেলিভারি চার্জ</dt><dd class="font-semibold text-gray-800 mt-0.5">৳{{ number_format($quote->delivery_charge, 2) }}</dd></div>
                 <div><dt class="text-gray-400 text-xs uppercase tracking-wider">অগ্রিম</dt><dd class="font-semibold text-gray-800 mt-0.5">৳{{ number_format($quote->advanceAmount(), 2) }}@if($quote->advance_percentage) ({{ rtrim(rtrim(number_format($quote->advance_percentage,2),'0'),'.') }}%)@endif</dd></div>
                 <div><dt class="text-gray-400 text-xs uppercase tracking-wider">মোট</dt><dd class="font-bold text-[#c9a227] text-xl mt-0.5">৳{{ number_format($quote->grandTotal(), 2) }}</dd></div>
+                <div><dt class="text-gray-400 text-xs uppercase tracking-wider">কোটেশনের তারিখ</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $quote->created_at->format('d M Y') }}</dd></div>
                 @if($quote->delivery_time)
                 <div><dt class="text-gray-400 text-xs uppercase tracking-wider">ডেলিভারি সময়</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $quote->delivery_time }}</dd></div>
                 @endif

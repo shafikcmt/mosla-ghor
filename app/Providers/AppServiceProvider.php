@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\MailConfigurator;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Apply admin-managed SMTP settings (DB) over .env when enabled.
+        MailConfigurator::apply();
     }
 }

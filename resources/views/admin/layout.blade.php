@@ -136,6 +136,8 @@
                 ['label' => 'ডেলিভারি সেটিং',  'route' => 'admin.delivery-settings.index', 'active' => 'admin.delivery-settings.*'],
                 ['label' => 'জেনারেল সেটিং',   'route' => 'admin.general-settings.index',   'active' => 'admin.general-settings.*'],
                 ['label' => 'লগইন সেটিং',      'route' => 'admin.auth-settings.index',      'active' => 'admin.auth-settings.*'],
+                ['label' => 'মেইল সেটিং',      'route' => 'admin.mail-settings.edit',       'active' => 'admin.mail-settings.*'],
+                ['label' => 'আমার প্রোফাইল',   'route' => 'admin.profile.edit',             'active' => 'admin.profile.*'],
             ],
         ],
     ];
@@ -212,8 +214,8 @@
     {{-- Sidebar footer (fixed bottom) --}}
     <div class="px-4 py-3 border-t border-[#14532d] space-y-2.5 flex-shrink-0">
 
-        {{-- Logged-in user --}}
-        <div class="flex items-center gap-2.5">
+        {{-- Logged-in user (click to edit profile) --}}
+        <a href="{{ route('admin.profile.edit') }}" class="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
             <div class="w-7 h-7 rounded-full bg-[#1a6b3a] flex items-center justify-center flex-shrink-0">
                 <span class="text-white text-xs font-bold">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
             </div>
@@ -221,7 +223,7 @@
                 <div class="text-white text-xs font-medium truncate">{{ auth()->user()->name }}</div>
                 <div class="text-[#4d7a5a] text-[10px] truncate">{{ auth()->user()->email }}</div>
             </div>
-        </div>
+        </a>
 
         {{-- View website --}}
         <a href="{{ url('/') }}" target="_blank"

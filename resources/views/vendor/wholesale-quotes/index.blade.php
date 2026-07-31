@@ -19,6 +19,7 @@
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">মূল্য/kg</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">মোট</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Admin</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">তারিখ</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">কার্যক্রম</th>
             </tr>
         </thead>
@@ -41,6 +42,7 @@
                     @endphp
                     <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $rowBadge }}">{{ $quote->statusLabel() }}</span>
                 </td>
+                <td class="px-4 py-3 text-gray-500 text-xs whitespace-nowrap hidden sm:table-cell">{{ $quote->created_at->format('d M Y') }}</td>
                 <td class="px-4 py-3">
                     <a href="{{ route('vendor.wholesale.quote.show', $quote->id) }}"
                        class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition-colors font-medium">

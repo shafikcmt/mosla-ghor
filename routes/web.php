@@ -55,6 +55,8 @@ use App\Http\Controllers\Admin\VendorParcelController as AdminVendorParcelContro
 use App\Http\Controllers\Admin\VendorStockController as AdminVendorStockController;
 use App\Http\Controllers\Admin\VendorCustomerController as AdminVendorCustomerController;
 use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
+use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
+use App\Http\Controllers\Admin\MailSettingController as AdminMailSettingController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\VendorShopController;
 use App\Http\Controllers\Admin\WholesaleEnquiryController as AdminWholesaleEnquiryController;
@@ -367,6 +369,15 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
 
     Route::get('auth-settings',  [AdminAuthSettingController::class, 'index'])->name('auth-settings.index');
     Route::post('auth-settings', [AdminAuthSettingController::class, 'update'])->name('auth-settings.update');
+
+    // ── Mail (SMTP) settings ───────────────────────────────────────────────
+    Route::get('mail-settings',       [AdminMailSettingController::class, 'edit'])->name('mail-settings.edit');
+    Route::put('mail-settings',       [AdminMailSettingController::class, 'update'])->name('mail-settings.update');
+    Route::post('mail-settings/test', [AdminMailSettingController::class, 'test'])->name('mail-settings.test');
+
+    // ── Admin profile (self-service) ───────────────────────────────────────
+    Route::get('profile', [AdminProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('profile', [AdminProfileController::class, 'update'])->name('profile.update');
 
     Route::get('payment-settings', [AdminPaymentSettingController::class, 'index'])->name('payment-settings.index');
     Route::post('payment-settings', [AdminPaymentSettingController::class, 'update'])->name('payment-settings.update');

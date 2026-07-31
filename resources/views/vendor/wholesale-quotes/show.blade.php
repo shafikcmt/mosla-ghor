@@ -56,6 +56,10 @@
                     <dt class="text-gray-400 text-xs uppercase tracking-wider">মোট</dt>
                     <dd class="font-bold text-[#c9a227] text-xl mt-0.5">৳{{ number_format($quote->grandTotal(), 2) }}</dd>
                 </div>
+                <div>
+                    <dt class="text-gray-400 text-xs uppercase tracking-wider">কোটেশনের তারিখ</dt>
+                    <dd class="font-semibold text-gray-800 mt-0.5">{{ $quote->created_at->format('d M Y') }}</dd>
+                </div>
                 @if($quote->delivery_time)
                 <div>
                     <dt class="text-gray-400 text-xs uppercase tracking-wider">ডেলিভারি সময়</dt>

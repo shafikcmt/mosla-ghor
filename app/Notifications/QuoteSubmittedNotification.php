@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\WholesaleQuote;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class QuoteSubmittedNotification extends Notification
@@ -14,7 +15,27 @@ class QuoteSubmittedNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        $channels = ['database'];
+
+        // Email admins only. TODO: extend to customer once their User.email is
+        // reliably populated (customers currently sign in phone-first).
+        if ($this->audience === 'admin' && filled($notifiable->email ?? null)) {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        $enquiryId = $this->quote->enquiry_id;
+
+        return (new MailMessage)
+            ->subject("নতুন কোটেশন — Enquiry #{$enquiryId}")
+            ->greeting('নতুন কোটেশন জমা হয়েছে')
+            ->line("Enquiry #{$enquiryId} — একটি নতুন কোটেশন জমা হয়েছে।")
+            ->action('কোটেশন দেখুন', route('admin.wholesale.quote.show', $this->quote->id))
+            ->line('MoslaMart Admin');
     }
 
     public function toArray(object $notifiable): array
