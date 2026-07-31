@@ -710,7 +710,12 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
     </div>
 </section>
 
-{{-- ━━━━━━━━━━━━━━━━  MOSLAMART APP PROMO (replaces the homepage FAQ)  ━━━━━━━━━━━━━━━━ --}}
+{{-- MOSLAMART APP PROMO — DISABLED.
+     This large homepage app-download section was replaced by the compact,
+     mobile-only install button in the header (partials/storefront/navbar.blade.php).
+     Kept here (not deleted) and wrapped in the @if(false) block below so it never
+     renders, allowing an easy restore later. --}}
+@if (false)
 @php
     // Real spice photos for the phone mockup. Drop optimized square images into
     //   public/images/spices/<key>.webp  (jpg/jpeg/png/avif also accepted)
@@ -825,6 +830,8 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
         </div>
     </div>
 </section>
+@endif
+{{-- ── end disabled #app-promo section ── --}}
 
 {{-- Install instructions modal (fallback when the browser has no install prompt) --}}
 <div id="ms-install-help" class="fixed inset-0 z-[140] hidden items-center justify-center bg-black/60 p-4" onclick="if(event.target===this)msCloseInstallHelp()">

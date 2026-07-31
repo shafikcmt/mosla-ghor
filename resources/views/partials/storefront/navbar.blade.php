@@ -111,6 +111,20 @@
                 @endif
             </div>
 
+            {{-- Install app (mobile only; revealed by JS only when installable — see script below).
+                 Solid gold pill so it reads clearly as an "install/download" CTA. Icon-only to
+                 match the other navbar icons; the corner pulse dot only shows while the button is
+                 visible (i.e. install is available) to draw attention without a text label. --}}
+            <button type="button" data-install-btn
+                    class="relative hidden md:hidden w-10 h-10 flex items-center justify-center rounded-full bg-[#c9a227] text-[#0f3d22] hover:brightness-110 transition"
+                    title="অ্যাপ ইনস্টল করুন" aria-label="অ্যাপ ইনস্টল করুন">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.9" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                <span class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5" aria-hidden="true">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#0f3d22] opacity-60"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#0f3d22]"></span>
+                </span>
+            </button>
+
             {{-- Hamburger (mobile + tablet only) --}}
             <button type="button" data-drawer-open
                     class="md:hidden w-10 h-10 flex items-center justify-center rounded-full text-green-100 hover:text-white hover:bg-white/10 transition-colors"
@@ -219,6 +233,52 @@
     });
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && !root.classList.contains('hidden')) close();
+    });
+})();
+
+// ── Mobile-only "Install app" button ──────────────────────────────────────
+// Reveals the header install button ONLY on a phone-width viewport (the button
+// keeps md:hidden, so it can never show on tablet/desktop) AND only when the
+// site is installable and not already installed. Reuses window.__msDeferredPrompt
+// captured by the PWA head script; also captures the event itself so it works
+// on pages that fire it later. Fully null-safe — inert when not installable.
+(function () {
+    var btn = document.querySelector('[data-install-btn]');
+    if (!btn || btn.__msInstallInit) return;
+    btn.__msInstallInit = true;
+
+    // Already installed / running standalone → never show (requirement 3c).
+    var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+                     || window.navigator.standalone === true;
+    if (standalone) return;
+
+    function reveal() { btn.classList.remove('hidden'); } // md:hidden still hides desktop/tablet
+    function hide()   { btn.classList.add('hidden'); }
+
+    // Install prompt already captured before this script ran → show now.
+    if (window.__msDeferredPrompt) reveal();
+
+    // Prompt becomes available later → capture + show (requirement 3d).
+    window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__msDeferredPrompt = e;
+        if (!standalone) reveal();
+    });
+
+    // Installed during this session → clear + hide.
+    window.addEventListener('appinstalled', function () {
+        window.__msDeferredPrompt = null;
+        hide();
+    });
+
+    // Click → fire the native install prompt (same UX as "Add to Home Screen").
+    btn.addEventListener('click', async function () {
+        var dp = window.__msDeferredPrompt;
+        if (!dp) { hide(); return; }
+        dp.prompt();
+        try { await dp.userChoice; } catch (e) {}
+        window.__msDeferredPrompt = null; // one-time use
+        hide();
     });
 })();
 </script>
