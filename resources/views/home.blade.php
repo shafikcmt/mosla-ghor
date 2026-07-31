@@ -216,11 +216,11 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
              SERVER renders the right mode. No JS/localStorage switching to get out
              of sync. Active state is server-rendered from $listMode. --}}
         <div class="inline-flex items-center gap-1 p-1.5 bg-white/95 rounded-2xl shadow-2xl">
-            <a href="{{ $retailHref }}"
+            <a href="{{ $retailHref }}" id="hero-mode-retail" onclick="return msHeroClick(event,'retail')"
                class="px-7 py-3 rounded-xl text-base font-bold transition-colors {{ $listMode === 'retail' ? 'bg-[#14532d] text-white' : 'text-gray-500 hover:text-gray-700' }}">
                 খুচরা
             </a>
-            <a href="{{ $wholesaleHref }}"
+            <a href="{{ $wholesaleHref }}" id="hero-mode-wholesale" onclick="return msHeroClick(event,'wholesale')"
                class="px-7 py-3 rounded-xl text-base font-bold transition-colors {{ $listMode === 'wholesale' ? 'bg-orange-600 text-white' : 'text-gray-500 hover:text-gray-700' }}">
                 পাইকারি
             </a>
@@ -353,20 +353,24 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 {{-- ━━━━━━━━━━━━━━━━  COMBO BUILDER  ━━━━━━━━━━━━━━━━ --}}
 <section id="combo-builder" class="py-12 sm:py-16 md:py-20 px-4 sm:px-5 bg-[#f6fdf8] overflow-x-hidden">
     @php
-        // Combo mode is URL-driven only (no sticky localStorage): default retail
-        // unless ?combo=paykari|wholesale (e.g. the cart drawer "পাইকারি কম্বো" link).
-        $comboMode = in_array(strtolower(request('combo') ?? ''), ['paykari', 'wholesale'], true) ? 'paykari' : 'retail';
+        // Combo mode follows the SAME source of truth as the hero/listing mode
+        // ($listMode from ?mode). It is also forced to paykari by the cart drawer's
+        // "পাইকারি কম্বো" deep-link (?combo=paykari|wholesale). JS keeps it in sync
+        // afterwards (setMode), so hero ↔ listing ↔ combo never drift apart.
+        $comboMode = ($listMode === 'wholesale'
+            || in_array(strtolower(request('combo') ?? ''), ['paykari', 'wholesale'], true))
+            ? 'paykari' : 'retail';
     @endphp
     <div class="max-w-7xl mx-auto">
 
         {{-- Section Label + Combo Mode Tabs --}}
         <x-storefront.section-heading eyebrow="আপনার পছন্দে তৈরি" margin="mb-8">
             <div class="inline-flex max-w-full bg-white rounded-xl border border-green-200 overflow-hidden shadow-sm mt-4">
-                <button id="combo-tab-retail" onclick="switchComboTab('retail')"
+                <button id="combo-tab-retail" onclick="setMode('retail')"
                         class="px-5 sm:px-6 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors {{ $comboMode === 'retail' ? 'bg-[#14532d] text-[#c9a227]' : 'text-gray-600 hover:bg-gray-50' }}">
-                    নিজের বাক্স
+                    নিজের বাক্স <span class="text-[10px] font-normal opacity-70">(খুচরা)</span>
                 </button>
-                <button id="combo-tab-paykari" onclick="switchComboTab('paykari')"
+                <button id="combo-tab-paykari" onclick="setMode('wholesale')"
                         class="px-5 sm:px-6 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors {{ $comboMode === 'paykari' ? 'bg-amber-700 text-white' : 'text-gray-600 hover:bg-amber-50' }}">
                     পাইকারি অর্ডার
                 </button>
@@ -2086,7 +2090,9 @@ function closeEnquiry() {
 })();
 
 // ── Combo Builder Mode (Retail / Paykari) ─────────────────────────────────
-function switchComboTab(tab) {
+// Toggle only the combo section visuals. When called via setMode() the URL is
+// managed centrally (?mode), so pass silent=true to skip the legacy ?combo write.
+function switchComboTab(tab, silent) {
     const retailSection  = document.getElementById('combo-retail-section');
     const paykariSection = document.getElementById('combo-paykari-section');
     const retailTab      = document.getElementById('combo-tab-retail');
@@ -2104,14 +2110,58 @@ function switchComboTab(tab) {
         paykariTab.className = 'px-6 py-2.5 text-sm font-semibold transition-colors bg-amber-700 text-white';
         retailTab.className  = 'px-6 py-2.5 text-sm font-semibold transition-colors text-gray-600 hover:bg-gray-50';
     }
-    // Reflect combo mode in the URL (no reload) so a refresh keeps it.
-    // NOT saved to localStorage — combo builder must default to retail on a plain load.
+    if (silent) return;
+    // Legacy standalone call: reflect combo mode in the URL (no reload).
     try {
         const u = new URL(window.location.href);
         if (tab === 'paykari') u.searchParams.set('combo', 'paykari');
         else u.searchParams.delete('combo');
         history.replaceState(null, '', u.pathname + u.search + window.location.hash);
     } catch (e) {}
+}
+
+// ── Unified mode state (single source of truth) ───────────────────────────
+// setMode() is THE entry point for switching between খুচরা (retail) and পাইকারি
+// (wholesale). It syncs the hero toggle, the product listing, AND the combo
+// section together, then persists the choice. mode ∈ {'retail','wholesale'}.
+const HERO_RETAIL_ON = 'px-7 py-3 rounded-xl text-base font-bold transition-colors bg-[#14532d] text-white';
+const HERO_WS_ON     = 'px-7 py-3 rounded-xl text-base font-bold transition-colors bg-orange-600 text-white';
+const HERO_OFF       = 'px-7 py-3 rounded-xl text-base font-bold transition-colors text-gray-500 hover:text-gray-700';
+
+function msSetHeroActive(mode) {
+    const r = document.getElementById('hero-mode-retail');
+    const w = document.getElementById('hero-mode-wholesale');
+    if (r) r.className = (mode === 'retail')    ? HERO_RETAIL_ON : HERO_OFF;
+    if (w) w.className = (mode === 'wholesale') ? HERO_WS_ON     : HERO_OFF;
+}
+
+function setMode(mode) {
+    mode = (mode === 'wholesale') ? 'wholesale' : 'retail';
+    // 1) Product listing + activeTab + ?mode URL + category/mode links.
+    if (typeof setTab === 'function') setTab(mode);
+    // 2) Combo section visuals (URL handled centrally below).
+    switchComboTab(mode === 'wholesale' ? 'paykari' : 'retail', true);
+    // 3) Hero toggle active state.
+    msSetHeroActive(mode);
+    // 4) Persist (URL query still wins on next load). Drop the legacy ?combo param
+    //    so it can't conflict with ?mode on a refresh.
+    try { localStorage.setItem('moslamart_selected_mode', mode); } catch (e) {}
+    try {
+        const u = new URL(window.location.href);
+        u.searchParams.delete('combo');
+        history.replaceState(null, '', u.pathname + u.search + window.location.hash);
+    } catch (e) {}
+}
+
+// Hero toggle click: switch in-place (no page reload) when JS is available;
+// fall back to following the server link if setMode is somehow unavailable.
+function msHeroClick(e, mode) {
+    if (typeof setMode === 'function') {
+        e.preventDefault();
+        setMode(mode);
+        return false;
+    }
+    return true;
 }
 
 // ── Paykari Combo Builder ────────────────────────────────────────────────
@@ -2311,14 +2361,27 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// Combo tab is URL-driven ONLY (no sticky localStorage): the server already rendered
-// the correct initial tab/sections from ?combo; this just keeps the URL canonical when
-// arriving via ?combo=paykari (and re-applies the active state defensively).
+// ── Initial mode resolution (single source of truth) ──────────────────────
+// Priority: URL ?mode/?tab  →  legacy ?combo  →  saved localStorage  →  retail.
+// Runs after setMode + all refreshers are defined, then syncs hero + listing +
+// combo together in one call so they can never start out of sync.
 (function () {
+    let mode = 'retail';
     try {
-        const c = (new URLSearchParams(window.location.search).get('combo') || '').toLowerCase();
-        if (c === 'paykari' || c === 'wholesale') switchComboTab('paykari');
+        const qs = new URLSearchParams(window.location.search);
+        let m = (qs.get('mode') || qs.get('tab') || '').toLowerCase();
+        if (m === 'paykari') m = 'wholesale';
+        const c = (qs.get('combo') || '').toLowerCase();
+        if (m === 'wholesale' || m === 'retail') {
+            mode = m;                                         // URL query wins
+        } else if (c === 'paykari' || c === 'wholesale') {
+            mode = 'wholesale';                               // legacy combo deep-link
+        } else {
+            const saved = (localStorage.getItem('moslamart_selected_mode') || '').toLowerCase();
+            if (saved === 'wholesale' || saved === 'retail') mode = saved; // persisted choice
+        }
     } catch (e) {}
+    if (typeof setMode === 'function') setMode(mode);
 })();
 
 // ── Modal open/close ──────────────────────────────────────────────────────
@@ -3746,7 +3809,8 @@ function zoomNav(dir) {
     const p = (typeof PRODUCTS !== 'undefined') ? PRODUCTS[pending.productId] : null;
     if (!p) return;
 
-    if (typeof setTab === 'function') setTab(pending.sellType || 'retail');
+    if (typeof setMode === 'function') setMode(pending.sellType === 'wholesale' ? 'wholesale' : 'retail');
+    else if (typeof setTab === 'function') setTab(pending.sellType || 'retail');
 
     // Select the requested pack in the product's picker row, then add it.
     const qs = document.getElementById('picker-qty-' + pending.productId);
