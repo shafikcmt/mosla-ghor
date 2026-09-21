@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\WebsiteSetting;
 use App\Models\WholesaleQuote;
+use App\Support\WholesaleQuoteInvoicePdf;
 
 /**
  * Public, token-addressed wholesale quote invoice.
@@ -32,5 +33,17 @@ class WholesaleQuoteInvoiceController extends Controller
             'vendor'   => $quote->vendor,
             'siteName' => WebsiteSetting::get('site_name', 'মসলা মার্ট'),
         ]);
+    }
+
+    /** Real (server-generated) PDF of the quote — same data as show(). */
+    public function pdf(string $token)
+    {
+        $quote = $this->resolve($token);
+
+        $pdf = WholesaleQuoteInvoicePdf::bytes($quote);
+
+        return response($pdf, 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="quote-' . $quote->id . '-invoice.pdf"');
     }
 }

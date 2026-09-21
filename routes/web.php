@@ -242,7 +242,8 @@ Route::get('/invoice/{token}/pay',      [InvoiceController::class, 'pay'])->name
 Route::post('/invoice/{token}/pay',     [InvoiceController::class, 'payStore'])->name('invoice.pay.store');
 
 // ── Public token-addressed wholesale quote invoice (no login required) ───────
-Route::get('/wholesale-invoice/{token}', [WholesaleQuoteInvoiceController::class, 'show'])->name('wholesale.invoice.show');
+Route::get('/wholesale-invoice/{token}',     [WholesaleQuoteInvoiceController::class, 'show'])->name('wholesale.invoice.show');
+Route::get('/wholesale-invoice/{token}/pdf', [WholesaleQuoteInvoiceController::class, 'pdf'])->name('wholesale.invoice.pdf');
 
 // ── Vendor public routes ───────────────────────────────────────────────────
 Route::prefix('vendor')->name('vendor.')->group(function () {

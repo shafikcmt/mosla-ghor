@@ -158,6 +158,12 @@ class WholesaleQuote extends Model
         return $this->invoice_token ? url('/wholesale-invoice/' . $this->invoice_token) : null;
     }
 
+    /** Public, login-free URL to the real (server-generated) PDF invoice. */
+    public function invoicePdfUrl(): ?string
+    {
+        return $this->invoice_token ? url('/wholesale-invoice/' . $this->invoice_token . '/pdf') : null;
+    }
+
     /**
      * Click-to-send WhatsApp link carrying this quote's price/total to the
      * customer (Admin reply channel). Null when there is no usable number.

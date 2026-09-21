@@ -51,12 +51,26 @@ class QuoteSubmittedNotification extends Notification
             // Public, login-free quote link so guests without a password can open it.
             $this->quote->ensureInvoiceToken();
 
-            return (new MailMessage)
+            $mail = (new MailMessage)
                 ->subject("আপনার enquiry-তে নতুন কোটেশন — #{$enquiryId}")
                 ->greeting('নতুন কোটেশন এসেছে')
-                ->line("Enquiry #{$enquiryId} — আপনার চাহিদা অনুযায়ী একটি কোটেশন পাঠানো হয়েছে।")
+                ->line("Enquiry #{$enquiryId} — আপনার চাহিদা অনুযায়ী একটি কোটেশন পাঠানো হয়েছে। সম্পূর্ণ ইনভয়েস PDF সংযুক্ত করা হলো।")
                 ->action('কোটেশন দেখুন', $this->quote->invoiceUrl())
                 ->line('MoslaMart Team');
+
+            // Attach the real PDF invoice (same builder as the /pdf route). Never
+            // let a PDF-build failure block the whole email.
+            try {
+                $mail->attachData(
+                    \App\Support\WholesaleQuoteInvoicePdf::bytes($this->quote),
+                    'invoice-' . $this->quote->id . '.pdf',
+                    ['mime' => 'application/pdf'],
+                );
+            } catch (\Throwable) {
+                // non-critical — send the email without the attachment
+            }
+
+            return $mail;
         }
 
         return (new MailMessage)

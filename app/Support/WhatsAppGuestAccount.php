@@ -59,13 +59,16 @@ class WhatsAppGuestAccount
 
         $unit  = number_format((float) $quote->unit_price, 2);
         $total = number_format($quote->grandTotal(), 2);
-        $track = route('customer.wholesale.enquiry.show', $enquiry->id);
+
+        // Public, login-free PDF invoice — a guest without a password can open it.
+        $quote->ensureInvoiceToken();
+        $pdfUrl = $quote->invoicePdfUrl();
 
         $message = "আসসালামু আলাইকুম {$enquiry->customer_name},\n\n"
             . "আপনার enquiry (#{$enquiry->id} — {$enquiry->productLabel()}) এর কোটেশন:\n"
             . "ইউনিট মূল্য: ৳{$unit}/{$quote->quantity_unit}\n"
             . "মোট: ৳{$total}\n\n"
-            . "বিস্তারিত দেখতে ও অর্ডার confirm করতে login করুন:\n{$track}\n\n"
+            . "সম্পূর্ণ PDF ইনভয়েস ডাউনলোড করুন:\n{$pdfUrl}\n\n"
             . "— MoslaMart";
 
         return 'https://wa.me/' . $wa . '?text=' . rawurlencode($message);
