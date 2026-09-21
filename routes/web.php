@@ -58,6 +58,7 @@ use App\Http\Controllers\Admin\NotificationController as AdminNotificationContro
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\MailSettingController as AdminMailSettingController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\WholesaleQuoteInvoiceController;
 use App\Http\Controllers\VendorShopController;
 use App\Http\Controllers\Admin\WholesaleEnquiryController as AdminWholesaleEnquiryController;
 use App\Http\Controllers\Admin\WholesaleQuoteController as AdminWholesaleQuoteController;
@@ -239,6 +240,9 @@ Route::get('/invoice/{token}/reorder',  [InvoiceController::class, 'reorder'])->
 Route::post('/invoice/{token}/reorder', [InvoiceController::class, 'reorderStore'])->name('invoice.reorder.store');
 Route::get('/invoice/{token}/pay',      [InvoiceController::class, 'pay'])->name('invoice.pay');
 Route::post('/invoice/{token}/pay',     [InvoiceController::class, 'payStore'])->name('invoice.pay.store');
+
+// ── Public token-addressed wholesale quote invoice (no login required) ───────
+Route::get('/wholesale-invoice/{token}', [WholesaleQuoteInvoiceController::class, 'show'])->name('wholesale.invoice.show');
 
 // ── Vendor public routes ───────────────────────────────────────────────────
 Route::prefix('vendor')->name('vendor.')->group(function () {

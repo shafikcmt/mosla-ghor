@@ -48,11 +48,14 @@ class QuoteSubmittedNotification extends Notification
         $enquiryId = $this->quote->enquiry_id;
 
         if ($this->audience === 'customer') {
+            // Public, login-free quote link so guests without a password can open it.
+            $this->quote->ensureInvoiceToken();
+
             return (new MailMessage)
                 ->subject("আপনার enquiry-তে নতুন কোটেশন — #{$enquiryId}")
                 ->greeting('নতুন কোটেশন এসেছে')
                 ->line("Enquiry #{$enquiryId} — আপনার চাহিদা অনুযায়ী একটি কোটেশন পাঠানো হয়েছে।")
-                ->action('কোটেশন দেখুন', route('customer.wholesale.enquiry.show', $enquiryId))
+                ->action('কোটেশন দেখুন', $this->quote->invoiceUrl())
                 ->line('MoslaMart Team');
         }
 

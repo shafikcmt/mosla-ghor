@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class WholesaleQuote extends Model
 {
@@ -14,7 +15,7 @@ class WholesaleQuote extends Model
         'delivery_charge', 'advance_required', 'advance_percentage',
         'delivery_time', 'payment_options',
         'note', 'valid_until', 'validity_days', 'status',
-        'admin_note', 'order_id',
+        'admin_note', 'order_id', 'invoice_token',
     ];
 
     protected $casts = [
@@ -140,6 +141,21 @@ class WholesaleQuote extends Model
     public function statusLabel(): string
     {
         return static::statuses()[$this->status] ?? $this->status;
+    }
+
+    /** Generate the secure public invoice token once (idempotent). */
+    public function ensureInvoiceToken(): void
+    {
+        if (empty($this->invoice_token)) {
+            $this->invoice_token = Str::random(40);
+            $this->save();
+        }
+    }
+
+    /** Public, login-free URL to view this quote (token IS the access control). */
+    public function invoiceUrl(): ?string
+    {
+        return $this->invoice_token ? url('/wholesale-invoice/' . $this->invoice_token) : null;
     }
 
     /**
