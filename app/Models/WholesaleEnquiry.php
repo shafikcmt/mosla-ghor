@@ -168,12 +168,23 @@ class WholesaleEnquiry extends Model
         return $channels;
     }
 
+    /** True once the linked customer's login account has set its own password. */
+    public function accountActivated(): bool
+    {
+        return (bool) $this->customer?->user?->hasSetPassword();
+    }
+
     /**
      * Click-to-send WhatsApp link inviting a guest to set their password and
-     * track this enquiry. Null when there is no login account / phone.
+     * track this enquiry. Null when the account is already activated (no need to
+     * invite) or when there is no login account / phone.
      */
     public function guestTrackingWhatsappLink(): ?string
     {
+        if ($this->accountActivated()) {
+            return null;
+        }
+
         return \App\Support\WhatsAppGuestAccount::linkFor($this);
     }
 

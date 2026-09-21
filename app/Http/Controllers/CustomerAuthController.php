@@ -371,7 +371,10 @@ class CustomerAuthController extends Controller
             'password.confirmed' => 'পাসওয়ার্ড মিলছে না।',
         ]);
 
-        $user->update(['password' => Hash::make($data['password'])]);
+        $user->update([
+            'password'        => Hash::make($data['password']),
+            'password_set_at' => now(),
+        ]);
 
         Auth::login($user, true);
         $request->session()->regenerate();

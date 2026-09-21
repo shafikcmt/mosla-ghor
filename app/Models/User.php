@@ -20,6 +20,7 @@ class User extends Authenticatable
         'email',
         'phone',
         'password',
+        'password_set_at',
         'is_admin',
         'role',
     ];
@@ -44,6 +45,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
+            'password_set_at'   => 'datetime',
             'is_admin'          => 'boolean',
         ];
     }
@@ -61,6 +63,12 @@ class User extends Authenticatable
     public function isVendor(): bool
     {
         return $this->role === 'vendor';
+    }
+
+    /** True once the customer has claimed the account by setting their own password. */
+    public function hasSetPassword(): bool
+    {
+        return ! is_null($this->password_set_at);
     }
 
     /**

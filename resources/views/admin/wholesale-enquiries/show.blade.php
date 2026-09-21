@@ -35,7 +35,9 @@
                     @if($enquiry->contactEmail())
                     <div><span class="text-gray-500 text-xs">Email:</span> <span class="font-semibold text-gray-800">{{ $enquiry->contactEmail() }}</span></div>
                     @endif
-                    @if($enquiry->guestTrackingWhatsappLink())
+                    @if($enquiry->accountActivated())
+                    <p class="mt-2 text-xs font-semibold text-green-700">✓ Account activated — customer can log in directly</p>
+                    @elseif($enquiry->guestTrackingWhatsappLink())
                     <a href="{{ $enquiry->guestTrackingWhatsappLink() }}" target="_blank" rel="noopener"
                        class="inline-flex items-center gap-1.5 mt-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
                         WhatsApp-এ Tracking Link পাঠান
