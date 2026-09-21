@@ -17,18 +17,44 @@ class QuoteSubmittedNotification extends Notification
     {
         $channels = ['database'];
 
-        // Email admins only. TODO: extend to customer once their User.email is
-        // reliably populated (customers currently sign in phone-first).
+        // Admins: email when the account has an address.
         if ($this->audience === 'admin' && filled($notifiable->email ?? null)) {
+            $channels[] = 'mail';
+        }
+
+        // Customers: email when the enquiry captured a contact address (guests
+        // often have a null User.email but a filled enquiry customer_email).
+        // The address is resolved via User::routeNotificationForMail() +
+        // mailRouteOverride() below.
+        if ($this->audience === 'customer' && $this->quote->enquiry?->hasEmailContact()) {
             $channels[] = 'mail';
         }
 
         return $channels;
     }
 
+    /**
+     * Preferred mail address for this notification. Laravel calls
+     * routeNotificationForMail() on the notifiable (User); that method checks
+     * for this override so we can deliver to a guest's captured enquiry email.
+     */
+    public function mailRouteOverride(): ?string
+    {
+        return $this->quote->enquiry?->contactEmail();
+    }
+
     public function toMail(object $notifiable): MailMessage
     {
         $enquiryId = $this->quote->enquiry_id;
+
+        if ($this->audience === 'customer') {
+            return (new MailMessage)
+                ->subject("আপনার enquiry-তে নতুন কোটেশন — #{$enquiryId}")
+                ->greeting('নতুন কোটেশন এসেছে')
+                ->line("Enquiry #{$enquiryId} — আপনার চাহিদা অনুযায়ী একটি কোটেশন পাঠানো হয়েছে।")
+                ->action('কোটেশন দেখুন', route('customer.wholesale.enquiry.show', $enquiryId))
+                ->line('MoslaMart Team');
+        }
 
         return (new MailMessage)
             ->subject("নতুন কোটেশন — Enquiry #{$enquiryId}")

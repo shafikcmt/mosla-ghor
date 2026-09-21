@@ -32,7 +32,15 @@
                     @if($enquiry->customer_whatsapp)
                     <div><span class="text-gray-500 text-xs">WhatsApp:</span> <span class="font-semibold text-gray-800">{{ $enquiry->customer_whatsapp }}</span></div>
                     @endif
-                    <div><span class="text-gray-500 text-xs">Email:</span> <span class="font-semibold text-gray-800">{{ $enquiry->customer?->email }}</span></div>
+                    @if($enquiry->contactEmail())
+                    <div><span class="text-gray-500 text-xs">Email:</span> <span class="font-semibold text-gray-800">{{ $enquiry->contactEmail() }}</span></div>
+                    @endif
+                    @if($enquiry->guestTrackingWhatsappLink())
+                    <a href="{{ $enquiry->guestTrackingWhatsappLink() }}" target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-1.5 mt-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
+                        WhatsApp-এ Tracking Link পাঠান
+                    </a>
+                    @endif
                 </div>
 
                 <div class="space-y-3">

@@ -131,6 +131,52 @@ class WholesaleEnquiry extends Model
             ->count();
     }
 
+    // ── Reply channels (Admin only — vendors must never see customer contact) ──
+
+    /** WhatsApp number to reach the customer on: explicit WhatsApp, else phone. */
+    public function whatsappNumber(): ?string
+    {
+        return $this->customer_whatsapp ?: $this->customer_phone;
+    }
+
+    /** Contact email: the captured enquiry email, else the linked customer's. */
+    public function contactEmail(): ?string
+    {
+        return $this->customer_email ?: $this->customer?->email;
+    }
+
+    public function hasEmailContact(): bool
+    {
+        return filled($this->contactEmail());
+    }
+
+    public function hasWhatsappContact(): bool
+    {
+        return filled($this->whatsappNumber());
+    }
+
+    /** Channels available to reply on, e.g. ['email', 'whatsapp']. */
+    public function availableReplyChannels(): array
+    {
+        $channels = [];
+        if ($this->hasEmailContact()) {
+            $channels[] = 'email';
+        }
+        if ($this->hasWhatsappContact()) {
+            $channels[] = 'whatsapp';
+        }
+        return $channels;
+    }
+
+    /**
+     * Click-to-send WhatsApp link inviting a guest to set their password and
+     * track this enquiry. Null when there is no login account / phone.
+     */
+    public function guestTrackingWhatsappLink(): ?string
+    {
+        return \App\Support\WhatsAppGuestAccount::linkFor($this);
+    }
+
     // Returns only safe fields — customer contact is excluded
     public function toVendorArray(): array
     {

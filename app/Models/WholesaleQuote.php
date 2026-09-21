@@ -142,6 +142,15 @@ class WholesaleQuote extends Model
         return static::statuses()[$this->status] ?? $this->status;
     }
 
+    /**
+     * Click-to-send WhatsApp link carrying this quote's price/total to the
+     * customer (Admin reply channel). Null when there is no usable number.
+     */
+    public function whatsappReplyLink(): ?string
+    {
+        return \App\Support\WhatsAppGuestAccount::replyLinkFor($this);
+    }
+
     public function isExpired(): bool
     {
         return $this->valid_until && $this->valid_until->isPast();

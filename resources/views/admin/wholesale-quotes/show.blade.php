@@ -96,6 +96,25 @@
         <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-800 leading-relaxed">
             এই কোটেশন Customer সরাসরি দেখতে পাচ্ছেন — কোনো admin approval প্রয়োজন নেই। Admin শুধু monitoring-এর জন্য দেখছেন।
         </div>
+
+        {{-- Reply channels (Admin only — customer contact never shown to vendors) --}}
+        @php $channels = $quote->enquiry?->availableReplyChannels() ?? []; @endphp
+        @if($channels)
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
+            <h4 class="font-semibold text-gray-700 text-sm">Customer-কে কোটেশন পাঠান</h4>
+            @if(in_array('email', $channels))
+            <div class="bg-green-50 border border-green-200 text-green-800 text-xs font-semibold px-3 py-2 rounded-lg">
+                ✓ Email-এ পাঠানো হয়েছে
+            </div>
+            @endif
+            @if(in_array('whatsapp', $channels) && $quote->whatsappReplyLink())
+            <a href="{{ $quote->whatsappReplyLink() }}" target="_blank" rel="noopener"
+               class="block text-center bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                WhatsApp-এ কোটেশন পাঠান
+            </a>
+            @endif
+        </div>
+        @endif
         @if($quote->order_id)
         <div class="bg-green-50 border border-green-200 rounded-2xl p-4 text-sm text-green-800">
             ✓ এই কোটেশন থেকে অর্ডার তৈরি হয়েছে।

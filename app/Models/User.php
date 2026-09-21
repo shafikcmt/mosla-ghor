@@ -64,6 +64,24 @@ class User extends Authenticatable
     }
 
     /**
+     * Mail routing for notifications. Laravel calls this on the NOTIFIABLE (the
+     * User), not the notification — so a notification that needs to reach a
+     * captured contact address (e.g. a guest enquiry email, when the User's own
+     * email is empty) exposes mailRouteOverride() and we prefer it here.
+     */
+    public function routeNotificationForMail($notification = null)
+    {
+        if ($notification !== null && method_exists($notification, 'mailRouteOverride')) {
+            $override = $notification->mailRouteOverride();
+            if (! empty($override)) {
+                return $override;
+            }
+        }
+
+        return $this->email;
+    }
+
+    /**
      * Super admins have elevated privileges such as permanently (hard) deleting
      * orders from Trash. Regular admins can trash/restore but not force-delete.
      */
