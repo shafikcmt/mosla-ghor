@@ -6,6 +6,8 @@ use App\Models\Product;
 use App\Models\ProductReview;
 use App\Models\WholesaleEnquiry;
 use App\Notifications\EnquiryReceivedNotification;
+use App\Notifications\GuestAccountCreatedNotification;
+use App\Support\GuestWholesaleAccount;
 use App\Support\Notify;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -181,6 +183,7 @@ class ProductController extends Controller
             'business_type'      => ['nullable', 'in:shop,restaurant,dealer,retailer,other'],
             'product_variant_id' => ['nullable', 'integer', 'exists:product_variants,id'],
             'customer_whatsapp'  => ['nullable', 'string', 'max:20'],
+            'customer_email'     => ['nullable', 'email', 'max:150'],
             'message'            => ['nullable', 'string', 'max:1000'],
         ], [
             'customer_phone.regex' => 'সঠিক ফোন নম্বর দিন।',
@@ -201,10 +204,22 @@ class ProductController extends Controller
                 ->withErrors(['quantity_kg' => "এই পণ্যের জন্য সর্বনিম্ন অর্ডার পরিমাণ {$qty} {$unit}।"]);
         }
 
-        // Link to the customer record when logged in; null for guests.
-        $customer = (Auth::check() && Auth::user()->role === 'customer')
-            ? Auth::user()->customer
-            : null;
+        // Link to the customer record when logged in. For guests, auto-create a
+        // trackable account (User + Customer, keyed by phone) so the enquiry has
+        // a real customer_id from the start — this also fixes the null
+        // customer_id that broke quote creation for guest enquiries.
+        $loggedIn = Auth::check() && Auth::user()->role === 'customer';
+        $customer = $loggedIn ? Auth::user()->customer : null;
+        $account  = null;
+
+        if (! $customer) {
+            $account  = GuestWholesaleAccount::findOrCreate(
+                $validated['customer_name'],
+                $validated['customer_phone'],
+                $validated['customer_email'] ?? null,
+            );
+            $customer = $account['customer'];
+        }
 
         $enquiry = WholesaleEnquiry::create([
             'customer_id'        => $customer?->id,
@@ -219,19 +234,33 @@ class ProductController extends Controller
             'customer_name'      => $validated['customer_name'],
             'customer_phone'     => $validated['customer_phone'],
             'customer_whatsapp'  => $validated['customer_whatsapp'] ?? null,
+            'customer_email'     => $validated['customer_email'] ?? null,
             'product_name'       => $product->name_bn ?: $product->name_en,
             'variant_name'       => $variant?->name,
             'status'             => 'pending',
         ]);
 
-        // Alerts: admin + assigned supplier; confirmation to a logged-in customer.
+        // Alerts: admin + assigned supplier; confirmation to the customer.
         Notify::admins(new EnquiryReceivedNotification($enquiry, 'admin'));
         Notify::vendor($product->vendor, new EnquiryReceivedNotification($enquiry, 'vendor'));
         Notify::customer($customer, new EnquiryReceivedNotification($enquiry, 'customer'));
 
+        // New guest account + email given → email a "set your password to track
+        // this enquiry" link. WhatsApp is never sent from the server (manual
+        // click-to-send only). Non-blocking.
+        if ($account && $account['isNew'] && ! empty($validated['customer_email']) && $account['setPasswordUrl']) {
+            try {
+                $customer->notifyNow(new GuestAccountCreatedNotification($account['setPasswordUrl']));
+            } catch (\Throwable) {
+                // non-critical — never block the enquiry on a mail failure
+            }
+        }
+
         $msg = 'আপনার enquiry successfully submit হয়েছে। MoslaMart team/supplier quote দিয়ে জানাবে।';
-        if (! $customer) {
-            $msg .= ' আপনি চাইলে পরে enquiry status দেখতে account তৈরি করতে পারেন।';
+        if (! $loggedIn) {
+            $msg .= ($account && $account['isNew'] && ! empty($validated['customer_email']))
+                ? ' আপনার email-এ password সেট করার লিংক পাঠানো হয়েছে — enquiry track করতে পারবেন।'
+                : ' একই ফোন নম্বরে password সেট করে পরে enquiry status দেখতে পারবেন।';
         }
 
         // Return to whichever page the enquiry was sent from (wholesale stays on its URL).

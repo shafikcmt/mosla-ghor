@@ -348,6 +348,38 @@ class CustomerAuthController extends Controller
         return mb_substr($identifier, 0, 3) . '****' . mb_substr($identifier, -2);
     }
 
+    // ── Set password (claim a guest-created account) ──────────────────────────
+    // Reached only through a signed link (see 'signed' middleware on the routes),
+    // so it works without login — that's the whole point.
+
+    public function showSetPassword(User $user)
+    {
+        abort_unless($user->role === 'customer', 404);
+
+        return view('customer.auth.set-password', ['user' => $user]);
+    }
+
+    public function setPassword(Request $request, User $user)
+    {
+        abort_unless($user->role === 'customer', 404);
+
+        $data = $request->validate([
+            'password' => 'required|string|min:6|confirmed',
+        ], [
+            'password.required'  => 'পাসওয়ার্ড দিন।',
+            'password.min'       => 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষর হতে হবে।',
+            'password.confirmed' => 'পাসওয়ার্ড মিলছে না।',
+        ]);
+
+        $user->update(['password' => Hash::make($data['password'])]);
+
+        Auth::login($user, true);
+        $request->session()->regenerate();
+
+        return redirect()->route('customer.account')
+            ->with('success', 'পাসওয়ার্ড সেট হয়েছে। স্বাগতম!');
+    }
+
     public function logout(Request $request)
     {
         Auth::logout();

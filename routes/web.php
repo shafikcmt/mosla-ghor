@@ -136,6 +136,14 @@ Route::name('customer.')->group(function () {
 
     Route::post('logout',   [CustomerAuthController::class, 'logout'])->name('logout');
 
+    // ── Set password (claim a guest-created account via a signed link) ──────
+    // Public + signed: reachable without login so guests can claim the account
+    // that was auto-created for their enquiry.
+    Route::get('set-password/{user}',  [CustomerAuthController::class, 'showSetPassword'])
+        ->middleware('signed')->name('set-password.show');
+    Route::post('set-password/{user}', [CustomerAuthController::class, 'setPassword'])
+        ->middleware('signed')->name('set-password');
+
     // ── Wholesale product detail (PUBLIC — no login, stays on this URL) ─────
     Route::get('wholesale/products/{product:slug}', [ProductController::class, 'showWholesale'])
         ->name('wholesale.products.show');

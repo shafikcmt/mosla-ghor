@@ -442,6 +442,14 @@
                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
                     </div>
 
+                    {{-- Email (optional) — enquiry tracking link + quote updates by email --}}
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">ইমেইল <span class="text-gray-300">(ঐচ্ছিক)</span></label>
+                        <input type="email" name="customer_email" value="{{ old('customer_email') }}" placeholder="you@example.com"
+                               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+                        <p class="text-[11px] text-gray-400 mt-1">ইমেইল দিলে enquiry track করার লিংক ও কোটেশনের আপডেট email-এ পাবেন।</p>
+                    </div>
+
                     {{-- Optional --}}
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
