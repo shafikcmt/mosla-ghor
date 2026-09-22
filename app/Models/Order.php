@@ -188,6 +188,12 @@ class Order extends Model
         return $this->invoice_token ? url('/invoice/' . $this->invoice_token) : null;
     }
 
+    /** Public, login-free PDF invoice link (same token as the HTML invoice). */
+    public function invoicePdfUrl(): ?string
+    {
+        return $this->invoice_token ? url('/invoice/' . $this->invoice_token . '/pdf') : null;
+    }
+
     public function reorderUrl(): ?string
     {
         return $this->reorder_token ? url('/invoice/' . $this->invoice_token . '/reorder') : null;

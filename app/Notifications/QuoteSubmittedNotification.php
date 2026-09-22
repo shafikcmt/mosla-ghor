@@ -52,6 +52,7 @@ class QuoteSubmittedNotification extends Notification
             $this->quote->ensureInvoiceToken();
 
             $mail = (new MailMessage)
+                ->theme('moslamart')
                 ->subject("আপনার enquiry-তে নতুন কোটেশন — #{$enquiryId}")
                 ->greeting('নতুন কোটেশন এসেছে')
                 ->line("Enquiry #{$enquiryId} — আপনার চাহিদা অনুযায়ী একটি কোটেশন পাঠানো হয়েছে। সম্পূর্ণ ইনভয়েস PDF সংযুক্ত করা হলো।")
@@ -74,6 +75,7 @@ class QuoteSubmittedNotification extends Notification
         }
 
         return (new MailMessage)
+            ->theme('moslamart')
             ->subject("নতুন কোটেশন — Enquiry #{$enquiryId}")
             ->greeting('নতুন কোটেশন জমা হয়েছে')
             ->line("Enquiry #{$enquiryId} — একটি নতুন কোটেশন জমা হয়েছে।")

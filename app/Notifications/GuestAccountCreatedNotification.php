@@ -23,6 +23,7 @@ class GuestAccountCreatedNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
+            ->theme('moslamart')
             ->subject('MoslaMart — আপনার account তৈরি হয়েছে')
             ->greeting('স্বাগতম!')
             ->line('আপনার পাইকারি enquiry গ্রহণ করা হয়েছে। enquiry track করতে ও পরবর্তীতে সহজে login করতে নিচের বাটনে ক্লিক করে একটি password সেট করুন।')

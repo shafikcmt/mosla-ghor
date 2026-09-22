@@ -21,9 +21,10 @@ class WhatsAppInvoice
             '{customer_name}' => $order->customer_name,
             '{order_number}'  => $order->order_number,
             '{total}'         => number_format((float) $order->grand_total, 0),
-            '{invoice_link}'  => $order->invoiceUrl() ?? '',
-            '{reorder_link}'  => $order->reorderUrl() ?? '',
-            '{shop_name}'     => $shopName,
+            '{invoice_link}'     => $order->invoiceUrl() ?? '',
+            '{invoice_pdf_link}' => $order->invoicePdfUrl() ?? '',
+            '{reorder_link}'     => $order->reorderUrl() ?? '',
+            '{shop_name}'        => $shopName,
         ];
 
         return strtr(VendorSettings::whatsappInvoiceTemplate(), $replacements);

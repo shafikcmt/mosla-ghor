@@ -334,9 +334,10 @@ class PosOrderController extends Controller
             '{order_number}'  => $order->order_number,
             '{total}'         => number_format((float) $order->grand_total, 0),
             '{due}'           => number_format((float) $order->due_amount, 0),
-            '{invoice_link}'  => $order->invoiceUrl() ?? '',
-            '{reorder_link}'  => $order->reorderUrl() ?? '',
-            '{payment_link}'  => $order->paymentUrl() ?? '',
+            '{invoice_link}'     => $order->invoiceUrl() ?? '',
+            '{invoice_pdf_link}' => $order->invoicePdfUrl() ?? '',
+            '{reorder_link}'     => $order->reorderUrl() ?? '',
+            '{payment_link}'     => $order->paymentUrl() ?? '',
             '{shop_name}'     => $vendor->shop_name ?? '',
         ]);
     }

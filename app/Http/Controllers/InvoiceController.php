@@ -45,6 +45,19 @@ class InvoiceController extends Controller
         ]);
     }
 
+    /** Real (server-generated) PDF of the order invoice — same data as show(). */
+    public function pdf(string $token)
+    {
+        $order = $this->resolve($token);
+        $order->load(['items', 'createdByVendor']);
+
+        $pdf = \App\Support\OrderInvoicePdf::bytes($order);
+
+        return response($pdf, 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="invoice-' . $order->order_number . '.pdf"');
+    }
+
     public function reorder(string $token)
     {
         $order = $this->resolve($token);

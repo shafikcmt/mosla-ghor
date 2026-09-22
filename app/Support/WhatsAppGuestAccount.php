@@ -33,9 +33,13 @@ class WhatsAppGuestAccount
 
         $setUrl = GuestWholesaleAccount::setPasswordUrlFor($user);
 
-        $message = "আসসালামু আলাইকুম {$enquiry->customer_name},\n\n"
-            . "MoslaMart-এ আপনার enquiry (#{$enquiry->id} — {$enquiry->productLabel()}) গ্রহণ করা হয়েছে।\n"
-            . "নিচের লিংকে password সেট করে enquiry track করুন:\n{$setUrl}\n\n"
+        $message = "🧾 *MoslaMart Enquiry* #{$enquiry->id}\n"
+            . "━━━━━━━━━━━━━━━\n"
+            . "আসসালামু আলাইকুম {$enquiry->customer_name},\n"
+            . "আপনার enquiry গ্রহণ করা হয়েছে ✅\n\n"
+            . "📦 পণ্য: {$enquiry->productLabel()}\n\n"
+            . "🔑 Password সেট করে enquiry track করুন:\n{$setUrl}\n"
+            . "━━━━━━━━━━━━━━━\n"
             . "— MoslaMart";
 
         return 'https://wa.me/' . $wa . '?text=' . rawurlencode($message);
@@ -64,11 +68,14 @@ class WhatsAppGuestAccount
         $quote->ensureInvoiceToken();
         $pdfUrl = $quote->invoicePdfUrl();
 
-        $message = "আসসালামু আলাইকুম {$enquiry->customer_name},\n\n"
-            . "আপনার enquiry (#{$enquiry->id} — {$enquiry->productLabel()}) এর কোটেশন:\n"
-            . "ইউনিট মূল্য: ৳{$unit}/{$quote->quantity_unit}\n"
-            . "মোট: ৳{$total}\n\n"
-            . "সম্পূর্ণ PDF ইনভয়েস ডাউনলোড করুন:\n{$pdfUrl}\n\n"
+        $message = "🧾 *MoslaMart কোটেশন* — Enquiry #{$enquiry->id}\n"
+            . "━━━━━━━━━━━━━━━\n"
+            . "আসসালামু আলাইকুম {$enquiry->customer_name},\n"
+            . "📦 পণ্য: {$enquiry->productLabel()}\n\n"
+            . "💰 ইউনিট মূল্য: *৳{$unit}/{$quote->quantity_unit}*\n"
+            . "💰 মোট: *৳{$total}*\n\n"
+            . "🧾 সম্পূর্ণ PDF ইনভয়েস:\n{$pdfUrl}\n"
+            . "━━━━━━━━━━━━━━━\n"
             . "— MoslaMart";
 
         return 'https://wa.me/' . $wa . '?text=' . rawurlencode($message);

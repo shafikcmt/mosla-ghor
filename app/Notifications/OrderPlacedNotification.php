@@ -40,6 +40,18 @@ class OrderPlacedNotification extends Notification
             $mail->action('অর্ডার দেখুন', $url);
         }
 
+        // Attach the real (server-generated) PDF invoice — same builder as the
+        // /invoice/{token}/pdf route. Never let a PDF-build failure block the email.
+        try {
+            $mail->attachData(
+                \App\Support\OrderInvoicePdf::bytes($this->order),
+                'invoice-' . $this->order->order_number . '.pdf',
+                ['mime' => 'application/pdf'],
+            );
+        } catch (\Throwable) {
+            // non-critical — send the email without the attachment
+        }
+
         return $mail->line('MoslaMart Admin');
     }
 

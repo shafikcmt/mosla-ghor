@@ -115,4 +115,25 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Markdown Mail Settings
+    |--------------------------------------------------------------------------
+    |
+    | The global default theme stays 'default' so unrelated transactional emails
+    | are NOT restyled. MoslaMart-branded emails opt in per-message with
+    | ->theme('moslamart') (see GuestAccountCreatedNotification,
+    | QuoteSubmittedNotification, GuestOrderAccountCreatedNotification). The
+    | published path below makes the custom theme CSS discoverable.
+    |
+    */
+
+    'markdown' => [
+        'theme' => 'default',
+
+        'paths' => [
+            resource_path('views/vendor/mail'),
+        ],
+    ],
+
 ];

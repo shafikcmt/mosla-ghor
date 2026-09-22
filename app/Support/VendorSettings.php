@@ -11,7 +11,9 @@ use App\Models\WebsiteSetting;
  */
 class VendorSettings
 {
-    public const DEFAULT_WHATSAPP_TEMPLATE = "Assalamu Alaikum {customer_name},\nআপনার MoslaMart invoice তৈরি হয়েছে।\n\nOrder No: #{order_number}\nTotal: ৳{total}\nInvoice দেখুন / Payment করুন:\n{invoice_link}\n\nNext time order করতে:\n{reorder_link}\n\nধন্যবাদ,\n{shop_name} - MoslaMart";
+    // WhatsApp renders *bold*/_italic_ client-side, so it is safe here (the
+    // no-bold-Bengali rule only applies to the mpdf PDF invoice, not WhatsApp).
+    public const DEFAULT_WHATSAPP_TEMPLATE = "🧾 *MoslaMart ইনভয়েস*\n━━━━━━━━━━━━━━━\nAssalamu Alaikum {customer_name},\nআপনার order confirm হয়েছে ✅\n\n📦 Order: *#{order_number}*\n💰 Total: *৳{total}*\n━━━━━━━━━━━━━━━\n🧾 PDF ইনভয়েস ডাউনলোড:\n{invoice_pdf_link}\n\n🔗 Invoice / Payment:\n{invoice_link}\n\n🔄 আবার order করতে:\n{reorder_link}\n━━━━━━━━━━━━━━━\nধন্যবাদ 🙏\n_{shop_name} — MoslaMart_";
 
     /** Boolean toggle with a default. */
     protected static function bool(string $key, bool $default): bool

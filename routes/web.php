@@ -236,6 +236,7 @@ Route::post('/order/{orderNumber}/create-account', [OrderController::class, 'cre
 
 // ── Public token-addressed invoice (vendor POS orders) ──────────────────────
 Route::get('/invoice/{token}',          [InvoiceController::class, 'show'])->name('invoice.show');
+Route::get('/invoice/{token}/pdf',      [InvoiceController::class, 'pdf'])->name('invoice.pdf');
 Route::get('/invoice/{token}/reorder',  [InvoiceController::class, 'reorder'])->name('invoice.reorder');
 Route::post('/invoice/{token}/reorder', [InvoiceController::class, 'reorderStore'])->name('invoice.reorder.store');
 Route::get('/invoice/{token}/pay',      [InvoiceController::class, 'pay'])->name('invoice.pay');
