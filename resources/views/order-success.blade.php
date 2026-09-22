@@ -83,34 +83,32 @@
         <div class="no-print mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm text-center">{{ session('error') }}</div>
         @endif
 
-        {{-- Optional account creation for the guest who just placed this order --}}
-        @if(!empty($canCreateAccount))
+        {{-- Claim the auto-created account: set a password via the canonical signed
+             link, and/or save the order + tracking link to your own WhatsApp. --}}
+        @if(!empty($needsPassword))
         <div class="no-print mb-6 bg-white rounded-2xl border border-[#c9a227]/40 shadow-sm p-5">
-            <h2 class="font-serif-bn text-[#14532d] text-lg font-bold mb-1">অ্যাকাউন্ট তৈরি করুন (ঐচ্ছিক)</h2>
-            <p class="text-sm text-gray-600 mb-3">
-                এই মোবাইল নম্বর <span class="font-semibold">({{ $order->mobile_number }})</span> দিয়ে একটি পাসওয়ার্ড সেট করলে
-                আপনার অ্যাকাউন্ট তৈরি হয়ে যাবে এবং আপনি সহজে অর্ডার ট্র্যাক করতে পারবেন।
+            <h2 class="font-serif-bn text-[#14532d] text-lg font-bold mb-1">অর্ডার ট্র্যাক করুন</h2>
+            <p class="text-sm text-gray-600 mb-4">
+                এই মোবাইল নম্বর <span class="font-semibold">({{ $order->mobile_number }})</span> দিয়ে আপনার একটি অ্যাকাউন্ট তৈরি হয়েছে।
+                একটি পাসওয়ার্ড সেট করলে যেকোনো সময় লগইন করে অর্ডার ট্র্যাক করতে পারবেন।
             </p>
-            @if($errors->any())
-            <div class="mb-3 bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700">
-                <ul class="list-disc list-inside space-y-0.5">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+            <div class="flex flex-col sm:flex-row gap-3">
+                @if(!empty($setPasswordUrl))
+                <a href="{{ $setPasswordUrl }}"
+                   class="inline-flex items-center justify-center gap-2 bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition-colors">
+                    🔑 পাসওয়ার্ড সেট করুন
+                </a>
+                @endif
+                @if(!empty($selfWhatsAppUrl))
+                <a href="{{ $selfWhatsAppUrl }}" target="_blank" rel="noopener"
+                   class="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition-colors">
+                    💬 WhatsApp-এ পাঠান
+                </a>
+                @endif
             </div>
-            @endif
-            <form method="POST" action="{{ route('order.create-account', $order->order_number) }}" class="space-y-3">
-                @csrf
-                <div class="grid sm:grid-cols-2 gap-3">
-                    <input type="password" name="password" required minlength="6" placeholder="পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)" autocomplete="new-password"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
-                    <input type="password" name="password_confirmation" required placeholder="পাসওয়ার্ড আবার দিন" autocomplete="new-password"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
-                </div>
-                <button type="submit"
-                        class="w-full sm:w-auto bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition-colors">
-                    পাসওয়ার্ড সেট করে অ্যাকাউন্ট তৈরি করুন
-                </button>
-            </form>
+            <p class="text-xs text-gray-400 mt-3">“WhatsApp-এ পাঠান”-এ ক্লিক করলে আপনার নিজের নম্বরে অর্ডারের তথ্য, ট্র্যাকিং ও PDF ইনভয়েস লিংক চলে যাবে — সংরক্ষণ করে রাখতে পারবেন।</p>
         </div>
-        @elseif(!empty($phoneRegistered) && !auth()->check())
+        @elseif(!empty($hasPassword) && !auth()->check())
         <div class="no-print mb-6 bg-white rounded-2xl border border-green-100 shadow-sm p-5 text-center">
             <p class="text-sm text-gray-600 mb-3">এই মোবাইল নম্বরে আপনার একটি অ্যাকাউন্ট আছে। লগইন করে সব অর্ডার ট্র্যাক করুন।</p>
             <a href="{{ route('customer.login') }}?redirect={{ urlencode(route('order.success', $order->order_number, false)) }}"

@@ -65,6 +65,14 @@
         <input type="hidden" name="payment_mode" id="f-payment_mode" value="cod">
         <input type="hidden" name="payment_method" id="f-payment_method" value="cash_on_delivery">
 
+        {{-- Email (optional) — order tracking link + PDF invoice by email --}}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <label class="block text-xs text-gray-500 mb-1">ইমেইল <span class="text-gray-300">(ঐচ্ছিক)</span></label>
+            <input type="email" name="customer_email" value="{{ old('customer_email') }}" placeholder="you@example.com"
+                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+            <p class="text-[11px] text-gray-400 mt-1">দিলে অর্ডার ট্র্যাক করার লিংক ও ইনভয়েস email-এ পাবেন।</p>
+        </div>
+
         {{-- COD card --}}
         @if($codEnabled)
         <label class="block cursor-pointer">

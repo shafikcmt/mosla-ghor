@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Customer;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
@@ -54,6 +55,39 @@ class GuestWholesaleAccount
             ['mobile_number' => $normalized],
             ['name' => $name, 'email' => $email, 'is_active' => true]
         );
+
+        // Backfill a missing email onto REUSED accounts — an existing login User
+        // found by phone, and/or an existing Customer row created elsewhere
+        // without an email (e.g. OrderController::upsertCustomer runs first and
+        // makes the Customer with no email). We only ever FILL an empty email; we
+        // NEVER overwrite an email the account already has, so one order's typed
+        // value can't silently replace a customer's contact info. The new-account
+        // creation path already sets the email on create and is left untouched.
+        if ($email) {
+            try {
+                // Reused login account with no email yet → adopt this one, unless
+                // another account already owns that email (respect uniqueness).
+                if (! $isNew
+                    && empty($user->email)
+                    && ! User::where('email', $email)->where('id', '!=', $user->id)->exists()) {
+                    $user->update(['email' => $email]);
+                }
+
+                // Existing (found, not just-created) CRM record with no email →
+                // adopt. customers.email has no unique index today, but we stay
+                // symmetric with the User guard and future-proof one: only adopt
+                // when no OTHER customer already holds this email.
+                if (! $customer->wasRecentlyCreated
+                    && empty($customer->email)
+                    && ! Customer::where('email', $email)->where('id', '!=', $customer->id)->exists()) {
+                    $customer->update(['email' => $email]);
+                }
+            } catch (\Throwable $e) {
+                // A rare collision (or any DB error) must never crash order/enquiry
+                // placement — log a warning and skip the backfill silently.
+                Log::warning('GuestWholesaleAccount email backfill skipped: ' . $e->getMessage());
+            }
+        }
 
         return [
             'customer'       => $customer,

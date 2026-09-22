@@ -19,12 +19,13 @@ use App\Models\User;
 use App\Models\Vendor;
 use App\Models\VendorOrder;
 use App\Models\WebsiteSetting;
+use App\Notifications\GuestOrderAccountCreatedNotification;
+use App\Support\GuestWholesaleAccount;
 use App\Support\Phone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -57,6 +58,7 @@ class OrderController extends Controller
             'alternative_number'       => ['nullable', 'string', 'regex:/^01[3-9]\d{8}$/'],
             'full_address'             => ['required', 'string', 'max:500'],
             'order_note'               => ['nullable', 'string', 'max:500'],
+            'customer_email'           => ['nullable', 'email', 'max:150'],
             'bd_division_id'           => ['required', 'integer', 'exists:bd_divisions,id'],
             'bd_district_id'           => ['required', 'integer', 'exists:bd_districts,id'],
             'bd_upazila_id'            => ['required', 'integer', 'exists:bd_upazilas,id'],
@@ -371,6 +373,42 @@ class OrderController extends Controller
         $this->createVendorOrders($order);
         $this->upsertCustomer($order, $request->boolean('accepts_marketing'));
 
+        // Guest checkout → auto-create a trackable account (User + Customer, keyed
+        // by phone), mirroring ProductController::storeEnquiry. upsertCustomer()
+        // normally already set customer_id; we only backfill it when still null.
+        // The order form captures no email today, so the set-password email is
+        // dormant — the success page's WhatsApp self-service button is the primary
+        // claim path (see success()).
+        if (! Auth::check()) {
+            $email = $validated['customer_email'] ?? null; // optional field on the checkout form
+            try {
+                $account = GuestWholesaleAccount::findOrCreate(
+                    $order->customer_name,
+                    $order->mobile_number,
+                    $email,
+                );
+
+                if (empty($order->customer_id) && $account['customer']) {
+                    $order->update(['customer_id' => $account['customer']->id]);
+                }
+
+                // Only when a NEW account was created AND an email is on file:
+                // email the order confirmation + set-password link + PDF invoice.
+                if ($account['isNew'] && filled($email) && $account['setPasswordUrl']) {
+                    try {
+                        $order->ensureTokens(); // PDF link inside the email
+                        $account['customer']->notifyNow(
+                            new GuestOrderAccountCreatedNotification($order, $account['setPasswordUrl'])
+                        );
+                    } catch (\Throwable) {
+                        // non-critical — never block the order on a mail failure
+                    }
+                }
+            } catch (\Throwable) {
+                // non-critical — the order is already placed successfully
+            }
+        }
+
         // Clear the multi-step checkout cart once the order is placed.
         $request->session()->forget('checkout');
 
@@ -466,74 +504,46 @@ class OrderController extends Controller
         $whatsappNumber = WebsiteSetting::get('whatsapp_number');
         $siteName       = WebsiteSetting::get('site_name', 'মসলা ঘর');
 
-        // Account-creation offer: only for the guest who just placed THIS order,
-        // and only when no customer login exists for the order's phone yet.
-        $phone            = Phone::normalize($order->mobile_number);
-        $phoneRegistered  = $phone ? User::where('phone', $phone)->where('role', 'customer')->exists() : false;
-        $canCreateAccount = ! Auth::check()
-            && ! $phoneRegistered
-            && session('claimable_order') === $order->order_number;
+        // Every guest checkout now auto-creates a login account (see store()), so
+        // the phone almost always resolves to a User — but usually with NO password
+        // set yet. We offer to claim it via the SINGLE canonical set-password flow
+        // (signed link → CustomerAuthController::setPassword), not a second
+        // create-account endpoint. Only the browser that placed this order may claim.
+        $phone           = Phone::normalize($order->mobile_number);
+        $user            = $phone ? User::where('phone', $phone)->where('role', 'customer')->first() : null;
+        $phoneRegistered = (bool) $user;
+        $isClaimant      = ! Auth::check() && session('claimable_order') === $order->order_number;
+
+        $needsPassword = $isClaimant && $user && ! $user->hasSetPassword();
+        $hasPassword   = $user && $user->hasSetPassword();
+
+        // For the claimant who has not set a password: a signed set-password link
+        // plus a one-click "save to my own WhatsApp" message carrying that link and
+        // the PDF invoice (no server-side WhatsApp send exists yet — this is the
+        // correct self-service workaround, not a stopgap).
+        $setPasswordUrl  = null;
+        $selfWhatsAppUrl = null;
+        if ($needsPassword) {
+            $order->ensureTokens(); // enables the public PDF invoice link below
+            $setPasswordUrl = GuestWholesaleAccount::setPasswordUrlFor($user);
+
+            $wa = Phone::toWa($order->mobile_number);
+            if ($wa) {
+                $total   = number_format((float) $order->grand_total, 0);
+                $pdfUrl  = $order->invoicePdfUrl();
+                $message = "🧾 *MoslaMart অর্ডার* #{$order->order_number}\n"
+                    . "💰 মোট: *৳{$total}*\n"
+                    . "━━━━━━━━━━━━━━━\n"
+                    . "🔑 Password সেট করে অর্ডার track করুন:\n{$setPasswordUrl}\n\n"
+                    . "🧾 PDF ইনভয়েস ডাউনলোড:\n{$pdfUrl}\n\n"
+                    . "— MoslaMart";
+                $selfWhatsAppUrl = 'https://wa.me/' . $wa . '?text=' . rawurlencode($message);
+            }
+        }
 
         return view('order-success', compact(
-            'order', 'whatsappNumber', 'siteName', 'phoneRegistered', 'canCreateAccount'
+            'order', 'whatsappNumber', 'siteName',
+            'phoneRegistered', 'hasPassword', 'needsPassword', 'setPasswordUrl', 'selfWhatsAppUrl'
         ));
-    }
-
-    /**
-     * Turn a just-placed guest order into a customer login by setting a password.
-     * The CRM Customer row already exists (upsertCustomer) and past orders are linked
-     * by phone, so the new account immediately sees this order in the dashboard.
-     */
-    public function createAccount(Request $request, string $orderNumber)
-    {
-        if (Auth::check()) {
-            return redirect()->route('order.success', $orderNumber);
-        }
-
-        // Only the browser that placed this order may claim it.
-        if (session('claimable_order') !== $orderNumber) {
-            return redirect()->route('order.success', $orderNumber)
-                ->with('error', 'এই অর্ডারের জন্য অ্যাকাউন্ট তৈরি করা সম্ভব নয়।');
-        }
-
-        $order = Order::where('order_number', $orderNumber)->firstOrFail();
-
-        $data = $request->validate([
-            'password' => ['required', 'string', 'min:6', 'confirmed'],
-        ], [
-            'password.required'  => 'পাসওয়ার্ড দিন।',
-            'password.min'       => 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষর হতে হবে।',
-            'password.confirmed' => 'পাসওয়ার্ড দুইবার মিলছে না।',
-        ]);
-
-        $phone = Phone::normalize($order->mobile_number) ?? $order->mobile_number;
-
-        // Already registered → don't duplicate; send them to login (back to this order after).
-        if (User::where('phone', $phone)->where('role', 'customer')->exists()) {
-            return redirect()
-                ->route('customer.login', ['redirect' => route('order.success', $orderNumber, false)])
-                ->with('error', 'এই নম্বরে আগে থেকেই একটি অ্যাকাউন্ট আছে। লগইন করুন।');
-        }
-
-        $user = User::create([
-            'name'     => $order->customer_name,
-            'phone'    => $phone,
-            'password' => Hash::make($data['password']),
-            'role'     => 'customer',
-            'is_admin' => false,
-        ]);
-
-        // Ensure the CRM record exists and is linked by phone (upsertCustomer normally made it).
-        Customer::firstOrCreate(
-            ['mobile_number' => $phone],
-            ['name' => $order->customer_name, 'is_active' => true]
-        );
-
-        Auth::login($user, true);
-        $request->session()->forget('claimable_order');
-        $request->session()->regenerate();
-
-        return redirect()->route('order.success', $orderNumber)
-            ->with('success', 'অ্যাকাউন্ট তৈরি হয়েছে। এখন আপনি সহজে অর্ডার ট্র্যাক করতে পারবেন।');
     }
 }
