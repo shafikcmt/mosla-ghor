@@ -42,12 +42,14 @@ class ProductController extends Controller
         // Only active products are visible; vendor products must be approved.
         abort_unless(
             $product->is_active
+                && ($wholesaleView ? $product->show_in_wholesale : $product->show_in_retail)
                 && (is_null($product->vendor_id) || $product->approval_status === 'approved'),
             404
         );
 
         $product->load([
             'vendor',
+            'tags',
             'category.parent',
             'activeRetailPrices',
             'activeWholesalePrices',
@@ -58,16 +60,13 @@ class ProductController extends Controller
         $wholesalePrices = $product->activeWholesalePrices;
 
         // Related products: same category first, then fall back to the latest.
-        // Wholesale view is URL-driven, so any product can be shown as wholesale —
-        // we only exclude wholesale-only products from the RETAIL related list.
+        // Related products must be published in the requested sales channel.
         $relatedWholesale = $wholesaleView || $product->isWholesale();
         $relatedBase = function () use ($product, $relatedWholesale) {
             $q = Product::active()
                 ->where('id', '!=', $product->id)
                 ->with(['category', 'activeRetailPrices']);
-            if (! $relatedWholesale) {
-                $q->where('show_in_retail', true); // retail page: only retail-visible products
-            }
+            $q->where($relatedWholesale ? 'show_in_wholesale' : 'show_in_retail', true);
             return $q;
         };
 

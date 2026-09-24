@@ -53,6 +53,9 @@
 {{-- ─────────────────────────── SEO head ─────────────────────────── --}}
 @section('head')
     <meta name="description" content="{{ $metaDesc }}">
+    @if($product->tags->isNotEmpty())
+    <meta name="keywords" content="{{ $product->tags->pluck('name')->implode(', ') }}">
+    @endif
     <link rel="canonical" href="{{ $canonical }}">
 
     <meta property="og:type" content="product">
@@ -207,6 +210,11 @@
         </div>
 
         <h1 class="font-serif-bn text-2xl sm:text-3xl font-bold text-[#14532d] leading-tight">{{ $product->name_bn }}</h1>
+        @if($product->tags->isNotEmpty())
+        <ul class="flex flex-wrap gap-2 my-3" aria-label="Product tags">
+            @foreach($product->tags as $tag)<li class="text-xs text-gray-700 bg-gray-100 rounded-full px-3 py-1">{{ $tag->name }}</li>@endforeach
+        </ul>
+        @endif
         @if($product->name_en)
             <p class="text-sm text-gray-400 mt-0.5">{{ $product->name_en }}</p>
         @endif

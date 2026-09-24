@@ -71,6 +71,21 @@ class Product extends Model
         return $this->belongsTo(Vendor::class);
     }
 
+    public function tags(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class)->orderBy('name');
+    }
+
+    public function publicationStatus(): string
+    {
+        if ($this->vendor_id && $this->approval_status !== 'approved') {
+            return $this->approval_status === 'rejected' ? 'অনুমোদিত নয় — অ্যাডমিনের সাথে যোগাযোগ করুন' : 'অ্যাডমিন অনুমোদনের অপেক্ষায়';
+        }
+        if (! $this->is_active) { return 'নিষ্ক্রিয় — ওয়েবসাইটে দেখাবে না'; }
+        if (! $this->show_in_retail && ! $this->show_in_wholesale) { return 'বিক্রয় মাধ্যম নির্বাচন করুন'; }
+        return 'প্রকাশিত — '.implode(' ও ', array_filter([$this->show_in_retail ? 'খুচরা' : null, $this->show_in_wholesale ? 'পাইকারি' : null]));
+    }
+
     // Structured category (parent/child). NOTE: the legacy free-text `category`
     // string column shadows attribute access, so `$product->category` returns
     // that string. Use eager loading (with('category')) for this relation and
@@ -93,6 +108,7 @@ class Product extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true)
+            ->where(fn ($q) => $q->where('show_in_retail', true)->orWhere('show_in_wholesale', true))
             ->where(function ($q) {
                 $q->whereNull('vendor_id')
                   ->orWhere(function ($q2) {
@@ -314,7 +330,7 @@ class Product extends Model
         foreach ($packSizes as $grams) {
             $markup    = $settings->markupFor($grams);
             $autoPrice = round(($this->retail_price_1kg / 1000) * $grams * (1 + $markup / 100), 2);
-            $existing  = $this->prices()->where('sell_type', 'retail')->where('quantity_gram', $grams)->first();
+            $existing  = $this->prices()->whereNull('product_variant_id')->where('sell_type', 'retail')->where('quantity_gram', $grams)->first();
 
             if ($existing) {
                 $existing->auto_price = $autoPrice;

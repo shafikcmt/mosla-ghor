@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Concerns\ManagesProductVariants;
+use App\Services\ProductEditor;
+use App\Support\ProductMedia;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductPrice;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
-    use ManagesProductVariants;
+
 
     public function index()
     {
@@ -29,12 +28,11 @@ class ProductController extends Controller
         return view('admin.products.index', compact('products', 'stats'));
     }
 
-    /** Active top-level categories with their children, for the product form select. */
+    /** Include existing inactive categories so editing preserves the selection. */
     private function categoryOptions()
     {
         return Category::whereNull('parent_id')
-            ->with(['children' => fn($q) => $q->where('is_active', true)->orderBy('sort_order')])
-            ->where('is_active', true)
+            ->with(['children' => fn($q) => $q->orderBy('sort_order')])
             ->orderBy('sort_order')
             ->get();
     }
@@ -46,19 +44,8 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        $data    = $this->productData($request);
-        $product = Product::create($data);
-
-        $fileUpdates = $this->processFileUploads($request, $product);
-        if (!empty($fileUpdates)) {
-            $product->update($fileUpdates);
-        }
-
-        $product->syncPrices();
-        $this->saveVariants($request, $product);
-
-        return redirect()->route('admin.products.edit', $product)
-            ->with('success', 'পণ্য তৈরি হয়েছে। সব প্যাকের দাম স্বয়ংক্রিয়ভাবে সেট হয়েছে।');
+        $product = app(ProductEditor::class)->save($request, admin: true);
+        return redirect()->route('admin.products.edit', $product)->with('success', 'পণ্য তৈরি হয়েছে।');
     }
 
     public function show(Product $product)
@@ -78,183 +65,28 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
-        $data         = $this->productData($request, $product->id);
-        $priceChanged = (float) $product->retail_price_1kg !== (float) $data['retail_price_1kg'];
-
-        $fileUpdates = $this->processFileUploads($request, $product);
-        $data        = array_merge($data, $fileUpdates);
-
-        $product->update($data);
-
-        if ($priceChanged) {
-            $product->syncPrices();
-        }
-
-        $this->savePriceOverrides($request, $product);
-        $this->saveVariants($request, $product);
-
-        return redirect()->route('admin.products.edit', $product)
-            ->with('success', 'পণ্য আপডেট হয়েছে।');
+        app(ProductEditor::class)->save($request, $product, admin: true);
+        return redirect()->route('admin.products.edit', $product)->with('success', 'পণ্য আপডেট হয়েছে।');
     }
 
     public function destroy(Product $product)
     {
         $this->deleteProductFiles($product);
-        $product->delete();
 
         return redirect()->route('admin.products.index')
             ->with('success', 'পণ্য মুছে ফেলা হয়েছে।');
     }
 
-    private function productData(Request $request, ?int $ignoreId = null): array
-    {
-        $request->validate([
-            'name_bn'             => 'required|string|max:255',
-            'slug'                => ['required', 'string', 'max:255',
-                                      Rule::unique('products', 'slug')->ignore($ignoreId)],
-            'category_id'         => ['nullable', 'integer', Rule::exists('categories', 'id')],
-            'main_image'          => 'nullable|string|max:500',
-            'video_url'           => 'nullable|string|max:500',
-            'short_description'   => 'nullable|string|max:500',
-            'description'         => 'nullable|string',
-            'retail_price_1kg'    => 'required|numeric|min:0.01',
-            'stock'               => 'required|integer|min:0',
-            'main_image_file'     => 'nullable|file|mimes:jpg,jpeg,png,webp|max:5120',
-            'gallery_images.*'    => 'nullable|file|mimes:jpg,jpeg,png,webp|max:5120',
-            'video_file'          => 'nullable|file|mimes:mp4,webm,mov|max:51200',
-            'min_order_quantity'  => 'nullable|numeric|min:0',
-            'min_order_unit'      => 'nullable|in:kg,gram,bag,carton,piece,packet',
-            'delivery_time'       => 'nullable|string|max:255',
-            'payment_terms'       => 'nullable|string|max:255',
-            'is_active'           => 'nullable|boolean',
-            'show_in_retail'      => 'nullable|boolean',
-            'show_in_wholesale'   => 'nullable|boolean',
-        ]);
-
-        $showInRetail    = $request->boolean('show_in_retail');
-        $showInWholesale = $request->boolean('show_in_wholesale');
-
-        return [
-            'name_bn'                   => $request->name_bn,
-            'slug'                      => $request->slug,
-            'category_id'               => $request->category_id ?: null,
-            'main_image'                => $request->main_image ?: null,
-            'video_url'                 => $request->video_url ?: null,
-            'short_description'         => $request->short_description ?: null,
-            'description'               => $request->description ?: null,
-            'retail_price_1kg'          => $request->retail_price_1kg,
-            'stock'                     => $request->stock,
-            'is_active'                 => $request->boolean('is_active'),
-            'show_in_retail'            => $showInRetail,
-            'show_in_wholesale'         => $showInWholesale,
-            // Legacy flag kept in sync: "wholesale-only" = wholesale but not retail.
-            'is_wholesale'              => $showInWholesale && ! $showInRetail,
-            'wholesale_enquiry_enabled' => $request->boolean('wholesale_enquiry_enabled'),
-            'min_order_quantity'        => $request->min_order_quantity !== null && $request->min_order_quantity !== '' ? $request->min_order_quantity : null,
-            'min_order_unit'            => $request->min_order_unit ?: 'kg',
-            'delivery_time'             => $request->delivery_time ?: null,
-            'payment_terms'             => $request->payment_terms ?: null,
-        ];
-    }
-
-    private function processFileUploads(Request $request, Product $product): array
-    {
-        $updates = [];
-
-        // Main image
-        if ($request->hasFile('main_image_file')) {
-            $this->deleteLocalFile($product->main_image);
-            $path = $request->file('main_image_file')->store('products/images', 'public');
-            $updates['main_image'] = 'storage/' . $path;
-        } elseif ($request->boolean('remove_main_image')) {
-            $this->deleteLocalFile($product->main_image);
-            $updates['main_image'] = null;
-        }
-
-        // Gallery images
-        $currentGallery = $product->gallery_images ?? [];
-        $galleryChanged = false;
-
-        if ($request->has('remove_gallery')) {
-            foreach ((array) $request->input('remove_gallery') as $imgPath) {
-                $this->deleteLocalFile($imgPath);
-                $currentGallery = array_values(
-                    array_filter($currentGallery, fn($img) => $img !== $imgPath)
-                );
-            }
-            $galleryChanged = true;
-        }
-
-        if ($request->hasFile('gallery_images')) {
-            foreach ($request->file('gallery_images') as $file) {
-                $path = $file->store('products/images', 'public');
-                $currentGallery[] = 'storage/' . $path;
-            }
-            $galleryChanged = true;
-        }
-
-        if ($galleryChanged) {
-            $updates['gallery_images'] = !empty($currentGallery) ? array_values($currentGallery) : null;
-        }
-
-        // Video
-        if ($request->hasFile('video_file')) {
-            $this->deleteLocalFile($product->video_path ?? null);
-            $path = $request->file('video_file')->store('products/videos', 'public');
-            $updates['video_path'] = 'storage/' . $path;
-        } elseif ($request->boolean('remove_video')) {
-            $this->deleteLocalFile($product->video_path ?? null);
-            $updates['video_path'] = null;
-        }
-
-        return $updates;
-    }
-
-    // Only deletes files uploaded through our system (paths starting with storage/)
-    private function deleteLocalFile(?string $path): void
-    {
-        if (!$path || str_starts_with($path, 'http') || !str_starts_with($path, 'storage/')) {
-            return;
-        }
-        $diskPath = preg_replace('#^storage/#', '', $path);
-        Storage::disk('public')->delete($diskPath);
-    }
-
     private function deleteProductFiles(Product $product): void
     {
-        $this->deleteLocalFile($product->main_image);
-        $this->deleteLocalFile($product->video_path ?? null);
-        foreach ($product->gallery_images ?? [] as $img) {
-            $this->deleteLocalFile($img);
-        }
+        $media = new ProductMedia();
+        $media->retire($product->main_image);
+        $media->retire($product->video_path);
+        foreach ($product->gallery_images ?? [] as $path) { $media->retire($path); }
+        foreach ($product->variants as $variant) { $media->retire($variant->image); }
+        DB::transaction(function () use ($product, $media) {
+            $product->delete();
+            DB::afterCommit(fn () => $media->committed());
+        });
     }
-
-    private function savePriceOverrides(Request $request, Product $product): void
-    {
-        if (! $request->has('prices')) {
-            return;
-        }
-
-        foreach ($request->input('prices') as $priceId => $data) {
-            $row = ProductPrice::where('id', $priceId)
-                ->where('product_id', $product->id)
-                ->where('sell_type', 'retail')
-                ->first();
-
-            if (! $row) {
-                continue;
-            }
-
-            $manualPrice = (isset($data['manual_price']) && $data['manual_price'] !== '')
-                ? (float) $data['manual_price']
-                : null;
-
-            $row->is_manual_override = ! empty($data['is_manual_override']) && $manualPrice !== null;
-            $row->manual_price       = $manualPrice;
-            $row->final_price        = $row->is_manual_override ? $manualPrice : $row->auto_price;
-            $row->is_active          = ! empty($data['is_active']);
-            $row->save();
-        }
-    }
-
 }

@@ -534,7 +534,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                 <div class="flex-1 min-w-0">
                     <div class="space-y-2.5">
                     @foreach($products as $product)
-                    @if($product->show_in_wholesale && ($product->activePrices->isNotEmpty() || $product->activeVariants->isNotEmpty() || $product->isWholesale()))
+                    @if($product->show_in_wholesale)
                     <div id="paykari-row-{{ $product->id }}"
                          class="bg-white border border-amber-100 rounded-xl p-3 sm:p-4 shadow-sm">
                         {{-- Top: avatar + name + MOQ --}}

@@ -24,6 +24,7 @@ class ProductVariant extends Model
         'sort_order',
         'is_active',
         'is_default',
+        'attributes',
     ];
 
     protected $casts = [
@@ -33,6 +34,7 @@ class ProductVariant extends Model
         'sort_order'   => 'integer',
         'is_active'    => 'boolean',
         'is_default'   => 'boolean',
+        'attributes'   => 'array',
     ];
 
     public function product(): BelongsTo
@@ -46,7 +48,7 @@ class ProductVariant extends Model
         if (! $this->image) {
             return null;
         }
-        return Str::startsWith($this->image, 'http') ? $this->image : asset($this->image);
+        return \App\Support\ProductMedia::url($this->image);
     }
 
     /**
