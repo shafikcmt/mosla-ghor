@@ -1,82 +1,36 @@
-{{--
-    Top announcement marquee — dynamic, admin-controlled.
-    ──────────────────────────────────────────────────────────────
-    • Reads from WebsiteSetting (key/value). Self-computes $ws if not passed,
-      so it works whether included from the navbar partial or standalone.
-    • Hides entirely when disabled or when there is no text.
-    • Text is escaped (e()) — no raw HTML, XSS-safe. Optional link wraps the
-      whole strip. Colours fall back to the spice gold / deep-green defaults.
-    • Scoped CSS (.ms-marquee) injected once per page via @once.
---}}
 @php
     $ws = $ws ?? \App\Models\WebsiteSetting::allKeyed();
-
-    $annEnabled = ($ws['announcement_enabled'] ?? '1') === '1';
-    $annText1   = trim($ws['announcement_text_1'] ?? '');
-    $annText2   = trim($ws['announcement_text_2'] ?? '');
-
-    // Seed default copy ONLY on a fresh install (the key was never configured).
-    // If the admin saved a blank text, respect it — an empty bar stays hidden.
-    if (! array_key_exists('announcement_text_1', $ws) && ! array_key_exists('announcement_text_2', $ws)) {
-        $annText1 = 'ঈদ স্পেশাল — এখনই অর্ডার করুন এবং পান বিশেষ ছাড়! ✨ ১০০% খাঁটি মসলা — কোনো ভেজাল নেই ✨ সারা বাংলাদেশে হোম ডেলিভারি';
-    }
-
-    $annSegments = array_values(array_filter([$annText1, $annText2], fn ($t) => $t !== ''));
-
-    // Only allow http/https links — block javascript:/data: and other schemes.
+    $annEnabled = ($ws['announcement_enabled'] ?? '0') === '1';
+    $annMessage = trim($ws['announcement_text_1'] ?? '');
     $annLinkUrl = trim($ws['announcement_link_url'] ?? '');
-    if ($annLinkUrl !== '' && ! preg_match('#^https?://#i', $annLinkUrl)) {
+    if (! \App\Support\AnnouncementUrl::isValid($annLinkUrl)) {
         $annLinkUrl = '';
     }
-    $annLinkLbl = trim($ws['announcement_link_label'] ?? '');
-
-    $annBg    = trim($ws['announcement_bg_color'] ?? '')   ?: '#C9A227';
-    $annFg    = trim($ws['announcement_text_color'] ?? '') ?: '#064E2E';
-    $annSpeed = $ws['announcement_speed'] ?? 'normal';
-    $annDur   = ['slow' => 45, 'normal' => 30, 'fast' => 18][$annSpeed] ?? 30;
+    $annLinkLabel = trim($ws['announcement_link_label'] ?? '');
 @endphp
-
-@if($annEnabled && count($annSegments) > 0)
+@if($annEnabled && $annMessage !== '')
 @once
 <style>
-    @keyframes ms-marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-    .ms-marquee-bar   { overflow: hidden; }
-    .ms-marquee-track {
-        display: inline-flex; white-space: nowrap; will-change: transform;
-        animation: ms-marquee var(--ms-marquee-dur, 30s) linear infinite;
-    }
-    .ms-marquee-bar:hover .ms-marquee-track { animation-play-state: paused; }
-    .ms-marquee-seg { padding: 0 1.25rem; }
-    @media (prefers-reduced-motion: reduce) {
-        .ms-marquee-track { animation: none; transform: none; }
-    }
+.ms-announcement{background:#c9a227;color:#064e2e;font-size:13px;font-weight:600;line-height:20px}
+.ms-announcement-inner{max-width:1280px;margin:auto;padding:6px 20px;min-height:36px;display:flex;align-items:center;justify-content:center;gap:12px}
+.ms-announcement-message{min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.ms-announcement a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.ms-announcement-link{flex-shrink:0;max-width:40%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ms-announcement a:focus-visible{outline:2px solid #064e2e;outline-offset:2px}
+.ms-announcement a:hover{text-decoration-thickness:2px}
+@media(max-width:767px){.ms-announcement-inner{padding:8px 14px;gap:10px}.ms-announcement-message{-webkit-line-clamp:2}.ms-announcement-link{line-height:28px;min-height:28px}}
 </style>
 @endonce
-
-@php
-    // Build one run of segments separated by a spice diamond, then duplicate
-    // the whole run so the -50% keyframe loops seamlessly.
-    $annRun = collect($annSegments)
-        ->map(fn ($s) => '<span class="ms-marquee-seg">✦ ' . e($s) . '</span>')
-        ->implode('');
-    if ($annLinkLbl !== '' && $annLinkUrl !== '') {
-        $annRun .= '<span class="ms-marquee-seg" style="text-decoration:underline;font-weight:700;">✦ ' . e($annLinkLbl) . '</span>';
-    }
-@endphp
-
-<div class="ms-marquee-bar text-sm font-semibold" style="background: {{ $annBg }}; color: {{ $annFg }};">
-    @if($annLinkUrl !== '')
-    <a href="{{ $annLinkUrl }}" class="block py-2 hover:opacity-90 transition-opacity" style="color: inherit;">
-    @else
-    <div class="py-2">
-    @endif
-        <span class="ms-marquee-track" style="--ms-marquee-dur: {{ $annDur }}s;">
-            {!! $annRun !!}{!! $annRun !!}
-        </span>
-    @if($annLinkUrl !== '')
-    </a>
-    @else
+<aside class="ms-announcement" aria-label="Announcement">
+    <div class="ms-announcement-inner">
+        @if($annLinkUrl !== '' && $annLinkLabel === '')
+            <a class="ms-announcement-message" href="{{ $annLinkUrl }}">{{ $annMessage }}</a>
+        @else
+            <p class="ms-announcement-message">{{ $annMessage }}</p>
+            @if($annLinkUrl !== '')
+                <a class="ms-announcement-link" href="{{ $annLinkUrl }}">{{ $annLinkLabel }}</a>
+            @endif
+        @endif
     </div>
-    @endif
-</div>
+</aside>
 @endif
