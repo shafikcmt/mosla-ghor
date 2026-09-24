@@ -3,9 +3,9 @@
 
 @php
     // Resolve a usable URL for a stored image path (local 'storage/...' or full http URL).
-    $imgUrl = fn($p) => $p ? (\Illuminate\Support\Str::startsWith($p, 'http') ? $p : asset($p)) : null;
+    $imgUrl = fn($p) => \App\Support\ProductMedia::url($p);
 
-    $main    = $imgUrl($product->main_image) ?: 'https://placehold.co/600x600/f1f5f3/14532d?text=' . urlencode($product->display_name);
+    $main    = $imgUrl($product->main_image) ?: asset('images/product-placeholder.svg');
     $gallery = collect($product->gallery_images ?? [])->map($imgUrl)->filter()->values();
 
     // Build a YouTube embed URL from a watch/share link, if present.
@@ -98,7 +98,7 @@
     </script>
 
     <style>
-        .pd-thumb.active, .pd-thumb:focus { border-color: #14532d !important; outline: none; }
+        .pd-thumb.active, .pd-thumb:focus { border-color: #14532d !important; outline-offset: 3px; }
         .pd-pack.active { background:#14532d !important; border-color:#14532d !important; }
         .pd-pack.active .pd-pack-lbl { color:#86efac; }
         .pd-pack.active .pd-pack-val { color:#fff; }
@@ -150,9 +150,11 @@
 
     {{-- ── (a) Media gallery ──────────────────────────────────────────────── --}}
     <div>
-        <div class="rounded-xl overflow-hidden border border-gray-100 bg-gray-50 aspect-square">
+        <div class="product-detail-frame rounded-xl overflow-hidden border border-gray-100 bg-gray-50 aspect-square">
+            <button type="button" id="pd-image-pane" class="product-image-stage pd-pane" data-product-image-stage aria-label="Open product image viewer">
             <img id="pd-main-image" src="{{ $main }}" alt="{{ $product->display_name }}"
-                 class="w-full h-full object-cover pd-pane">
+                 class="product-detail-artwork">
+            </button>
             @if($youtubeEmbed)
             <div id="pd-youtube-pane" class="pd-pane hidden w-full h-full">
                 <iframe class="w-full h-full" src="{{ $youtubeEmbed }}" title="{{ $product->display_name }} ভিডিও"
@@ -166,15 +168,16 @@
             @endif
         </div>
 
+        <p class="text-xs text-gray-500 mt-2">ছবিতে মাউস রাখলে জুম হবে · বড় করে দেখতে চাপুন</p>
         <div class="mt-3 flex flex-wrap gap-2">
-            <button type="button" onclick="pdShowImage('{{ $main }}', this)"
-                    class="pd-thumb active w-16 h-16 rounded-lg overflow-hidden border-2 border-[#14532d]">
-                <img src="{{ $main }}" alt="{{ $product->display_name }}" class="w-full h-full object-cover">
+            <button type="button" data-product-thumbnail="{{ $main }}" aria-label="Show main product image" aria-pressed="true"
+                    class="pd-thumb active w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent">
+                <img src="{{ $main }}" alt="{{ $product->display_name }}" class="w-full h-full product-artwork" loading="lazy">
             </button>
             @foreach($gallery as $g)
-            <button type="button" onclick="pdShowImage('{{ $g }}', this)"
+            <button type="button" data-product-thumbnail="{{ $g }}" aria-label="Show product image {{ $loop->iteration + 1 }}" aria-pressed="false"
                     class="pd-thumb w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent">
-                <img src="{{ $g }}" alt="{{ $product->display_name }}" class="w-full h-full object-cover">
+                <img src="{{ $g }}" alt="{{ $product->display_name }}" class="w-full h-full product-artwork" loading="lazy">
             </button>
             @endforeach
             @if($youtubeEmbed)
@@ -263,7 +266,7 @@
                             data-price="{{ $vPrice !== null ? $vPrice : '' }}"
                             onclick="pdSelectVariant(this)">
                         @if($vUrl)
-                            <img src="{{ $vUrl }}" alt="{{ $variant->name }}" class="w-7 h-7 rounded-md object-cover border border-gray-100">
+                            <img src="{{ $vUrl }}" alt="{{ $variant->name }}" class="w-7 h-7 rounded-md product-artwork border border-gray-100">
                         @endif
                         <span>{{ $variant->name }}</span>
                         @if($vPrice !== null)
@@ -597,9 +600,7 @@
     <div class="flex gap-4 overflow-x-auto pb-3" style="scroll-snap-type: x mandatory;">
         @foreach($relatedProducts as $rp)
         @php
-            $rpImg = $rp->main_image
-                ? (\Illuminate\Support\Str::startsWith($rp->main_image, 'http') ? $rp->main_image : asset($rp->main_image))
-                : 'https://placehold.co/300x300/f1f5f3/14532d?text=' . urlencode($rp->display_name);
+            $rpImg = $imgUrl($rp->main_image) ?: asset('images/product-placeholder.svg');
             $rpUrl = $relatedWholesale
                 ? route('customer.wholesale.products.show', $rp->slug)
                 : route('products.show', $rp->slug);
@@ -610,7 +611,7 @@
            class="flex-shrink-0 w-40 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
            style="scroll-snap-align: start;">
             <div class="aspect-square rounded-t-xl overflow-hidden bg-gray-50">
-                <img src="{{ $rpImg }}" alt="{{ $rp->display_name }}" class="w-full h-full object-cover">
+                <img src="{{ $rpImg }}" alt="{{ $rp->display_name }}" class="w-full h-full product-artwork" loading="lazy">
             </div>
             <div class="p-2.5">
                 <p class="text-sm font-medium text-gray-800 truncate">{{ $rp->name_bn }}</p>
@@ -648,13 +649,13 @@
     // ── Gallery ───────────────────────────────────────────────────────────
     function pdHideAllPanes() { document.querySelectorAll('.pd-pane').forEach(el => el.classList.add('hidden')); }
     function pdSetActiveThumb(btn) {
-        document.querySelectorAll('.pd-thumb').forEach(t => t.classList.remove('active'));
-        if (btn) btn.classList.add('active');
+        document.querySelectorAll('.pd-thumb').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-pressed', 'false'); });
+        if (btn) { btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true'); }
     }
     function pdShowImage(src, btn) {
         pdHideAllPanes();
         const img = document.getElementById('pd-main-image');
-        img.src = src; img.classList.remove('hidden');
+        img.src = src; document.getElementById('pd-image-pane').classList.remove('hidden');
         pdSetActiveThumb(btn);
     }
     function pdShowPane(id, btn) {
@@ -697,7 +698,7 @@
         const img = document.getElementById('pd-main-image');
         if (img) {
             pdHideAllPanes();
-            img.classList.remove('hidden');
+            document.getElementById('pd-image-pane').classList.remove('hidden');
             img.src = btn.dataset.image ? btn.dataset.image : pdMainDefaultSrc;
             pdSetActiveThumb(null);
         }

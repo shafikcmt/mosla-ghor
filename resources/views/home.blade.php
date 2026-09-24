@@ -24,10 +24,10 @@ $productsForJs = $products->map(function ($p) {
         'name_en'           => $p->name_en,
         'short_description' => $p->short_description,
         'description'       => $p->description,
-        'main_image'        => $p->main_image ? asset($p->main_image) : null,
+        'main_image'        => \App\Support\ProductMedia::url($p->main_image),
         'min_order_quantity'=> $p->min_order_quantity ? (float) $p->min_order_quantity : null,
         'min_order_unit'    => $p->min_order_unit ?: null,
-        'gallery_images'    => collect($p->gallery_images ?? [])->map(fn($img) => asset($img))->values()->all(),
+        'gallery_images'    => collect($p->gallery_images ?? [])->map(fn($img) => \App\Support\ProductMedia::url($img))->values()->all(),
         'video_url'         => $p->video_url,
         'video_path'        => ($p->video_path ?? null) ? asset($p->video_path) : null,
         'stock'             => (int) $p->stock,
@@ -169,6 +169,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
            The combo-bar JS overrides this inline with 76px when a box is active. */
         @media (max-width: 1023px) { body { padding-bottom: calc(74px + env(safe-area-inset-bottom)); } }
     </style>
+@include('partials.storefront.product-media-assets')
 </head>
 <body class="min-h-screen">
 
@@ -761,11 +762,11 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                             @foreach($appMockProducts as $mp)
                             @php $mpImg = $spiceImg($mp['key']); @endphp
                             <div class="bg-white rounded-xl border border-green-50 shadow-sm overflow-hidden">
-                                {{-- Image: square, object-cover so every spice photo crops uniformly --}}
+                                {{-- Image: square area with complete artwork visible --}}
                                 <div class="relative aspect-square bg-[#f6fdf8]">
                                     @if($mpImg)
                                     <img src="{{ $mpImg }}" alt="{{ $mp['name'] }}" loading="lazy"
-                                         class="w-full h-full object-cover">
+                                         class="w-full h-full product-artwork">
                                     @else
                                     <div class="w-full h-full bg-gradient-to-br {{ $mp['grad'] }} flex items-center justify-center">
                                         <span class="font-serif-bn text-[#fef9ee]/90 text-2xl font-bold drop-shadow-sm">{{ mb_substr($mp['name'], 0, 1) }}</span>
@@ -1082,8 +1083,8 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 
                 {{-- Image slide --}}
                 <img id="modal-img" src="" alt=""
-                     class="absolute inset-0 w-full h-full object-cover cursor-zoom-in" style="display:none;"
-                     onclick="openZoom(modalCurSlide)">
+                     class="absolute inset-0 w-full h-full product-artwork cursor-zoom-in" style="display:none;"
+                     role="button" tabindex="0" aria-label="Open product image viewer" onclick="openZoom(modalCurSlide)" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openZoom(modalCurSlide); }">
 
                 {{-- Uploaded local video --}}
                 <video id="modal-local-video" class="absolute inset-0 w-full h-full object-cover"
@@ -1557,31 +1558,6 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 </div>
 
 {{-- ━━━━━━━━━━━━━━━━  IMAGE ZOOM LIGHTBOX  ━━━━━━━━━━━━━━━━ --}}
-<div id="zoom-overlay" onclick="closeZoom()"
-     class="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center"
-     style="display:none;">
-
-    <button id="zoom-close" onclick="event.stopPropagation(); closeZoom()"
-            class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center text-2xl leading-none transition-colors"
-            aria-label="close">&times;</button>
-
-    <div id="zoom-counter"
-         class="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-black/40 text-white/90 text-sm font-medium px-3 py-1 rounded-full select-none"
-         style="display:none;"></div>
-
-    <button id="zoom-prev" onclick="event.stopPropagation(); zoomNav(-1)"
-            class="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center text-3xl leading-none transition-colors"
-            style="display:none;">&#8249;</button>
-
-    <button id="zoom-next" onclick="event.stopPropagation(); zoomNav(1)"
-            class="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center text-3xl leading-none transition-colors"
-            style="display:none;">&#8250;</button>
-
-    <img id="zoom-img" src="" alt="" onclick="event.stopPropagation()"
-         class="object-contain select-none"
-         style="max-height:90vh; max-width:90vw;">
-</div>
-
 {{-- ━━━━━━━━━━━━━━━━  WHOLESALE ENQUIRY MODAL  ━━━━━━━━━━━━━━━━ --}}
 <div id="enq-overlay" class="fixed inset-0 z-[150] bg-black/70" style="display:none;"></div>
 <div id="enq-wrapper" class="fixed inset-0 z-[151] overflow-y-auto" style="display:none;">
@@ -2436,6 +2412,7 @@ function fillModal(p) {
     if (localVidEl) { localVidEl.pause(); localVidEl.src = ''; }
     ytEl.src = '';
 
+    imgEl.alt = p.name_bn || 'Product image';
     const ytId = ytExtract(p.video_url);
     if (ytId) {
         // YouTube takes priority — show iframe, no slideshow
@@ -2641,13 +2618,7 @@ function ytExtract(url) {
 document.getElementById('modal-close').addEventListener('click', closeModal);
 document.getElementById('modal-overlay').addEventListener('click', closeModal);
 document.addEventListener('keydown', e => {
-    const zoomOpen = document.getElementById('zoom-overlay')?.style.display !== 'none';
-    if (zoomOpen) {
-        if (e.key === 'Escape')     { closeZoom(); return; }
-        if (e.key === 'ArrowLeft')  { zoomNav(-1); return; }
-        if (e.key === 'ArrowRight') { zoomNav(1);  return; }
-        return;
-    }
+    if (window.MoslaProductViewer?.isOpen) return;
     if (e.key === 'Escape') { closeModal(); closeOrderForm(); }
 });
 
@@ -3755,53 +3726,10 @@ function msCloseInstallHelp() {
 window.addEventListener('appinstalled', function () { window.__msDeferredPrompt = null; });
 
 // ── Image Zoom Lightbox ───────────────────────────────────────────────────
-let zoomImages = [];
-let zoomCurIdx = 0;
-
 function openZoom(modalSlideIndex) {
-    zoomImages = modalSlides.filter(s => s.type === 'image').map(s => s.src);
-    if (!zoomImages.length) return;
     if (modalSlides[modalSlideIndex]?.type !== 'image') return;
-
-    let imgIdx = 0;
-    for (let i = 0; i < modalSlideIndex; i++) {
-        if (modalSlides[i].type === 'image') imgIdx++;
-    }
-    zoomCurIdx = imgIdx;
-    zoomShowImage();
-    document.getElementById('zoom-overlay').style.display = 'flex';
-}
-
-function zoomShowImage() {
-    const img     = document.getElementById('zoom-img');
-    const counter = document.getElementById('zoom-counter');
-    const prevBtn = document.getElementById('zoom-prev');
-    const nextBtn = document.getElementById('zoom-next');
-
-    if (img) img.src = zoomImages[zoomCurIdx] || '';
-
-    if (zoomImages.length > 1) {
-        if (counter) { counter.textContent = (zoomCurIdx + 1) + ' / ' + zoomImages.length; counter.style.display = 'block'; }
-        if (prevBtn) prevBtn.style.display = 'flex';
-        if (nextBtn) nextBtn.style.display = 'flex';
-    } else {
-        if (counter) counter.style.display = 'none';
-        if (prevBtn) prevBtn.style.display = 'none';
-        if (nextBtn) nextBtn.style.display = 'none';
-    }
-}
-
-function closeZoom() {
-    const ol = document.getElementById('zoom-overlay');
-    if (!ol || ol.style.display === 'none') return;
-    ol.style.display = 'none';
-    zoomImages = [];
-}
-
-function zoomNav(dir) {
-    if (!zoomImages.length) return;
-    zoomCurIdx = ((zoomCurIdx + dir) % zoomImages.length + zoomImages.length) % zoomImages.length;
-    zoomShowImage();
+    const urls = modalSlides.filter(slide => slide.type === 'image').map(slide => slide.src);
+    window.MoslaProductViewer?.open(urls, urls.indexOf(modalSlides[modalSlideIndex].src), document.getElementById('modal-img').alt, document.getElementById('modal-img'));
 }
 
 // ── Product-detail "Add to Cart / Buy Now" handoff ────────────────────────

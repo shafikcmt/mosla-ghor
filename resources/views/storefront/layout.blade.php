@@ -32,6 +32,7 @@
         @media (max-width: 1023px) { body { padding-bottom: calc(74px + env(safe-area-inset-bottom)); } }
     </style>
 
+    @include('partials.storefront.product-media-assets')
     @yield('head')
 </head>
 <body class="min-h-screen flex flex-col">

@@ -94,7 +94,7 @@
     let bagVariants = {};
 
     function bagImg(it) {
-        return it.image || ('https://placehold.co/80x80/f1f5f3/14532d?text=' + encodeURIComponent((it.name || '').slice(0, 6)));
+        return it.image || @json(asset('images/product-placeholder.svg'));
     }
     function escAttr(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
@@ -130,7 +130,7 @@
             }).join('');
             return '' +
             '<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex items-start gap-3">' +
-                '<img src="' + bagImg(it) + '" alt="" class="w-16 h-16 rounded-lg object-cover border border-gray-100 flex-shrink-0">' +
+                '<img src="' + bagImg(it) + '" alt="" class="w-16 h-16 rounded-lg product-artwork border border-gray-100 flex-shrink-0">' +
                 '<div class="flex-1 min-w-0">' +
                     '<a href="/wholesale/products/' + it.slug + '" class="text-sm font-semibold text-gray-800 hover:underline truncate block">' + (it.name || '') + '</a>' +
                     variantSelectHtml(it, i) +

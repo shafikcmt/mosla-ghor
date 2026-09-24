@@ -3,7 +3,7 @@
      min_order_quantity/unit are passed through so the drawer enforces the product MOQ;
      retail-only products (no MOQ) default to 5kg via the drawer's wholesale rules. --}}
 @php
-    $wbImg  = $product->main_image ? asset($product->main_image) : null;
+    $wbImg  = \App\Support\ProductMedia::url($product->main_image);
     $wbMoq  = $product->min_order_quantity ? (float) $product->min_order_quantity : null;
     $wbUnit = $product->min_order_unit ?: 'kg';
 @endphp

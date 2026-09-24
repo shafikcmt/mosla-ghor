@@ -16,10 +16,10 @@
             <article data-list-product="{{ $product->id }}" style="{{ $visibleInMode ? '' : 'display:none;' }}" class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
 
                 {{-- Thumb --}}
-                <div class="w-28 sm:w-36 flex-shrink-0 relative min-h-[110px]">
+                <div class="w-28 sm:w-36 flex-shrink-0 relative h-36 bg-gray-50">
                     @if($product->main_image)
-                        <img src="{{ asset($product->main_image) }}" alt="{{ $product->name_bn }}"
-                             class="w-full h-full object-cover">
+                        <img src="{{ \App\Support\ProductMedia::url($product->main_image) }}" alt="{{ $product->name_bn }}" loading="lazy"
+                             class="w-full h-full product-artwork">
                     @else
                         <div class="w-full h-full bg-gradient-to-br from-[#14532d] to-[#1a6b3a] flex items-center justify-center">
                             <div class="text-center px-2">

@@ -1,0 +1,21 @@
+/* Artwork stays complete. scale-down is contain capped at intrinsic resolution. */
+.product-artwork{object-fit:scale-down!important;object-position:center;background:#f1f5f3}
+.product-detail-frame{max-height:560px}
+.product-image-stage{display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:12px;border:0;background:#f1f5f3;overflow:hidden;cursor:zoom-in}
+.product-image-stage[hidden],.product-image-stage.hidden{display:none}
+.product-image-stage img{width:auto;max-width:100%;height:auto;max-height:100%;object-fit:contain;transition:transform .18s ease;transform-origin:center}
+.product-image-stage:focus-visible,.pd-thumb:focus-visible{outline:3px solid #c9a227!important;outline-offset:3px}
+.product-viewer{position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:12px;border:0;background:rgba(8,15,11,.96);color:white;box-sizing:border-box}
+.product-viewer::backdrop{background:rgba(0,0,0,.85)}
+.product-viewer[open]{display:flex;flex-direction:column;gap:12px}
+.product-viewer-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;flex-shrink:0}
+.product-viewer button{min-width:44px;min-height:44px;padding:8px 14px;background:#243d2d;color:white;border:1px solid #73957f;border-radius:8px;font:inherit;cursor:pointer}
+.product-viewer button:focus-visible{outline:3px solid #e2bb45;outline-offset:2px}
+.product-viewer button:disabled{opacity:.45;cursor:default}
+.product-viewer [hidden]{display:none!important}
+.product-viewer-viewport{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y pinch-zoom}
+.product-viewer-canvas{min-width:100%;min-height:100%;width:max-content;height:max-content;display:flex;align-items:center;justify-content:center}
+.product-viewer img{display:block;max-width:none;max-height:none;object-fit:contain;flex-shrink:0;cursor:grab}
+.product-viewer-status{text-align:center;font-size:14px;margin:0}
+@media(prefers-reduced-motion:reduce){.product-image-stage img{transition:none}}
+@media(max-width:480px){.product-viewer{padding:8px;padding-bottom:max(8px,env(safe-area-inset-bottom))}.product-viewer button{padding:8px 10px}}
