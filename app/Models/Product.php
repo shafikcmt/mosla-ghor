@@ -12,6 +12,7 @@ class Product extends Model
     protected $fillable = [
         'vendor_id',
         'approval_status',
+        'rejection_reason',
         'name_bn',
         'name_en',
         'slug',

@@ -95,6 +95,7 @@
             'label' => 'Vendor Management', 'icon' => $icons['shop'],
             'items' => [
                 ['label' => 'ভেন্ডর / মার্চেন্ট', 'route' => 'admin.vendors.index',          'active' => 'admin.vendors.*'],
+                ['label' => 'ভেন্ডর পণ্য অনুমোদন', 'route' => 'admin.vendor-products.index', 'active' => 'admin.vendor-products.*'],
                 ['label' => 'ভেন্ডর স্টক',        'route' => 'admin.vendor-stock.index',     'active' => 'admin.vendor-stock.*'],
                 ['label' => 'ভেন্ডর কাস্টমার',    'route' => 'admin.vendor-customers.index', 'active' => 'admin.vendor-customers.*'],
                 ['label' => 'পেআউট রিকুয়েস্ট',   'route' => 'admin.vendor-payouts.index',   'active' => 'admin.vendor-payouts.*'],

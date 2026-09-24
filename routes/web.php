@@ -49,6 +49,7 @@ use App\Http\Controllers\Vendor\NotificationController as VendorNotificationCont
 use App\Http\Controllers\Admin\ReturnRequestController as AdminReturnRequestController;
 use App\Http\Controllers\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\Admin\VendorController as AdminVendorController;
+use App\Http\Controllers\Admin\VendorProductApprovalController as AdminVendorProductApprovalController;
 use App\Http\Controllers\Admin\VendorPayoutController as AdminVendorPayoutController;
 use App\Http\Controllers\Admin\VendorPickupPointController as AdminVendorPickupPointController;
 use App\Http\Controllers\Admin\VendorParcelController as AdminVendorParcelController;
@@ -491,11 +492,13 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::post('/{vendor}/reset-password', [AdminVendorController::class, 'resetPassword'])->name('reset-password');
     });
 
-    // Admin approve vendor product
-    Route::post('vendor-products/{product}/approve', function (\App\Models\Product $product) {
-        $product->update(['approval_status' => 'approved']);
-        return back()->with('success', 'পণ্য অনুমোদিত হয়েছে।');
-    })->name('vendor-products.approve');
+    // ── Vendor product approval ────────────────────────────────────────────
+    Route::prefix('vendor-products')->name('vendor-products.')->group(function () {
+        Route::get('/',                  [AdminVendorProductApprovalController::class, 'index'])->name('index');
+        Route::post('/bulk/approve',     [AdminVendorProductApprovalController::class, 'bulkApprove'])->name('bulk-approve');
+        Route::post('/{product}/approve',[AdminVendorProductApprovalController::class, 'approve'])->whereNumber('product')->name('approve');
+        Route::post('/{product}/reject', [AdminVendorProductApprovalController::class, 'reject'])->whereNumber('product')->name('reject');
+    });
 
     // Vendor payout management
     Route::prefix('vendor-payouts')->name('vendor-payouts.')->group(function () {
