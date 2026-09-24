@@ -16,6 +16,9 @@
                     ? route('products.show', ['product' => $product->slug, 'mode' => 'wholesale'])
                     : route('products.show', $product->slug);
             @endphp
+            @if(isset($previewMode))
+                @include('partials.storefront.product-preview')
+            @else
             <article data-card-product="{{ $product->id }}" style="{{ $visibleInMode ? '' : 'display:none;' }}" class="product-card bg-white rounded-2xl overflow-hidden shadow border border-green-50 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all">
 
                 {{-- Image slideshow / placeholder --}}
@@ -160,3 +163,5 @@
                     @endif
                 </div>
             </article>
+
+            @endif

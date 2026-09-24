@@ -11,7 +11,7 @@ class WebsiteSettingSeeder extends Seeder
     {
         $defaults = [
             'site_name'          => 'মসলা ঘর',
-            'hero_badge_text'    => 'ঈদ স্পেশাল কালেকশন',
+            'hero_badge_text'    => '',
             'hero_title'         => 'খাঁটি মশলার',
             'hero_subtitle'      => 'প্রকৃতির সেরা উপাদান থেকে তৈরি, ভেজালমুক্ত খাঁটি মশলা — আপনার রান্নাকে করে তুলুন অতুলনীয় ও সুস্বাদু।',
             'primary_cta_text'   => 'পণ্য দেখুন',

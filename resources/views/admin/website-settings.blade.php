@@ -58,7 +58,7 @@
                     <input type="text" name="hero_badge_text" id="hero_badge_text" maxlength="100"
                            value="{{ old('hero_badge_text', $settings['hero_badge_text'] ?? '') }}"
                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
-                    <p class="text-gray-400 text-xs mt-1">যেমন: ঈদ স্পেশাল কালেকশন</p>
+                    <p class="text-gray-400 text-xs mt-1">যেমন: খুচরা ও পাইকারি মসলা</p>
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1" for="hero_title">

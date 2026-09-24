@@ -45,7 +45,7 @@ class HomeController extends Controller
         $products = $productsQuery->get();
 
         // Featured strip: newest active products (independent of the active filter).
-        $featuredProducts = Product::active()->with('category')
+        $featuredProducts = Product::active()->with(['category', 'activePrices', 'activeVariants.activePrices'])
             ->orderByDesc('id')->limit(8)->get();
 
         $priceSetting    = PriceSetting::current();

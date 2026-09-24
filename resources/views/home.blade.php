@@ -56,14 +56,14 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>মসলা ঘর — খাঁটি মশলার আস্থার দোকান</title>
+    @include('partials.storefront.seo')
 
     {{-- Installable "MoslaMart App" (manifest + home-screen install) --}}
     <link rel="manifest" href="{{ asset('manifest.json') }}">
     <meta name="theme-color" content="#14532d">
     <link rel="apple-touch-icon" href="{{ asset('icons/icon-192.png') }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="MoslaMart">
+    <meta name="apple-mobile-web-app-title" content="{{ $siteName }}">
     <script>
         // Capture the install prompt as early as possible (it can fire before the
         // main script runs). The download button reads window.__msDeferredPrompt.
@@ -79,7 +79,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
         }
     </script>
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite('resources/css/app.css')
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;600;700&family=Noto+Sans+Bengali:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -170,8 +170,9 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
         @media (max-width: 1023px) { body { padding-bottom: calc(74px + env(safe-area-inset-bottom)); } }
     </style>
 @include('partials.storefront.product-media-assets')
+<link rel="stylesheet" href="{{ asset('css/storefront-home.css') }}?v=20260924">
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen market-home">
 
 {{-- Flash messages (e.g. guest Paykari enquiry confirmation) --}}
 @if(session('success'))
@@ -189,67 +190,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 @include("partials.storefront.navbar")
 
 {{-- ━━━━━━━━━━━━━━━━  HERO  ━━━━━━━━━━━━━━━━ --}}
-<section class="hero-bg py-20 md:py-28 px-5">
-    <div class="max-w-4xl mx-auto text-center">
-
-        <div class="flex items-center justify-center gap-4 mb-8">
-            <div class="h-px w-20 bg-gradient-to-r from-transparent to-[#c9a227] opacity-70"></div>
-            <span class="text-[#c9a227] text-xs tracking-[.35em] uppercase font-semibold">{{ $ws['hero_badge_text'] ?? 'ঈদ স্পেশাল কালেকশন' }}</span>
-            <div class="h-px w-20 bg-gradient-to-l from-transparent to-[#c9a227] opacity-70"></div>
-        </div>
-
-        <h1 class="font-serif-bn text-cream leading-tight mb-6">
-            <span class="block text-5xl md:text-7xl font-bold">{{ $ws['hero_title'] ?? 'খাঁটি মশলার' }}</span>
-            <span class="block text-4xl md:text-6xl font-bold text-[#c9a227] mt-1">অপূর্ব স্বাদ</span>
-        </h1>
-        @if(!empty($ws['hero_subtitle']))
-        <p class="text-green-200 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-10">
-            {{ $ws['hero_subtitle'] }}
-        </p>
-        @else
-        <p class="text-green-200 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-10">
-            প্রকৃতির সেরা উপাদান থেকে তৈরি, ভেজালমুক্ত খাঁটি মশলা —
-            আপনার রান্নাকে করে তুলুন অতুলনীয় ও সুস্বাদু।
-        </p>
-        @endif
-        {{-- Retail / Wholesale mode toggle (replaces the old "পণ্য দেখুন" CTA).
-             These are real LINKS — the URL is the single source of truth, so the
-             SERVER renders the right mode. No JS/localStorage switching to get out
-             of sync. Active state is server-rendered from $listMode. --}}
-        <div class="inline-flex items-center gap-1 p-1.5 bg-white/95 rounded-2xl shadow-2xl">
-            <a href="{{ $retailHref }}" id="hero-mode-retail" onclick="return msHeroClick(event,'retail')"
-               class="px-7 py-3 rounded-xl text-base font-bold transition-colors {{ $listMode === 'retail' ? 'bg-[#14532d] text-white' : 'text-gray-500 hover:text-gray-700' }}">
-                খুচরা
-            </a>
-            <a href="{{ $wholesaleHref }}" id="hero-mode-wholesale" onclick="return msHeroClick(event,'wholesale')"
-               class="px-7 py-3 rounded-xl text-base font-bold transition-colors {{ $listMode === 'wholesale' ? 'bg-orange-600 text-white' : 'text-gray-500 hover:text-gray-700' }}">
-                পাইকারি
-            </a>
-        </div>
-
-        <div class="mt-16 flex flex-wrap justify-center gap-8 md:gap-12">
-            <div class="text-center">
-                <div class="text-[#c9a227] text-4xl font-bold font-serif-bn">{{ $products->count() }}+</div>
-                <div class="text-green-400 text-xs mt-1 uppercase tracking-wider">খাঁটি মশলা</div>
-            </div>
-            <div class="w-px bg-green-700 self-stretch hidden md:block"></div>
-            <div class="text-center">
-                <div class="text-[#c9a227] text-4xl font-bold font-serif-bn">১০০%</div>
-                <div class="text-green-400 text-xs mt-1 uppercase tracking-wider">প্রাকৃতিক</div>
-            </div>
-            <div class="w-px bg-green-700 self-stretch hidden md:block"></div>
-            <div class="text-center">
-                <div class="text-[#c9a227] text-4xl font-bold font-serif-bn">দ্রুত</div>
-                <div class="text-green-400 text-xs mt-1 uppercase tracking-wider">ডেলিভারি</div>
-            </div>
-            <div class="w-px bg-green-700 self-stretch hidden md:block"></div>
-            <div class="text-center">
-                <div class="text-[#c9a227] text-4xl font-bold font-serif-bn">সেরা</div>
-                <div class="text-green-400 text-xs mt-1 uppercase tracking-wider">মানের নিশ্চয়তা</div>
-            </div>
-        </div>
-    </div>
-</section>
+@include('partials.storefront.home-hero')
 
 <div class="gold-rule"></div>
 
@@ -257,39 +198,23 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 <section id="products" class="py-16 md:py-20 px-5">
     <div class="max-w-7xl mx-auto">
 
-        {{-- Section header + view toggle --}}
-        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-5 mb-10">
-            <div>
-                <div class="flex items-center gap-4 mb-2">
-                    <div class="h-px w-10 bg-[#c9a227] opacity-50"></div>
-                    <span class="text-[#c9a227] text-xs tracking-[.3em] uppercase font-semibold">Our Collection</span>
-                    <div class="h-px w-10 bg-[#c9a227] opacity-50"></div>
-                </div>
-                <h2 class="font-serif-bn text-[#14532d] text-3xl md:text-4xl font-bold">আমাদের মশলা সংগ্রহ</h2>
-                <p class="text-gray-400 text-sm mt-1">সর্বোচ্চ মানের — সম্পূর্ণ প্রাকৃতিক</p>
-            </div>
-
-            <div class="flex items-center gap-3 self-start sm:self-auto flex-wrap">
-                {{-- Product toolbar: grid / list view only. The খুচরা / পাইকারি mode
-                     toggle now lives in the hero section. --}}
-                <div class="flex items-center gap-1 p-1 bg-white border border-gray-200 rounded-xl shadow-sm">
-                    <button id="btn-card" onclick="setView('card')" title="Card view"
-                            class="p-2 rounded-lg bg-[#14532d] text-white transition-colors" aria-pressed="true">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
-                        </svg>
-                    </button>
-                    <button id="btn-list" onclick="setView('list')" title="List view"
-                            class="p-2 rounded-lg text-gray-400 hover:text-gray-600 transition-colors" aria-pressed="false">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
-                        </svg>
-                    </button>
-                </div>
+        <div class="hm-section-heading"><div><h2 id="home-catalog-title">{{ $listMode === 'wholesale' ? 'পাইকারি পণ্য' : 'খুচরা কেনাকাটা' }}</h2><p>পণ্য দেখুন, প্যাক বেছে নিন ও অর্ডার করুন।</p></div></div>
+        <div class="hm-catalog-tools">
+            <nav class="hm-mode-tabs" aria-label="কেনাকাটার ধরন">
+                <a id="hero-mode-retail" data-active="{{ $listMode === 'retail' ? '1' : '0' }}" href="{{ $retailHref }}" onclick="return msHeroClick(event, 'retail')">খুচরা</a>
+                <a id="hero-mode-wholesale" data-active="{{ $listMode === 'wholesale' ? '1' : '0' }}" href="{{ $wholesaleHref }}" onclick="return msHeroClick(event, 'wholesale')">পাইকারি</a>
+            </nav>
+            <form class="hm-search" role="search" onsubmit="event.preventDefault(); filterCardsByMode()">
+                <label class="sr-only" for="hm-product-search">পণ্য খুঁজুন</label>
+                <input id="hm-product-search" type="search" placeholder="পণ্যের নাম লিখুন" oninput="filterCardsByMode()">
+                <button type="submit">খুঁজুন</button>
+            </form>
+            <div class="hm-view-toggle" role="group" aria-label="পণ্য প্রদর্শন">
+                <button id="btn-card" onclick="setView('card')" class="p-3 rounded-lg bg-[#14532d] text-white" aria-pressed="true">গ্রিড</button>
+                <button id="btn-list" onclick="setView('list')" class="p-3 rounded-lg text-gray-600" aria-pressed="false">তালিকা</button>
             </div>
         </div>
 
-        {{-- ══ Category filter pills (carry the current mode so a click keeps it) ══ --}}
         @include('partials.storefront.category-chips')
 
         @if($products->isEmpty())
@@ -314,19 +239,17 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
         </div>
 
         {{-- Wholesale empty state — shown by JS when পাইকারি mode has no wholesale products --}}
-        <div id="ms-wholesale-empty" style="display:none;" class="text-center py-20">
-            <div class="text-5xl mb-4">🧺</div>
-            <p class="font-serif-bn text-[#14532d] text-xl font-bold">এখন কোনো পাইকারি পণ্য পাওয়া যায়নি</p>
-            <p class="text-gray-500 text-sm mt-1 mb-5">Admin থেকে পাইকারি পণ্য active করুন।</p>
-            <a href="{{ url('/') }}#products"
-               class="inline-block bg-[#14532d] hover:bg-[#166534] text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-colors">
-                সব পণ্য দেখুন
-            </a>
+        <div id="ms-wholesale-empty" style="display:none;" class="hm-empty" role="status">
+            <p>এই তালিকায় কোনো পণ্য পাওয়া যায়নি। অন্য নাম বা ক্যাটাগরি দিয়ে দেখুন।</p>
+            <a href="{{ url('/') }}#products">সব পণ্য দেখুন</a>
         </div>
 
         @endif {{-- end products not empty --}}
     </div>
 </section>
+@include('partials.storefront.home-discovery')
+@include('partials.storefront.home-benefits')
+
 
 <div class="gold-rule"></div>
 
@@ -522,7 +445,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
             <div class="text-center mb-6 sm:mb-8">
                 <h2 class="font-serif-bn text-[#14532d] text-2xl sm:text-3xl md:text-4xl font-bold">পাইকারি অর্ডার তৈরি করুন</h2>
                 <p class="text-gray-500 text-sm mt-2 max-w-lg mx-auto leading-relaxed">
-                    আপনার প্রয়োজন অনুযায়ী একাধিক মসলা ও quantity নির্বাচন করুন। MoslaMart আপনাকে best wholesale quote পাঠাবে।
+                    আপনার প্রয়োজন অনুযায়ী একাধিক মসলা ও quantity নির্বাচন করুন। {{ $siteName }} আপনাকে best wholesale quote পাঠাবে।
                 </p>
                 <p class="text-amber-700 text-xs mt-2 bg-amber-50 inline-block px-4 py-1.5 rounded-full border border-amber-200">
                     Wholesale price available on request. Quantity অনুযায়ী price change হতে পারে।
@@ -689,27 +612,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 @endif
 
 {{-- ━━━━━━━━━━━━━━━━  WHY US  ━━━━━━━━━━━━━━━━ --}}
-<section id="why-us" class="bg-[#14532d] py-16 md:py-20 px-5">
-    <div class="max-w-5xl mx-auto">
-        <x-storefront.section-heading eyebrow="Why Choose Us" title="কেন আমাদের বেছে নেবেন?" :dark="true" margin="mb-12" />
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
-            @foreach([
-                ['🌱', '১০০% খাঁটি',     'কোনো কৃত্রিম রং বা সংরক্ষক ছাড়া সরাসরি উৎস থেকে সংগৃহীত।'],
-                ['📦', 'নিরাপদ প্যাকেজিং','বায়ুরোধী প্যাকেজিংয়ে মশলার সতেজতা দীর্ঘদিন বজায় থাকে।'],
-                ['🚚', 'দ্রুত ডেলিভারি',  'সারা বাংলাদেশে দ্রুত ও নিরাপদ হোম ডেলিভারির ব্যবস্থা।'],
-                ['💬', 'সহজ অর্ডার',      'অনলাইনে বা ফোনে অর্ডার করুন, যেকোনো সময় যেকোনো স্থান থেকে।'],
-            ] as [$icon, $title, $desc])
-            <div class="text-center group">
-                <div class="w-16 h-16 rounded-full border-2 border-[#c9a227] border-opacity-30 group-hover:border-opacity-100 transition-all bg-[#0f3d22] flex items-center justify-center mx-auto mb-4">
-                    <span class="text-3xl">{{ $icon }}</span>
-                </div>
-                <h3 class="text-[#c9a227] font-semibold text-base mb-2">{{ $title }}</h3>
-                <p class="text-green-300 text-sm leading-relaxed">{{ $desc }}</p>
-            </div>
-            @endforeach
-        </div>
-    </div>
-</section>
+
 
 {{-- MOSLAMART APP PROMO — DISABLED.
      This large homepage app-download section was replaced by the compact,
@@ -749,7 +652,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                         <div class="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-[#0a2a17] rounded-b-2xl z-10"></div>
                         {{-- App top bar --}}
                         <div class="bg-[#0f3d22] px-4 pt-7 pb-3 flex items-center justify-between rounded-t-[2rem]">
-                            <span class="font-serif-bn text-[#c9a227] text-base font-bold">মসলা ঘর</span>
+                            <span class="font-serif-bn text-[#c9a227] text-base font-bold">{{ $siteName }}</span>
                             <div class="w-6 h-6 rounded-full bg-[#c9a227]/25 flex items-center justify-center text-[#c9a227] text-xs">🔍</div>
                         </div>
                         {{-- Mode tabs --}}
@@ -802,9 +705,9 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                             <path d="M37 24 q3 -5 0 -10" stroke="#fde68a" stroke-width="2" fill="none" stroke-linecap="round" opacity=".8"/>
                         </svg>
                     </div>
-                    <h2 class="font-serif-bn text-[#fef9ee] text-3xl md:text-4xl font-bold leading-tight">MoslaMart App ডাউনলোড করুন</h2>
+                    <h2 class="font-serif-bn text-[#fef9ee] text-3xl md:text-4xl font-bold leading-tight">{{ $siteName }} App ডাউনলোড করুন</h2>
                     <p class="text-green-200 text-sm md:text-base mt-3 leading-relaxed max-w-lg mx-auto md:mx-0">
-                        খুচরা ও পাইকারি মসলা অর্ডার করুন আরও দ্রুত। মোবাইলে এক ক্লিকে MoslaMart খুলুন, পণ্য দেখুন, enquiry পাঠান এবং order track করুন।
+                        খুচরা ও পাইকারি মসলা অর্ডার করুন আরও দ্রুত। মোবাইলে এক ক্লিকে {{ $siteName }} খুলুন, পণ্য দেখুন, enquiry পাঠান এবং order track করুন।
                     </p>
 
                     <div class="grid grid-cols-2 gap-3 mt-6 max-w-md mx-auto md:mx-0">
@@ -842,7 +745,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
             <button onclick="msCloseInstallHelp()" class="text-green-200 hover:text-white text-xl leading-none">&times;</button>
         </div>
         <div class="p-5 text-sm text-gray-600 space-y-3">
-            <p>MoslaMart কে মোবাইলের Home Screen-এ যোগ করতে:</p>
+            <p>{{ $siteName }} কে মোবাইলের Home Screen-এ যোগ করতে:</p>
             <div class="bg-amber-50 rounded-xl p-3">
                 <p class="font-bold text-[#14532d] mb-1">Android (Chrome)</p>
                 <p>উপরে ডান কোণে <b>⋮ মেনু</b> → <b>Add to Home screen</b> নির্বাচন করুন।</p>
@@ -859,6 +762,10 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 <div class="gold-rule"></div>
 
 {{-- ━━━━━━━━━━━━━━━━  CONTACT  ━━━━━━━━━━━━━━━━ --}}
+<aside class="hm-container hm-wholesale-cta">
+    <div><h2>আপনার ব্যবসার জন্য মসলা দরকার?</h2><p>বাল্ক অর্ডার, MOQ ও কোটেশনের জন্য পাইকারি পণ্য দেখুন।</p></div>
+    <a class="hm-button hm-button-primary" href="{{ route('wholesale.enquiry-bag') }}">পাইকারি enquiry করুন</a>
+</aside>
 <section id="contact" class="bg-[#fef9ee] py-12 px-5 border-t border-amber-100">
     @php
         $waNum    = $ws['whatsapp_number']   ?? '';
@@ -912,7 +819,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
     <div class="max-w-6xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
-                <h3 class="font-serif-bn text-[#c9a227] text-xl font-bold">{{ $ws['site_name'] ?? 'মসলা ঘর' }}</h3>
+                <h3 class="font-serif-bn text-[#c9a227] text-xl font-bold">{{ $siteName }}</h3>
                 <p class="text-green-500 text-xs mt-1">খাঁটি মশলার আস্থার দোকান</p>
             </div>
             <div class="flex flex-wrap gap-6 text-green-500 text-xs justify-center">
@@ -945,7 +852,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
             </div>
         </div>
         <div class="gold-rule mt-8 mb-6 opacity-20"></div>
-        <p class="text-center text-green-700 text-xs">&copy; {{ date('Y') }} {{ $ws['site_name'] ?? 'মসলা ঘর' }} — {{ $ws['footer_text'] ?? 'সমস্ত অধিকার সংরক্ষিত।' }}</p>
+        <p class="text-center text-green-700 text-xs">&copy; {{ date('Y') }} {{ $siteName }} — {{ $ws['footer_text'] ?? 'সমস্ত অধিকার সংরক্ষিত।' }}</p>
     </div>
 </footer>
 
@@ -1057,7 +964,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                     </p>
                     @endguest
                     <p class="text-gray-400 text-[10px] text-center leading-relaxed">
-                        Enquiry submit করার পরে MoslaMart team / supplier আপনাকে quote পাঠাবে।
+                        Enquiry submit করার পরে {{ $siteName }} team / supplier আপনাকে quote পাঠাবে।
                     </p>
                 </div>
             </form>
@@ -1220,7 +1127,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                         </button>
                     </div>
                     <div class="mt-3 bg-green-50 border border-green-200 rounded-xl p-3 text-xs text-green-800 leading-relaxed text-center">
-                        আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য MoslaMart-এর ভিতরেই supplier-এর সাথে chat এবং order process complete করুন।
+                        আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য {{ $siteName }}-এর ভিতরেই supplier-এর সাথে chat এবং order process complete করুন।
                     </div>
                 </div>
             </div>
@@ -1537,7 +1444,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                                id="f-accepts_marketing"
                                class="mt-0.5 flex-shrink-0 rounded border-green-300 text-[#14532d] focus:ring-[#14532d]">
                         <span class="text-gray-500 text-xs leading-relaxed">
-                            আমি মসলা ঘর থেকে নতুন অফার ও আপডেট পেতে চাই।
+                            আমি {{ $siteName }} থেকে নতুন অফার ও আপডেট পেতে চাই।
                         </span>
                     </label>
                 </div>
@@ -1577,7 +1484,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
             {{-- Safety notice --}}
             <div class="bg-green-50 border-b border-green-200 px-6 py-3">
                 <p class="text-green-800 text-xs leading-relaxed text-center">
-                    আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য MoslaMart-এর ভিতরেই supplier-এর সাথে chat এবং order process complete করুন।
+                    আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য {{ $siteName }}-এর ভিতরেই supplier-এর সাথে chat এবং order process complete করুন।
                 </p>
             </div>
 
@@ -1682,7 +1589,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                     </button>
 
                     <p class="text-gray-400 text-[10px] text-center">
-                        Enquiry পাওয়ার পরে MoslaMart থেকে supplier-এর quote আপনার account-এ পাঠানো হবে।
+                        Enquiry পাওয়ার পরে {{ $siteName }} থেকে supplier-এর quote আপনার account-এ পাঠানো হবে।
                     </p>
                 </div>
             </form>
@@ -1857,9 +1764,13 @@ function updateModeLinks() {
 // list-view <article>, and surfaces a friendly empty state when a tab is empty.
 function filterCardsByMode() {
     const isWholesale = activeTab === 'wholesale';
+    const query = (document.getElementById('hm-product-search')?.value || '').trim().toLocaleLowerCase();
+    const title = document.getElementById('home-catalog-title');
+    if (title) title.textContent = isWholesale ? 'পাইকারি পণ্য' : 'খুচরা কেনাকাটা';
     let visible = 0;
     Object.values(PRODUCTS).forEach(function (p) {
-        const show = isWholesale ? !!p.show_in_wholesale : !!p.show_in_retail;
+        const inChannel = isWholesale ? !!p.show_in_wholesale : !!p.show_in_retail;
+        const show = inChannel && [p.name_bn, p.name_en].filter(Boolean).join(' ').toLocaleLowerCase().includes(query);
         if (show) visible++;
         document
             .querySelectorAll('[data-card-product="' + p.id + '"], [data-list-product="' + p.id + '"]')
@@ -2107,15 +2018,14 @@ function switchComboTab(tab, silent) {
 // setMode() is THE entry point for switching between খুচরা (retail) and পাইকারি
 // (wholesale). It syncs the hero toggle, the product listing, AND the combo
 // section together, then persists the choice. mode ∈ {'retail','wholesale'}.
-const HERO_RETAIL_ON = 'px-7 py-3 rounded-xl text-base font-bold transition-colors bg-[#14532d] text-white';
-const HERO_WS_ON     = 'px-7 py-3 rounded-xl text-base font-bold transition-colors bg-orange-600 text-white';
-const HERO_OFF       = 'px-7 py-3 rounded-xl text-base font-bold transition-colors text-gray-500 hover:text-gray-700';
-
 function msSetHeroActive(mode) {
-    const r = document.getElementById('hero-mode-retail');
-    const w = document.getElementById('hero-mode-wholesale');
-    if (r) r.className = (mode === 'retail')    ? HERO_RETAIL_ON : HERO_OFF;
-    if (w) w.className = (mode === 'wholesale') ? HERO_WS_ON     : HERO_OFF;
+    ['retail', 'wholesale'].forEach(channel => {
+        const link = document.getElementById('hero-mode-' + channel);
+        if (!link) return;
+        link.dataset.active = mode === channel ? '1' : '0';
+        if (mode === channel) link.setAttribute('aria-current', 'true');
+        else link.removeAttribute('aria-current');
+    });
 }
 
 function setMode(mode) {
@@ -2142,6 +2052,7 @@ function msHeroClick(e, mode) {
     if (typeof setMode === 'function') {
         e.preventDefault();
         setMode(mode);
+        document.getElementById('products')?.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
         return false;
     }
     return true;
@@ -2583,6 +2494,7 @@ function toggleDesc() {
 function setView(view) {
     const cv   = document.getElementById('card-view');
     const lv   = document.getElementById('list-view');
+    if (!cv || !lv) return; // Empty catalogues have no grid/list containers.
     const bc   = document.getElementById('btn-card');
     const bl   = document.getElementById('btn-list');
     const on   = 'p-2 rounded-lg bg-[#14532d] text-white transition-colors';
