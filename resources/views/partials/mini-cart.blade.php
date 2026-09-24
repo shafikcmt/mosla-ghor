@@ -116,7 +116,7 @@
 
         {{-- Footer: quick actions + main CTA --}}
         <div id="ms-bag-foot" class="shrink-0 border-t border-amber-100 bg-white px-4 py-3 space-y-3" style="display:none;">
-            <p class="text-[11px] text-gray-400 leading-snug">পরিমাণ ঠিক করে দর জানতে চান — MoslaMart টিম quote পাঠাবে।</p>
+            <p class="text-[11px] text-gray-400 leading-snug">পরিমাণ ঠিক করে দর জানতে চান — {{ $siteName }} টিম quote পাঠাবে।</p>
             <a href="{{ route('wholesale.enquiry-bag') }}"
                class="block w-full text-center bg-amber-700 hover:bg-amber-800 text-white font-bold text-sm py-3 rounded-xl transition shadow">
                 দর জানতে চাই →

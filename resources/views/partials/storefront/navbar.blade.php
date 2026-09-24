@@ -39,13 +39,17 @@
 {{-- Admin-controlled top announcement marquee (shows on every storefront page). --}}
 @include('partials.storefront.announcement', ['ws' => $ws])
 
+<style>
+.ms-site-brand{min-width:0;max-width:190px;flex-shrink:1}.ms-site-brand>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ms-drawer-brand{min-width:0;overflow-wrap:anywhere}
+@media(max-width:767px){.ms-site-brand{max-width:calc(100vw - 165px)}}
+</style>
 <header class="bg-[#0f3d22]/95 backdrop-blur sticky top-0 z-50 shadow-md border-b border-green-900/60">
     <div class="max-w-7xl mx-auto px-3 sm:px-5 h-16 flex items-center gap-2">
 
         {{-- ── Brand (left) ── --}}
-        <a href="/" class="group flex flex-col leading-none shrink-0">
-            <span class="font-serif-bn text-[#c9a227] text-xl sm:text-2xl font-bold group-hover:text-[#e2bb45] transition-colors">মসলা ঘর</span>
-            <span class="hidden sm:block text-green-400 text-[10px] tracking-[.2em] uppercase mt-0.5">Authentic Spice Store</span>
+        <a href="/" class="ms-site-brand group flex flex-col leading-none shrink-0" title="{{ $siteName }}">
+            <span class="font-serif-bn text-[#c9a227] text-xl sm:text-2xl font-bold group-hover:text-[#e2bb45] transition-colors">{{ $siteName }}</span>
+            <span class="hidden sm:block text-green-400 text-[10px] tracking-[.2em] uppercase mt-0.5">{{ $siteTagline }}</span>
         </a>
 
         {{-- ── Desktop nav links ── --}}
@@ -142,7 +146,7 @@
            class="absolute top-0 right-0 h-full w-72 max-w-[82%] bg-white shadow-2xl translate-x-full transition-transform duration-300 ease-out flex flex-col">
 
         <div class="flex items-center justify-between px-5 h-16 bg-[#0f3d22] shrink-0">
-            <span class="font-serif-bn text-[#c9a227] text-xl font-bold">মসলা ঘর</span>
+            <span class="ms-drawer-brand font-serif-bn text-[#c9a227] text-xl font-bold">{{ $siteName }}</span>
             <button type="button" data-drawer-close class="w-9 h-9 flex items-center justify-center rounded-full text-green-200 hover:text-white hover:bg-white/10" aria-label="বন্ধ করুন">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>

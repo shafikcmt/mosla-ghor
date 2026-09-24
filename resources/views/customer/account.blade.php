@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>আমার অ্যাকাউন্ট — মসলা ঘর</title>
+    <title>আমার অ্যাকাউন্ট — {{ $siteName }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>body { font-family: 'Noto Sans Bengali', sans-serif; background: #fef9ee; }</style>
@@ -13,7 +13,7 @@
 {{-- Header --}}
 <header class="bg-[#14532d] shadow-md">
     <div class="max-w-4xl mx-auto px-5 py-4 flex items-center justify-between">
-        <a href="/" class="text-[#c9a227] text-xl font-bold">মসলা ঘর</a>
+        <a href="/" class="text-[#c9a227] text-xl font-bold">{{ $siteName }}</a>
         <div class="flex items-center gap-3">
             <span class="text-green-200 text-sm hidden sm:inline">{{ $customer->name }}</span>
             <form method="POST" action="{{ route('customer.logout') }}">

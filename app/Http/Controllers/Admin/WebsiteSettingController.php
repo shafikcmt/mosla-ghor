@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class WebsiteSettingController extends Controller
 {
     private const FIELDS = [
-        'site_name', 'hero_badge_text', 'hero_title', 'hero_subtitle',
+        'meta_title', 'meta_description', 'site_name', 'site_tagline', 'hero_badge_text', 'hero_title', 'hero_subtitle',
         'primary_cta_text', 'secondary_cta_text', 'hero_image_url',
         'whatsapp_number', 'messenger_url', 'facebook_page_url', 'footer_text',
         'vendor_registration_enabled', 'vendor_login_enabled',
@@ -29,7 +29,10 @@ class WebsiteSettingController extends Controller
     public function update(Request $request)
     {
         $request->validate([
+            'meta_title' => 'nullable|string|max:70',
+            'meta_description' => 'nullable|string|max:200',
             'site_name'        => 'required|string|max:100',
+            'site_tagline'     => 'nullable|string|max:100',
             'hero_title'       => 'required|string|max:200',
             'hero_subtitle'    => 'nullable|string|max:500',
             'hero_badge_text'  => 'nullable|string|max:100',

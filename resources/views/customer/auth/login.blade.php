@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>লগইন — মসলা ঘর</title>
+    <title>লগইন — {{ $siteName }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>body { font-family: 'Noto Sans Bengali', sans-serif; }</style>
@@ -14,7 +14,7 @@
 
     <div class="text-center mb-8">
         <a href="/" class="inline-block mb-4">
-            <span class="text-[#14532d] text-3xl font-bold">মসলা ঘর</span>
+            <span class="text-[#14532d] text-3xl font-bold">{{ $siteName }}</span>
         </a>
         <h1 class="text-2xl font-bold text-gray-800">লগইন করুন</h1>
         <p class="text-gray-500 text-sm mt-1">আপনার অর্ডার দেখুন ও ট্র্যাক করুন</p>

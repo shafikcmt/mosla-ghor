@@ -20,7 +20,7 @@
 </nav>
 
 <h1 class="font-serif-bn text-2xl font-bold text-[#14532d] mb-1">পাইকারি Enquiry Bag</h1>
-<p class="text-sm text-gray-500 mb-5">একাধিক পাইকারি পণ্য একসাথে enquiry পাঠান। MoslaMart team আপনাকে quote জানাবে।</p>
+<p class="text-sm text-gray-500 mb-5">একাধিক পাইকারি পণ্য একসাথে enquiry পাঠান। {{ $siteName }} team আপনাকে quote জানাবে।</p>
 
 {{-- Empty state --}}
 <div id="bag-empty" class="hidden bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">

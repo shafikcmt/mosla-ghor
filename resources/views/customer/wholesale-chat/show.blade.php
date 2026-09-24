@@ -10,7 +10,7 @@
 
 {{-- Safety notice --}}
 <div class="mb-4 bg-green-50 border border-green-200 rounded-xl p-3 text-xs text-green-800 leading-relaxed">
-    আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য MoslaMart-এর ভিতরেই supplier-এর সাথে chat এবং order process complete করুন।
+    আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য {{ $siteName }}-এর ভিতরেই supplier-এর সাথে chat এবং order process complete করুন।
 </div>
 
 {{-- Chat messages --}}
@@ -34,7 +34,7 @@
                 </div>
                 @if($msg->is_filtered)
                 <div class="bg-amber-100 border border-amber-300 rounded-2xl px-4 py-2.5 text-sm text-amber-800 italic">
-                    [বার্তাটি ফিল্টার করা হয়েছে] — আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য MoslaMart-এর ভিতরেই chat এবং order process complete করুন।
+                    [বার্তাটি ফিল্টার করা হয়েছে] — আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য {{ $siteName }}-এর ভিতরেই chat এবং order process complete করুন।
                 </div>
                 @else
                 <div class="rounded-2xl px-4 py-2.5 text-sm

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'আমার অ্যাকাউন্ট') — মসলা ঘর</title>
+    <title>@yield('title', 'আমার অ্যাকাউন্ট') — {{ $siteName }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -73,7 +73,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
             </button>
-            <a href="/" class="text-[#c9a227] text-lg font-bold">মসলা ঘর</a>
+            <a href="/" class="text-[#c9a227] text-lg font-bold">{{ $siteName }}</a>
             <span class="text-green-400 text-xs hidden sm:inline">/ অ্যাকাউন্ট</span>
         </div>
         <div class="flex items-center gap-3">

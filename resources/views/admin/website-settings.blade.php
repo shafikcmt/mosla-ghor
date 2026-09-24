@@ -23,9 +23,27 @@
                        value="{{ old('site_name', $settings['site_name'] ?? 'মসলা ঘর') }}"
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
                 @error('site_name')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                <p class="text-gray-500 text-xs mt-2">ওয়েবসাইটের হেডার, ফুটার ও ব্রাউজার টাইটেলে এই নাম ব্যবহার হবে।</p>
+                <label class="block text-xs font-medium text-gray-600 mt-4 mb-1" for="site_tagline">Website Tagline / স্লোগান</label>
+                <input type="text" name="site_tagline" id="site_tagline" maxlength="100"
+                       value="{{ old('site_tagline', $settings['site_tagline'] ?? 'Authentic Spice Store') }}"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                @error('site_tagline')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
             </div>
         </div>
     </div>
+
+    <section class="bg-white rounded shadow-sm border border-gray-100 mb-6 p-6">
+        <h2 class="text-sm font-semibold text-gray-600 mb-4">SEO Settings</h2>
+        <label for="meta_title" class="block text-sm mb-2">Default Meta Title</label>
+        <input id="meta_title" name="meta_title" maxlength="70" value="{{ old('meta_title', $settings['meta_title'] ?? '') }}" class="w-full border rounded px-3 py-2">
+        @error('meta_title')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
+        <p class="text-xs text-gray-500 mt-1 mb-4">ঐচ্ছিক, সর্বোচ্চ ৭০ অক্ষর। খালি থাকলে সাইটের নাম ব্যবহার হবে।</p>
+        <label for="meta_description" class="block text-sm mb-2">Default Meta Description</label>
+        <textarea id="meta_description" name="meta_description" maxlength="200" rows="3" class="w-full border rounded px-3 py-2">{{ old('meta_description', $settings['meta_description'] ?? '') }}</textarea>
+        @error('meta_description')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
+        <p class="text-xs text-gray-500 mt-1">ঐচ্ছিক, সর্বোচ্চ ২০০ অক্ষর। দোকানের সংক্ষিপ্ত পরিচয় লিখুন।</p>
+    </section>
 
     {{-- ── Hero section ────────────────────────────────────────────── --}}
     <div class="bg-white rounded shadow-sm border border-gray-100 mb-6">

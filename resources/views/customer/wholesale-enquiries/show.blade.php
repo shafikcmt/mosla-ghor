@@ -8,7 +8,7 @@
 
 {{-- Protected-communication policy (shown inside the logged-in enquiry area) --}}
 <div class="mb-5 text-[12px] text-orange-800 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 leading-relaxed">
-    আপনার তথ্য, quote এবং payment record নিরাপদ রাখার জন্য মসলা ঘর-এর chatbox এবং order process ব্যবহার করুন।
+    আপনার তথ্য, quote এবং payment record নিরাপদ রাখার জন্য {{ $siteName }}-এর chatbox এবং order process ব্যবহার করুন।
     Phone, WhatsApp, external link বা website-এর বাইরে payment/deal করা যাবে না।
 </div>
 
@@ -123,7 +123,7 @@
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
             <div>
                 <p class="font-semibold text-gray-800 text-sm">Supplier-এর সাথে Chat</p>
-                <p class="text-gray-400 text-xs mt-0.5">MoslaMart chatbox ব্যবহার করুন</p>
+                <p class="text-gray-400 text-xs mt-0.5">{{ $siteName }} chatbox ব্যবহার করুন</p>
             </div>
             <a href="{{ route('customer.wholesale.chat.show', $enquiry->id) }}"
                class="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-5 py-2 rounded-xl text-sm transition-colors">
@@ -149,7 +149,7 @@
         @endif
 
         <div class="bg-green-50 border border-green-200 rounded-2xl p-5 text-xs text-green-800 leading-relaxed">
-            আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য MoslaMart-এর ভিতরেই supplier-এর সাথে chat এবং order process complete করুন।
+            আপনার অর্ডার, quote এবং payment record নিরাপদে রাখার জন্য {{ $siteName }}-এর ভিতরেই supplier-এর সাথে chat এবং order process complete করুন।
         </div>
     </div>
 

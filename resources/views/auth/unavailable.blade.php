@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'অনুপলব্ধ' }} — মসলা ঘর</title>
+    <title>{{ $title ?? 'অনুপলব্ধ' }} — {{ $siteName }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600&display=swap" rel="stylesheet">
     <style>body { font-family: 'Noto Sans Bengali', sans-serif; }</style>
@@ -12,7 +12,7 @@
 
 <div class="w-full max-w-md text-center">
     <a href="/" class="inline-block mb-8">
-        <span class="text-[#14532d] text-3xl font-bold">মসলা ঘর</span>
+        <span class="text-[#14532d] text-3xl font-bold">{{ $siteName }}</span>
     </a>
 
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">

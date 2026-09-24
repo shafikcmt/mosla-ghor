@@ -166,7 +166,7 @@
     <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
         <div class="text-3xl mb-3">⏳</div>
         <p class="text-amber-800 font-semibold text-sm">আপনার enquiry review করা হচ্ছে।</p>
-        <p class="text-amber-600 text-xs mt-1">MoslaMart team / supplier শীঘ্রই quote পাঠাবে।</p>
+        <p class="text-amber-600 text-xs mt-1">{{ $siteName }} team / supplier শীঘ্রই quote পাঠাবে।</p>
     </div>
     @endif
 

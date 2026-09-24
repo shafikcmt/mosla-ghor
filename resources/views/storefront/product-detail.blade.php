@@ -51,15 +51,15 @@
 @endphp
 
 {{-- ─────────────────────────── SEO head ─────────────────────────── --}}
+@section('meta_description', $metaDesc)
 @section('head')
-    <meta name="description" content="{{ $metaDesc }}">
     @if($product->tags->isNotEmpty())
     <meta name="keywords" content="{{ $product->tags->pluck('name')->implode(', ') }}">
     @endif
     <link rel="canonical" href="{{ $canonical }}">
 
     <meta property="og:type" content="product">
-    <meta property="og:title" content="{{ $product->display_name }} — মসলা ঘর">
+    <meta property="og:title" content="{{ $product->display_name }} — {{ $siteName }}">
     <meta property="og:description" content="{{ $metaDesc }}">
     <meta property="og:image" content="{{ $main }}">
     <meta property="og:url" content="{{ $canonical }}">
@@ -73,7 +73,7 @@
         'image'       => $main,
         'description' => $metaDesc,
         'sku'         => $product->sku,
-        'brand'       => ['@type' => 'Brand', 'name' => $product->brand ?: 'মসলা ঘর'],
+        'brand'       => ['@type' => 'Brand', 'name' => $product->brand ?: $siteName],
         'category'    => $cat?->name_bn,
         'offers'      => $hasRetail ? [
             '@type'         => 'Offer',
@@ -223,7 +223,7 @@
         @endif
 
         @if($product->vendor)
-            <p class="text-xs text-gray-500 mt-2">সরবরাহকারী: <span class="font-medium text-gray-700">{{ $product->vendor->shop_name ?? $product->vendor->name ?? 'মসলা ঘর' }}</span></p>
+            <p class="text-xs text-gray-500 mt-2">সরবরাহকারী: <span class="font-medium text-gray-700">{{ $product->vendor->shop_name ?? $product->vendor->name ?? $siteName }}</span></p>
         @endif
 
         @if($product->short_description)
@@ -383,7 +383,7 @@
                 পরিমাণ বেশি হলে দাম কম হতে পারে। আপনার চাহিদা অনুযায়ী আমরা দাম জানাবো।
             </p>
             <p class="text-[11px] text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2 mt-2 leading-snug">
-                আপনার তথ্য, দাম এবং payment record নিরাপদ রাখতে MoslaMart chatbox এবং order process ব্যবহার করুন।
+                আপনার তথ্য, দাম এবং payment record নিরাপদ রাখতে {{ $siteName }} chatbox এবং order process ব্যবহার করুন।
             </p>
 
             {{-- In-page enquiry form (slide section, NOT a popup) — guest + logged-in --}}
