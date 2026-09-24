@@ -126,6 +126,7 @@
                 ['label' => 'FAQ',           'route' => 'admin.faqs.index',            'active' => 'admin.faqs.*'],
                 ['label' => 'রিভিউ',         'route' => 'admin.reviews.index',         'active' => 'admin.reviews.*'],
                 ['label' => 'পণ্য রিভিউ',     'route' => 'admin.product-reviews.index', 'active' => 'admin.product-reviews.*'],
+                ['label' => 'Hero Slides', 'route' => 'admin.hero-slides.index', 'active' => 'admin.hero-slides.*'],
                 ['label' => 'ওয়েবসাইট সেটিং', 'route' => 'admin.website-settings.index', 'active' => 'admin.website-settings.*'],
             ],
         ],

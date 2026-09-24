@@ -44,6 +44,7 @@
         @error('meta_description')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
         <p class="text-xs text-gray-500 mt-1">ঐচ্ছিক, সর্বোচ্চ ২০০ অক্ষর। দোকানের সংক্ষিপ্ত পরিচয় লিখুন।</p>
     </section>
+    <p class="mb-4 text-sm"><a class="underline" href="{{ route('admin.hero-slides.index') }}">Hero Slides পরিচালনা করুন</a> — সক্রিয় স্লাইড না থাকলে নিচের হিরো ব্যবহার হবে।</p>
 
     {{-- ── Hero section ────────────────────────────────────────────── --}}
     <div class="bg-white rounded shadow-sm border border-gray-100 mb-6">

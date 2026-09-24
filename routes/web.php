@@ -351,6 +351,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
+    Route::resource('hero-slides', \App\Http\Controllers\Admin\HeroSlideController::class)->except('show');
+
     Route::get('website-settings', [AdminWebsiteSettingController::class, 'index'])->name('website-settings.index');
     Route::post('website-settings', [AdminWebsiteSettingController::class, 'update'])->name('website-settings.update');
 

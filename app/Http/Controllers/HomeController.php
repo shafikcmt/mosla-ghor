@@ -101,6 +101,7 @@ class HomeController extends Controller
 
         $reviews = Review::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
 
+        $heroSlides = \App\Models\HeroSlide::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
         $ws = WebsiteSetting::allKeyed();
 
         return view('home', compact(
@@ -108,7 +109,7 @@ class HomeController extends Controller
             'activeZones', 'zonesForJs', 'fixedCombos', 'fixedCombosForJs',
             'bdDivisions', 'bdDistricts', 'bdUpazilas',
             'faqs', 'reviews', 'ws',
-            'navCategories', 'selectedCategory', 'featuredProducts'
+            'navCategories', 'selectedCategory', 'featuredProducts', 'heroSlides'
         ));
     }
 }
