@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: mosla-app
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    ports:
+      - "9000:9000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=mosla_ghor
+      - DB_USERNAME=mosla_user
+      - DB_PASSWORD=mosla_password_123
+    depends_on:
+      - db
+    networks:
+      - mosla-network
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    container_name: mosla-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_123
+      MYSQL_DATABASE: mosla_ghor
+      MYSQL_USER: mosla_user
+      MYSQL_PASSWORD: mosla_password_123
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/backups:/backups
+    ports:
+      - "3306:3306"
+    networks:
+      - mosla-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:alpine
+    container_name: mosla-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www/html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./storage/logs:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - mosla-network
+    restart: unless-stopped
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  mosla-network:
+    driver: bridge
