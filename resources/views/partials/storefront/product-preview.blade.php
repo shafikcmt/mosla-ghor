@@ -3,7 +3,7 @@
     $previewUrl = route('products.show', ['product'=>$product->slug, 'mode'=>$previewWholesale ? 'wholesale' : 'retail']);
 @endphp
 <article class="hm-product-tile" data-discovery-product="{{ $product->id }}" data-channel="{{ $previewMode }}">
-    <a class="hm-tile-image" href="{{ $previewUrl }}"><img class="product-artwork" src="{{ \App\Support\ProductMedia::url($product->main_image) ?: asset('images/product-placeholder.svg') }}" alt="{{ $product->display_name }}" loading="lazy" decoding="async" width="400" height="300">
+    <a class="hm-tile-image" href="{{ $previewUrl }}"><img class="product-artwork" src="{{ \App\Support\ProductMedia::url($product->main_image) ?: asset('images/product-placeholder.svg') }}" alt="{{ $product->display_name }}" loading="lazy" decoding="async" width="400" height="300"></a>
     <div class="hm-tile-body">
         <span class="hm-channel-label">{{ $previewWholesale ? 'পাইকারি' : 'খুচরা' }}</span>
         <h3><a href="{{ $previewUrl }}">{{ $product->display_name }}</a></h3>
