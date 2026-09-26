@@ -83,7 +83,7 @@
 .market-home .hm-wholesale-cta h2{font-family:'Noto Serif Bengali',serif;font-size:25px;font-weight:700;color:var(--hm-green)}.market-home .hm-wholesale-cta p{margin-top:8px;color:var(--hm-muted);max-width:65ch;font-size:14px}
 .market-home :is(a,button,input):focus-visible{outline:3px solid #b78421;outline-offset:3px}
 @media(max-width:1199px){.market-home .hm-categories{grid-template-columns:repeat(3,minmax(0,1fr))}.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.market-home .hm-hero-copy{padding:24px}}
-@media(max-width:767px){.market-home .hm-container{width:calc(100% - 28px)}.market-home .hm-hero{grid-template-columns:1fr;margin-top:14px}.market-home .hm-hero-copy{padding:22px}.market-home .hm-hero-media>img{height:190px}.market-home .hm-section{padding-block:24px}.market-home .hm-section-heading{align-items:flex-start;flex-wrap:wrap;gap:8px}.market-home .hm-section-heading h2{font-size:23px}.market-home .hm-categories{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.market-home #products{padding-inline:14px}.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.market-home .product-card [data-slideshow],.market-home .hm-tile-image{height:150px}.market-home .product-card>.p-5,.market-home .hm-tile-body{padding:12px}.market-home .product-card h3,.market-home .hm-product-tile h3{font-size:16px}.market-home .product-card [id^=card-chips]{grid-template-columns:repeat(2,minmax(0,1fr))}.market-home .hm-benefits{grid-template-columns:repeat(2,minmax(0,1fr))}.market-home .hm-benefits>div{padding:16px 10px}.market-home .hm-wholesale-cta{flex-direction:column;align-items:flex-start;padding:22px}.market-home .hm-search{max-width:none}.market-home .hm-section-heading>a{white-space:normal}}
+@media(max-width:767px){.market-home .hm-container{width:calc(100% - 28px)}.market-home .hm-hero{grid-template-columns:1fr;margin-top:14px}.market-home .hm-hero-copy{padding:22px}.market-home .hm-hero-media>img{height:190px}.market-home .hm-section{padding-block:24px}.market-home .hm-section-heading{align-items:flex-start;flex-wrap:wrap;gap:8px}.market-home .hm-section-heading h2{font-size:23px}.market-home .hm-categories{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.market-home #products{padding-inline:14px}.market-home .hm-benefits{grid-template-columns:repeat(2,minmax(0,1fr))}.market-home .hm-benefits>div{padding:16px 10px}.market-home .hm-wholesale-cta{flex-direction:column;align-items:flex-start;padding:22px}.market-home .hm-search{max-width:none}.market-home .hm-section-heading>a{white-space:normal}}
 @media(prefers-reduced-motion:reduce){.market-home .product-card,.market-home .card-slide{transition:none!important}}
 /* The desktop navigation exceeds tablet width; use its existing drawer. */
 @media(min-width:768px) and (max-width:1023px){
@@ -130,3 +130,23 @@
 @media(max-width:900px){.market-home .hm-catalog-tools{grid-template-columns:1fr auto}.market-home .hm-search{grid-row:2;grid-column:1/-1}}
 @media(max-width:767px){.market-home .hm-catalog-tools{display:flex;flex-direction:column;align-items:stretch}.market-home .hm-mode-tabs a{flex:1;justify-content:center}.market-home .hm-view-toggle{align-self:flex-end}.market-home .hm-slider{margin-top:14px}.market-home .hm-slide{margin-top:0;min-height:0}.market-home .hm-slide-title{font-size:28px}.market-home .hm-slide .hm-hero-display{height:190px}.market-home .hm-slider-controls button{min-height:44px;min-width:40px}.market-home .hm-slider-dots button{min-width:32px}}
 @media(prefers-reduced-motion:reduce){.market-home .hm-slide{transition:none}}
+
+/* Phones (< 768px): one product card per row, capped at 480px and centred so it
+   doesn't stretch on 600-767px screens. Tablet/desktop rules above (3 / 4 columns)
+   are unchanged. Chip sizing lives here (not in the markup) because the
+   mode-toggle JS rebuilds the chip HTML with its own classes. */
+@media(max-width:767px){
+.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+.market-home .product-card,.market-home .hm-product-tile{width:100%;max-width:480px;margin-inline:auto;border-radius:16px;border-color:#f3f4f6;box-shadow:0 1px 2px #0000000d}
+.market-home .product-card [data-slideshow],.market-home .hm-tile-image{height:auto;aspect-ratio:4/3}
+.market-home .product-card>.p-5,.market-home .hm-tile-body{padding:12px}
+.market-home .product-card h3,.market-home .hm-product-tile h3{font-size:16px;font-weight:600;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.market-home .product-card>.p-5>p{font-size:14px;color:#4b5563}
+.market-home .product-card [id^=card-from-]{font-size:18px}
+.market-home .product-card [id^=card-chips]{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.market-home .product-card .p-chip{min-height:44px;display:flex;flex-direction:column;justify-content:center;padding:6px 4px}
+.market-home .product-card .chip-lbl{font-size:13px}
+.market-home .product-card .chip-val{font-size:14px}
+.market-home .product-card [id^=card-retail-btns]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.market-home .product-card [id^=card-retail-btns]>*{min-width:0;display:flex;align-items:center;justify-content:center}
+}

@@ -31,7 +31,7 @@
                 <div class="relative h-52 overflow-hidden flex-shrink-0" data-slideshow="{{ $product->id }}">
                     @if($cardSlides->isNotEmpty())
                         @foreach($cardSlides as $si => $slide)
-                        <img src="{{ \App\Support\ProductMedia::url($slide) }}" alt="{{ $product->name_bn }}" loading="lazy"
+                        <img src="{{ \App\Support\ProductMedia::url($slide) }}" alt="{{ $product->name_bn }}" loading="lazy" decoding="async" width="400" height="300"
                              class="card-slide absolute inset-0 w-full h-full product-artwork transition-opacity duration-500"
                              style="{{ $si > 0 ? 'opacity:0;' : '' }}">
                         @endforeach

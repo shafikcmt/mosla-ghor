@@ -170,7 +170,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
         @media (max-width: 1023px) { body { padding-bottom: calc(74px + env(safe-area-inset-bottom)); } }
     </style>
 @include('partials.storefront.product-media-assets')
-<link rel="stylesheet" href="{{ asset('css/storefront-home.css') }}?v=20260924">
+<link rel="stylesheet" href="{{ asset('css/storefront-home.css') }}?v=20260926b">
 </head>
 <body class="min-h-screen market-home">
 
@@ -224,7 +224,8 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
             </div>
         @else
 
-        {{-- ══ CARD VIEW ══ --}}
+        {{-- ══ CARD VIEW ══ (column counts come from public/css/storefront-home.css,
+             which overrides these utilities: 1 col < 768px, 3 < 1200px, else 4) --}}
         <div id="card-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             @foreach($products as $product)
             @include("partials.storefront.product-card")
@@ -2785,7 +2786,7 @@ function renderCombo() {
     if (barEl) {
         if (n > 0) {
             barEl.style.display = 'block';
-            document.body.style.paddingBottom = '76px';
+            document.body.style.paddingBottom = 'calc(76px + env(safe-area-inset-bottom))';
             if (barCount) barCount.textContent = n + ' টি পণ্য বেছেছেন';
             if (barText)  barText.textContent  = '৳' + fmt(grand);
         } else {
