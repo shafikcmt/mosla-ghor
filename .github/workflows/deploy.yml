@@ -1,19 +1,18 @@
 name: Deploy to Production
 
 on:
-  push:
-    branches:
-      - master
+  # push trigger will be enabled after the runner + deploy script are tested
+  workflow_dispatch:
+
+concurrency:
+  group: mosla-production-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # Office server runner (192.168.245.25 is private, GitHub-hosted runners can't reach it)
+    runs-on: [self-hosted, mosla-deploy]
+    timeout-minutes: 20
     steps:
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            bash /var/www/mosla-ghor/deploy.sh
+      - name: Deploy on server
+        run: bash /var/www/mosla-ghor/deploy-docker.sh

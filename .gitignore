@@ -37,3 +37,8 @@ Thumbs.db
 *.sqlite-shm
 *.sqlite-wal
 spice_ecommercec
+
+# Server-only Docker config (contains credentials, managed on the server)
+/Dockerfile
+/docker-compose.yml
+/nginx.conf

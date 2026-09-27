@@ -11,10 +11,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+         // Trust Cloudflare Tunnel / reverse proxy so HTTPS URLs are generated correctly
+        $middleware->trustProxies(at: '*');
         $middleware->alias([
             'admin'         => \App\Http\Middleware\AdminMiddleware::class,
             'vendor'        => \App\Http\Middleware\VendorMiddleware::class,
             'customer-auth' => \App\Http\Middleware\CustomerMiddleware::class,
+           
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
