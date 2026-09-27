@@ -1,7 +1,7 @@
-name: Deploy to Production
-
 on:
-  # push trigger will be enabled after the runner + deploy script are tested
+  push:
+    branches:
+      - master
   workflow_dispatch:
 
 concurrency:
