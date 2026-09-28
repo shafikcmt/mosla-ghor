@@ -57,23 +57,52 @@ class CustomerOtpLoginTest extends TestCase
         ]);
     }
 
-    public function test_full_otp_login_flow_authenticates_customer(): void
+    /**
+     * Run the OTP flow the way the form does (?redirect= rides on the send URL)
+     * and return the verify response.
+     */
+    private function otpLogin(?string $redirect = null)
     {
         $this->enableOtp();
         $user = $this->customer();
 
         // Request a code.
-        $this->post(route('customer.login.otp.send'), ['identifier' => '01712345678'])
+        $sendUrl = route('customer.login.otp.send', $redirect !== null ? ['redirect' => $redirect] : []);
+        $this->post($sendUrl, ['identifier' => '01712345678'])
             ->assertRedirect(route('customer.login.otp.verify'));
 
         $code = Cache::get('otp_test_code');
         $this->assertMatchesRegularExpression('/^\d{6}$/', $code);
 
         // Verify it → logged in.
-        $this->post(route('customer.login.otp.verify.post'), ['code' => $code])
-            ->assertRedirect(route('customer.account'));
-
+        $response = $this->post(route('customer.login.otp.verify.post'), ['code' => $code]);
         $this->assertAuthenticatedAs($user);
+
+        return $response;
+    }
+
+    // Post-auth destination is ecommerce-friendly (78f3752): never the forced dashboard.
+    public function test_full_otp_login_flow_without_redirect_goes_home(): void
+    {
+        $this->otpLogin()
+            ->assertRedirect(url('/'))
+            ->assertSessionHas('success', 'সফলভাবে লগইন হয়েছে।');
+    }
+
+    public function test_otp_login_returns_to_safe_redirect(): void
+    {
+        $this->otpLogin('/products/whole-cumin?mode=retail')
+            ->assertRedirect(url('/products/whole-cumin?mode=retail'));
+    }
+
+    public function test_otp_login_ignores_external_redirects(): void
+    {
+        $this->otpLogin('https://evil.com/phish')->assertRedirect(url('/'));
+    }
+
+    public function test_otp_login_ignores_protocol_relative_redirects(): void
+    {
+        $this->otpLogin('//evil.com/phish')->assertRedirect(url('/'));
     }
 
     public function test_unknown_identifier_is_rejected_without_sending(): void
