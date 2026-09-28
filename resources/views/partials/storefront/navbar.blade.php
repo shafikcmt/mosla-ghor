@@ -36,6 +36,9 @@
     $mActive = 'flex items-center gap-3 px-5 py-3 text-[15px] font-semibold text-[#14532d] bg-green-50 border-r-4 border-[#c9a227]';
 @endphp
 
+{{-- Maintenance admin bar / notice banner (renders nothing when maintenance is off). --}}
+@include('partials.storefront.maintenance-bar')
+
 {{-- Admin-controlled top announcement marquee (shows on every storefront page). --}}
 @include('partials.storefront.announcement', ['ws' => $ws])
 

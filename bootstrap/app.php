@@ -17,8 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin'         => \App\Http\Middleware\AdminMiddleware::class,
             'vendor'        => \App\Http\Middleware\VendorMiddleware::class,
             'customer-auth' => \App\Http\Middleware\CustomerMiddleware::class,
-           
+
         ]);
+        // Admin-controlled maintenance mode (after session/auth so admins can be recognised).
+        $middleware->web(append: [\App\Http\Middleware\MaintenanceMode::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Redirect back with a friendly message on CSRF token expiry (419)

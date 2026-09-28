@@ -6,6 +6,128 @@
 
 <h1 class="text-xl font-bold text-gray-800 mb-6">ওয়েবসাইট কন্টেন্ট সেটিং</h1>
 
+{{-- ── Maintenance / notice mode (own form: saving it never touches the fields below) ── --}}
+@php
+    $mnErr   = $errors->getBag('maintenance');
+    $mnOld   = fn ($key, $default = '') => old($key, $settings[$key] ?? $default);
+    $mnOn    = \App\Support\Maintenance::enabled();
+    $mnUntil = \App\Support\Maintenance::until();
+    $mnMode  = $mnOld('maintenance_mode', 'full');
+@endphp
+<form id="maintenance" action="{{ route('admin.maintenance.update') }}" method="POST"
+      class="mn-card bg-white rounded shadow-sm border border-gray-100 mb-6 {{ $mnOn ? 'is-on' : '' }}">
+    @csrf
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+        <h2 class="text-sm font-semibold text-gray-600">মেইনটেন্যান্স / নোটিশ মোড</h2>
+        @if($mnOn)
+            <span class="mn-badge"><span class="mn-dot"></span>চালু আছে</span>
+        @else
+            <span class="text-xs text-green-700 bg-green-50 rounded-full px-3 py-1">বন্ধ — সাইট স্বাভাবিক</span>
+        @endif
+    </div>
+    <div class="px-6 py-5 space-y-5">
+        @if($mnErr->any())
+            <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded px-4 py-3">
+                @foreach($mnErr->all() as $error)<p>{{ $error }}</p>@endforeach
+            </div>
+        @endif
+        @if($mnOn && \App\Support\Maintenance::expired())
+            <div class="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded px-4 py-3">
+                ⚠️ শেষ সময় ({{ $mnUntil->format('d M Y, h:i A') }}) পেরিয়ে গেছে, কিন্তু মেইনটেন্যান্স এখনও চালু আছে।
+                গ্রাহকদের কাউন্টডাউন লুকানো হয়েছে। কাজ শেষ হলে নিচ থেকে বন্ধ করুন বা নতুন সময় দিন।
+            </div>
+        @endif
+
+        <input type="hidden" name="maintenance_enabled" value="0">
+        <label class="mn-switch">
+            <input type="checkbox" name="maintenance_enabled" value="1" @checked((string) $mnOld('maintenance_enabled', '0') === '1')>
+            <span class="mn-track" aria-hidden="true"></span>
+            <span>
+                <span class="block text-sm font-medium text-gray-700">মেইনটেন্যান্স চালু করুন</span>
+                <span class="block text-xs text-gray-400 mt-0.5">অ্যাডমিন প্যানেল সবসময় কাজ করবে। লগইন করা অ্যাডমিন আসল সাইট দেখবেন।</span>
+            </span>
+        </label>
+
+        <div>
+            <span class="block text-xs font-medium text-gray-600 mb-2">মোড</span>
+            <div class="mn-modes">
+                <label class="mn-mode">
+                    <input type="radio" name="maintenance_mode" value="full" @checked($mnMode === 'full')>
+                    <span class="text-sm font-medium text-gray-700">পুরো সাইট বন্ধ</span>
+                    <small>গ্রাহক নোটিশ পেজ দেখবেন (HTTP 503)। অর্ডার ট্র্যাক ও ইনভয়েস দেখা যাবে।</small>
+                </label>
+                <label class="mn-mode">
+                    <input type="radio" name="maintenance_mode" value="banner" @checked($mnMode === 'banner')>
+                    <span class="text-sm font-medium text-gray-700">শুধু নোটিশ ব্যানার</span>
+                    <small>সাইট স্বাভাবিক চলবে, উপরে একটি নোটিশ বার দেখাবে।</small>
+                </label>
+            </div>
+        </div>
+
+        <div class="space-y-3">
+            <input type="hidden" name="maintenance_block_orders" value="0">
+            <label class="flex items-start gap-3 cursor-pointer" data-mn-orders>
+                <input type="checkbox" name="maintenance_block_orders" value="1" class="mt-0.5 rounded border-gray-300"
+                       @checked((string) $mnOld('maintenance_block_orders', '0') === '1')>
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">নতুন অর্ডার ও চেকআউট বন্ধ রাখুন <span class="text-xs text-gray-400">(শুধু ব্যানার মোডে)</span></span>
+                    <span class="block text-xs text-gray-400 mt-0.5">গ্রাহক “অর্ডার সাময়িকভাবে বন্ধ আছে” দেখবেন। পাইকারি enquiry চালু থাকবে।</span>
+                </span>
+            </label>
+            <input type="hidden" name="maintenance_block_vendors" value="0">
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" name="maintenance_block_vendors" value="1" class="mt-0.5 rounded border-gray-300"
+                       @checked((string) $mnOld('maintenance_block_vendors', '0') === '1')>
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">মার্চেন্ট প্যানেলও বন্ধ রাখুন</span>
+                    <span class="block text-xs text-gray-400 mt-0.5">মার্চেন্ট লগইন কাজ করবে, কিন্তু প্যানেলে শুধু নোটিশ দেখবেন।</span>
+                </span>
+            </label>
+        </div>
+
+        <div class="mn-grid">
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1" for="maintenance_title">শিরোনাম</label>
+                <input type="text" id="maintenance_title" name="maintenance_title" maxlength="120"
+                       value="{{ $mnOld('maintenance_title') }}" placeholder="{{ \App\Support\Maintenance::DEFAULT_TITLE }}"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1" for="maintenance_until">আনুমানিক শেষ সময় <span class="text-gray-400">(বাংলাদেশ সময়, ঐচ্ছিক)</span></label>
+                <input type="datetime-local" id="maintenance_until" name="maintenance_until"
+                       value="{{ old('maintenance_until', $mnUntil?->format('Y-m-d\TH:i')) }}"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+                <p class="text-gray-400 text-xs mt-1">দিলে গ্রাহক কাউন্টডাউন দেখবেন। সময় পেরোলেও মেইনটেন্যান্স নিজে বন্ধ হবে না। Retry-After এই সময় থেকে হিসাব হয়।</p>
+            </div>
+            <div class="mn-wide">
+                <label class="block text-xs font-medium text-gray-600 mb-1" for="maintenance_message">বার্তা</label>
+                <textarea id="maintenance_message" name="maintenance_message" maxlength="1000" rows="3"
+                          placeholder="{{ \App\Support\Maintenance::DEFAULT_MESSAGE }}"
+                          class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-y">{{ $mnOld('maintenance_message') }}</textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1" for="maintenance_contact">যোগাযোগ নম্বর (কল/WhatsApp, ঐচ্ছিক)</label>
+                <input type="text" id="maintenance_contact" name="maintenance_contact" maxlength="30" inputmode="tel"
+                       value="{{ $mnOld('maintenance_contact') }}" placeholder="01XXXXXXXXX"
+                       class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1" for="maintenance_allowed_ips">অনুমোদিত IP (ঐচ্ছিক)</label>
+                <textarea id="maintenance_allowed_ips" name="maintenance_allowed_ips" rows="2" maxlength="1000"
+                          placeholder="103.x.x.x, 2001:db8::1"
+                          class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-400 resize-y">{{ $mnOld('maintenance_allowed_ips') }}</textarea>
+                <p class="text-gray-400 text-xs mt-1">এই IP থেকে সাইট স্বাভাবিক দেখাবে। আপনার বর্তমান IP: <span class="font-mono">{{ request()->ip() }}</span></p>
+            </div>
+        </div>
+
+        <div class="mn-actions">
+            <button type="submit" class="bg-gray-800 text-white px-8 py-2.5 rounded text-sm font-medium hover:bg-gray-700 transition-colors">মেইনটেন্যান্স সেটিং সংরক্ষণ</button>
+            <a href="{{ route('admin.maintenance.preview') }}" target="_blank" rel="noopener" class="mn-btn mn-btn-outline">প্রিভিউ দেখুন ↗</a>
+            <span class="text-xs text-gray-400">প্রিভিউ সংরক্ষিত লেখা দেখায় — আগে সংরক্ষণ করুন।</span>
+        </div>
+    </div>
+</form>
+
 <form action="{{ route('admin.website-settings.update') }}" method="POST">
     @csrf
 

@@ -356,6 +356,8 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
 
     Route::get('website-settings', [AdminWebsiteSettingController::class, 'index'])->name('website-settings.index');
     Route::post('website-settings', [AdminWebsiteSettingController::class, 'update'])->name('website-settings.update');
+    Route::post('maintenance', [\App\Http\Controllers\Admin\MaintenanceSettingController::class, 'update'])->name('maintenance.update');
+    Route::get('maintenance/preview', [\App\Http\Controllers\Admin\MaintenanceSettingController::class, 'preview'])->name('maintenance.preview');
 
     Route::resource('categories', AdminCategoryController::class);
 

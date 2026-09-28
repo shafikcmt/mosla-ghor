@@ -7,6 +7,7 @@
     @vite('resources/css/app.css')
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="{{ asset('css/admin-maintenance.css') }}?v=20260928">
     @stack('styles')
     <style>
         [x-cloak] { display: none !important; }
@@ -274,6 +275,13 @@
 
         {{-- Right side --}}
         <div class="flex items-center gap-3 flex-shrink-0">
+            @if(\App\Support\Maintenance::enabled())
+                <a href="{{ route('admin.website-settings.index') }}#maintenance" class="mn-badge"
+                   title="{{ \App\Support\Maintenance::expired() ? 'শেষ সময় পেরিয়ে গেছে — মেইনটেন্যান্স এখনও চালু' : 'মেইনটেন্যান্স চালু আছে' }}">
+                    <span class="mn-dot"></span>
+                    <span class="mn-badge-text">Maintenance চালু{{ \App\Support\Maintenance::expired() ? ' · সময় শেষ' : '' }}</span>
+                </a>
+            @endif
             @include('partials.notification-bell', ['panel' => 'admin'])
             <span class="hidden sm:inline-block text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">Admin</span>
             <a href="{{ url('/') }}" target="_blank"
