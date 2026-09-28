@@ -90,7 +90,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">লোগো (ঐচ্ছিক)</label>
-                    <input type="file" name="logo" accept="image/*"
+                    <input type="file" name="logo" accept="image/*" {{ \App\Support\ImageOptimizer::inputAttributes('logo') }}
                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none">
                 </div>
                 <div>
@@ -113,5 +113,6 @@
     </p>
 </div>
 
+<script src="{{ asset('js/image-resize.js') }}?v=20260929" defer></script>
 </body>
 </html>

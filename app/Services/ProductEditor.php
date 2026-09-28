@@ -160,7 +160,7 @@ class ProductEditor
         }
         $retail = filter_var($input['show_in_retail'], FILTER_VALIDATE_BOOLEAN);
         $wholesale = filter_var($input['show_in_wholesale'], FILTER_VALIDATE_BOOLEAN);
-        $image = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:5120'];
+        $image = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:10240'];
         $rules = [
             'name_bn' => 'required|string|max:255', 'name_en' => 'nullable|string|max:255',
             'slug' => ['nullable', 'string', 'max:255', 'regex:~^[\pL\pN_-]+$~u', Rule::unique('products')->ignore($product?->id)],
@@ -192,7 +192,7 @@ class ProductEditor
             'meta_title' => 'nullable|string|max:70',
             'meta_description' => 'nullable|string|max:170',
             'meta_keywords' => 'nullable|string|max:255',
-            'og_image_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:2048'],
+            'og_image_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:10240'],
             'remove_og_image' => 'sometimes|boolean',
             'canonical_url' => $admin ? 'nullable|url:http,https|max:255' : 'exclude',
             'meta_robots' => $admin ? ['nullable', Rule::in(Product::META_ROBOTS)] : 'exclude',

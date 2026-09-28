@@ -185,12 +185,12 @@
         <div class="mt-3 flex flex-wrap gap-2">
             <button type="button" data-product-thumbnail="{{ $main }}" aria-label="Show main product image" aria-pressed="true"
                     class="pd-thumb active w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent">
-                <img src="{{ $main }}" alt="{{ $product->display_name }}" class="w-full h-full product-artwork" loading="lazy">
+                <img src="{{ $main }}" alt="{{ $product->display_name }}" class="w-full h-full product-artwork" loading="lazy" decoding="async">
             </button>
             @foreach($gallery as $g)
             <button type="button" data-product-thumbnail="{{ $g }}" aria-label="Show product image {{ $loop->iteration + 1 }}" aria-pressed="false"
                     class="pd-thumb w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent">
-                <img src="{{ $g }}" alt="{{ $product->display_name }}" class="w-full h-full product-artwork" loading="lazy">
+                <img src="{{ $g }}" alt="{{ $product->display_name }}" class="w-full h-full product-artwork" loading="lazy" decoding="async">
             </button>
             @endforeach
             @if($youtubeEmbed)
@@ -539,7 +539,7 @@
                 <p class="text-sm text-gray-700 leading-relaxed">{{ $review->comment }}</p>
             @endif
             @if($review->image)
-                <img src="{{ $imgUrl($review->image) }}" alt="রিভিউ ছবি" class="mt-2 w-20 h-20 rounded-lg object-cover border border-gray-100">
+                <img src="{{ $imgUrl($review->image) }}" alt="রিভিউ ছবি" loading="lazy" decoding="async" class="mt-2 w-20 h-20 rounded-lg object-cover border border-gray-100">
             @endif
             <div class="flex items-center gap-2 mt-3 pt-2 border-t border-gray-50">
                 <div class="w-8 h-8 rounded-full bg-[#14532d] flex items-center justify-center flex-shrink-0">
@@ -599,7 +599,7 @@
 
             <div>
                 <label class="block text-xs text-gray-500 mb-1">ছবি (ঐচ্ছিক)</label>
-                <input type="file" name="image" accept="image/jpeg,image/png,image/webp"
+                <input type="file" name="image" accept="image/jpeg,image/png,image/webp" {{ \App\Support\ImageOptimizer::inputAttributes('review') }}
                        class="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-green-50 file:text-[#14532d] file:text-sm file:font-semibold">
             </div>
 

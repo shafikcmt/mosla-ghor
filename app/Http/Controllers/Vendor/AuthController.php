@@ -52,7 +52,7 @@ class AuthController extends Controller
             'password'    => 'required|string|min:8|confirmed',
             'address'     => 'nullable|string|max:500',
             'business_type' => 'nullable|string|max:100',
-            'logo'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'logo'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
             'kyc_document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
         ], [
             'shop_name.required'  => 'দোকানের নাম দিন।',
@@ -89,11 +89,12 @@ class AuthController extends Controller
 
         $logoPath = null;
         if ($request->hasFile('logo')) {
-            $logoPath = 'storage/' . $request->file('logo')->store('vendors/logos', 'public');
+            $logoPath = 'storage/' . \App\Support\ImageOptimizer::store($request->file('logo'), 'vendors/logos', 'logo');
         }
 
         $kycPath = null;
         if ($request->hasFile('kyc_document')) {
+            // KYC is stored exactly as uploaded (never re-encoded).
             $kycPath = 'storage/' . $request->file('kyc_document')->store('vendors/kyc', 'public');
         }
 

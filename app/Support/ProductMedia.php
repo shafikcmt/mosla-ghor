@@ -32,8 +32,14 @@ class ProductMedia
 
     public function store(UploadedFile $file, string $folder, string $field): string
     {
+        // Images are optimised (see ImageOptimizer); videos are stored untouched.
+        $profile = match (true) {
+            str_starts_with($folder, 'products/videos') => null,
+            $field === 'og_image_file'                  => 'og',
+            default                                     => 'product',
+        };
         try {
-            $path = $file->store($folder, 'public');
+            $path = ImageOptimizer::store($file, $folder, $profile, 'public');
         } catch (\Throwable $e) {
             report($e);
             $path = false;

@@ -80,7 +80,7 @@ class HeroSlideTest extends TestCase
     {
         Storage::fake('public');
         $this->admin();
-        foreach ([UploadedFile::fake()->create('bad.svg', 1, 'image/svg+xml'), UploadedFile::fake()->image('huge.jpg')->size(5121)] as $image) {
+        foreach ([UploadedFile::fake()->create('bad.svg', 1, 'image/svg+xml'), UploadedFile::fake()->image('huge.jpg')->size(10241)] as $image) {
             $this->post(route('admin.hero-slides.store'), ['title'=>'Bad', 'sort_order'=>0, 'image'=>$image])->assertSessionHasErrors('image');
         }
         $slide = $this->slide();

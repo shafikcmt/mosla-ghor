@@ -44,7 +44,7 @@ class CustomerReturnController extends CustomerBaseController
             'order_item_id' => 'nullable|integer|exists:order_items,id',
             'reason'        => 'required|string|max:200',
             'details'       => 'nullable|string|max:1000',
-            'image'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'image'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
         ], [
             'reason.required' => 'কারণ লিখুন।',
         ]);
@@ -54,7 +54,7 @@ class CustomerReturnController extends CustomerBaseController
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('return-requests', 'public');
+            $imagePath = \App\Support\ImageOptimizer::store($request->file('image'), 'return-requests', 'return');
         }
 
         $returnRequest = ReturnRequest::create([

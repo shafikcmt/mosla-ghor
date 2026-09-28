@@ -30,8 +30,8 @@ class ProfileController extends Controller
             'phone'         => 'required|string|max:20|unique:vendors,phone,' . $vendor->id,
             'address'       => 'nullable|string|max:500',
             'business_type' => 'nullable|string|max:100',
-            'logo'          => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-            'banner'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'logo'          => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
+            'banner'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
             'payment_info'  => 'nullable|string|max:1000',
         ]);
 
@@ -46,14 +46,14 @@ class ProfileController extends Controller
             if ($vendor->logo && str_starts_with($vendor->logo, 'storage/')) {
                 Storage::disk('public')->delete(preg_replace('#^storage/#', '', $vendor->logo));
             }
-            $updates['logo'] = 'storage/' . $request->file('logo')->store('vendors/logos', 'public');
+            $updates['logo'] = 'storage/' . \App\Support\ImageOptimizer::store($request->file('logo'), 'vendors/logos', 'logo');
         }
 
         if ($request->hasFile('banner')) {
             if ($vendor->banner && str_starts_with($vendor->banner, 'storage/')) {
                 Storage::disk('public')->delete(preg_replace('#^storage/#', '', $vendor->banner));
             }
-            $updates['banner'] = 'storage/' . $request->file('banner')->store('vendors/banners', 'public');
+            $updates['banner'] = 'storage/' . \App\Support\ImageOptimizer::store($request->file('banner'), 'vendors/banners', 'banner');
         }
 
         if ($request->filled('payment_info')) {

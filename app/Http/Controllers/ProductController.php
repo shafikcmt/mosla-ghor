@@ -135,7 +135,7 @@ class ProductController extends Controller
             'comment'          => ['required', 'string', 'max:2000'],
             'customer_name'    => [$isCustomer ? 'nullable' : 'required', 'string', 'max:100'],
             'customer_contact' => ['nullable', 'string', 'max:100'],
-            'image'            => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'image'            => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
         ]);
 
         $name = $isCustomer
@@ -144,7 +144,7 @@ class ProductController extends Controller
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $path      = $request->file('image')->store('reviews', 'public');
+            $path      = \App\Support\ImageOptimizer::store($request->file('image'), 'reviews', 'review');
             $imagePath = 'storage/' . $path;
         }
 

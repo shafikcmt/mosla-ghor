@@ -42,7 +42,7 @@
 
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">ছবি <span class="text-gray-400 font-normal">(ঐচ্ছিক)</span></label>
-                <input type="file" name="image" accept="image/*"
+                <input type="file" name="image" accept="image/*" {{ \App\Support\ImageOptimizer::inputAttributes('return') }}
                        class="w-full text-sm text-gray-600 border border-gray-300 rounded-lg px-3 py-2 file:mr-3 file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-xs file:rounded">
             </div>
 

@@ -72,7 +72,7 @@ class OrderController extends Controller
             'sender_number'            => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:30'],
             'transaction_id'           => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:100'],
             'paid_amount'              => [$isManualPayment ? 'required' : 'nullable', 'numeric', 'min:0'],
-            'payment_screenshot'       => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'payment_screenshot'       => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'items'            => [$isComboOrder ? 'nullable' : 'required', 'array', 'min:1', 'max:20'],
             'items.*.price_id' => ['required_with:items', 'integer', 'exists:product_prices,id'],
         ], [
@@ -365,8 +365,7 @@ class OrderController extends Controller
         }
 
         if ($request->hasFile('payment_screenshot')) {
-            $path = $request->file('payment_screenshot')
-                ->store('payment-screenshots', 'public');
+            $path = \App\Support\ImageOptimizer::store($request->file('payment_screenshot'), 'payment-screenshots', 'payment');
             $order->update(['payment_screenshot' => $path]);
         }
 

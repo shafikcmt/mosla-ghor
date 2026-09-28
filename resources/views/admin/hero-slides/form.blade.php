@@ -13,7 +13,7 @@
     @endforeach
     <div><label for="image" class="block text-sm mb-2">স্লাইডের ছবি {{ $slide->exists ? '' : '*' }}</label>
         @if($slide->exists)<img src="{{ \App\Support\ProductMedia::url($slide->image_path) }}" alt="{{ $slide->title }}" class="h-32 object-contain mb-3">@endif
-        <input id="image" type="file" name="image" accept="image/jpeg,image/png,image/webp" @required(!$slide->exists) class="max-w-full">
+        <input id="image" type="file" name="image" accept="image/jpeg,image/png,image/webp" {{ \App\Support\ImageOptimizer::inputAttributes('hero') }} @required(!$slide->exists) class="max-w-full">
         <p class="text-xs text-gray-500 mt-2">JPG, PNG বা WebP, সর্বোচ্চ ৫ MB। নতুন ছবি না দিলে আগেরটি থাকবে।</p>
         @error('image')<p class="text-red-600 text-sm">{{ $message }}</p>@enderror
     </div>

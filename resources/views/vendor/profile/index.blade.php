@@ -52,7 +52,7 @@
                     <img src="{{ asset($vendor->logo) }}" alt="" class="w-20 h-20 rounded-lg object-cover border">
                 </div>
                 @endif
-                <input type="file" name="logo" accept="image/*"
+                <input type="file" name="logo" accept="image/*" {{ \App\Support\ImageOptimizer::inputAttributes('logo') }}
                        class="w-full border rounded px-3 py-2 text-sm bg-white">
             </div>
 
@@ -63,7 +63,7 @@
                     <img src="{{ asset($vendor->banner) }}" alt="" class="h-16 rounded-lg object-cover border">
                 </div>
                 @endif
-                <input type="file" name="banner" accept="image/*"
+                <input type="file" name="banner" accept="image/*" {{ \App\Support\ImageOptimizer::inputAttributes('banner') }}
                        class="w-full border rounded px-3 py-2 text-sm bg-white">
             </div>
 

@@ -52,7 +52,7 @@ class HeroSlideController extends Controller
             'primary_url' => ['nullable', 'required_with:primary_label', 'string', 'max:300', $urlRule],
             'secondary_label' => 'nullable|required_with:secondary_url|string|max:60',
             'secondary_url' => ['nullable', 'required_with:secondary_label', 'string', 'max:300', $urlRule],
-            'image' => [$slide->exists ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'image' => [$slide->exists ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
         ]);
         unset($data['image']);
         $data['is_active'] = $request->boolean('is_active');
@@ -60,7 +60,7 @@ class HeroSlideController extends Controller
         $stored = null;
         try {
             if ($request->hasFile('image')) {
-                $stored = $request->file('image')->store('hero-slides', 'public');
+                $stored = \App\Support\ImageOptimizer::store($request->file('image'), 'hero-slides', 'hero');
                 if (! $stored) {
                     throw ValidationException::withMessages(['image' => 'Image could not be stored. Please try again.']);
                 }

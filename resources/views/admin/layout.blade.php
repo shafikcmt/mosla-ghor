@@ -362,5 +362,6 @@ function closeSidebar() {
 window.addEventListener('pageshow', closeSidebar);
 </script>
 
+<script src="{{ asset('js/image-resize.js') }}?v=20260929" defer></script>
 </body>
 </html>

@@ -123,7 +123,8 @@ class ProductEditorTest extends TestCase
     {
         $product = $this->product(['main_image'=>'storage/products/images/old.jpg']);
         $disk = \Mockery::mock(\Illuminate\Filesystem\FilesystemAdapter::class);
-        $disk->shouldReceive('putFileAs')->once()->andReturn(false);
+        // Either write path fails: plain store() uses putFileAs, optimised images use put.
+        $disk->shouldReceive('putFileAs', 'put')->andReturn(false);
         Storage::shouldReceive('disk')->with('public')->andReturn($disk);
         $this->put(route('admin.products.update', $product), $this->payload(['main_image_file'=>UploadedFile::fake()->image('new.jpg')]))->assertSessionHasErrors('main_image_file');
         $this->assertSame('storage/products/images/old.jpg', $product->fresh()->main_image);

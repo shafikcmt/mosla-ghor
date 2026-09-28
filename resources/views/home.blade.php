@@ -1432,7 +1432,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                                         ছবি বেছে নিন (JPG, PNG, WebP • সর্বোচ্চ ২ MB)
                                     </span>
                                 </label>
-                                <input type="file" name="payment_screenshot" id="f-payment_screenshot"
+                                <input type="file" name="payment_screenshot" id="f-payment_screenshot" {{ \App\Support\ImageOptimizer::inputAttributes('payment') }}
                                        accept="image/jpeg,image/png,image/webp"
                                        class="sr-only"
                                        onchange="onScreenshotChange(this)">
@@ -3403,6 +3403,13 @@ function onLocationSelect(locationId) {
 function onScreenshotChange(input) {
     const label = document.getElementById('screenshot-label-text');
     if (!label) return;
+    const err = document.getElementById('err-payment_screenshot');
+    // The browser resize (image-resize.js) runs first; check the size only on the final file.
+    if (input.hasAttribute('data-resize') && !input.dataset.msResized) {
+        label.textContent = 'ছবি ছোট করা হচ্ছে…';
+        return;
+    }
+    if (err) { err.textContent = ''; err.classList.add('hidden'); }
     if (input.files && input.files[0]) {
         const f = input.files[0];
         if (f.size > 2 * 1024 * 1024) {
@@ -3700,5 +3707,6 @@ function openZoom(modalSlideIndex) {
 </script>
 
 @include('partials.marketing.pixel-events')
+<script src="{{ asset('js/image-resize.js') }}?v=20260929" defer></script>
 </body>
 </html>
