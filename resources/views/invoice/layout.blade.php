@@ -17,6 +17,7 @@
             @page     { margin: 1.2cm; size: A4 portrait; }
         }
     </style>
+    @include('partials.storefront.site-meta-tags')
     @include('partials.marketing.pixel-head')
 </head>
 <body class="min-h-screen flex flex-col">

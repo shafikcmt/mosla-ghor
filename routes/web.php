@@ -359,6 +359,14 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('website-settings', [AdminWebsiteSettingController::class, 'index'])->name('website-settings.index');
     Route::post('website-settings', [AdminWebsiteSettingController::class, 'update'])->name('website-settings.update');
     Route::post('maintenance', [\App\Http\Controllers\Admin\MaintenanceSettingController::class, 'update'])->name('maintenance.update');
+    // ── Site verification & meta tags (structured fields only; never raw HTML) ──
+    Route::get('site-meta-tags', [\App\Http\Controllers\Admin\SiteMetaTagController::class, 'index'])->name('site-meta-tags.index');
+    Route::post('site-meta-tags', [\App\Http\Controllers\Admin\SiteMetaTagController::class, 'store'])->name('site-meta-tags.store');
+    Route::post('site-meta-tags/parse', [\App\Http\Controllers\Admin\SiteMetaTagController::class, 'parse'])->name('site-meta-tags.parse');
+    Route::put('site-meta-tags/{tag}', [\App\Http\Controllers\Admin\SiteMetaTagController::class, 'update'])->name('site-meta-tags.update');
+    Route::post('site-meta-tags/{tag}/toggle', [\App\Http\Controllers\Admin\SiteMetaTagController::class, 'toggle'])->name('site-meta-tags.toggle');
+    Route::delete('site-meta-tags/{tag}', [\App\Http\Controllers\Admin\SiteMetaTagController::class, 'destroy'])->name('site-meta-tags.destroy');
+
     Route::get('marketing-settings', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'index'])->name('marketing-settings.index');
     Route::post('marketing-settings', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'update'])->name('marketing-settings.update');
     Route::post('marketing-settings/vendors/{vendorSetting}/toggle', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'toggleVendor'])->name('marketing-settings.vendors.toggle');

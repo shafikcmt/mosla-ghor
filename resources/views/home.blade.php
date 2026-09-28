@@ -171,6 +171,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
     </style>
 @include('partials.storefront.product-media-assets')
 <link rel="stylesheet" href="{{ asset('css/storefront-home.css') }}?v=20260926b">
+    @include('partials.storefront.site-meta-tags')
     @include('partials.marketing.pixel-head')
 </head>
 <body class="min-h-screen market-home">

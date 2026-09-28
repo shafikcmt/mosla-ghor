@@ -26,6 +26,7 @@
         .c-child:not(.active){ color:#4b5563; }
         .c-child:not(.active):hover { background:#ecfdf5; }
     </style>
+    @include('partials.storefront.site-meta-tags')
     @include('partials.marketing.pixel-head')
 </head>
 <body class="min-h-screen">

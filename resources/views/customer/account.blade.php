@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>body { font-family: 'Noto Sans Bengali', sans-serif; background: #fef9ee; }</style>
+    @include('partials.storefront.site-meta-tags')
     @include('partials.marketing.pixel-head')
 </head>
 <body class="min-h-screen">

@@ -17,6 +17,8 @@
     <meta name="robots" content="noindex, nofollow">
     <title>{{ Maintenance::title() }} — {{ $siteName }}</title>
     <link rel="icon" href="{{ asset('icons/icon-192.png') }}">
+    {{-- Domain verification keeps working while the site is in maintenance. --}}
+    @include('partials.storefront.site-meta-tags')
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600;700&display=swap" rel="stylesheet">
     <style>

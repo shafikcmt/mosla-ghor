@@ -140,6 +140,7 @@
                 ['label' => 'জেনারেল সেটিং',   'route' => 'admin.general-settings.index',   'active' => 'admin.general-settings.*'],
                 ['label' => 'লগইন সেটিং',      'route' => 'admin.auth-settings.index',      'active' => 'admin.auth-settings.*'],
                 ['label' => 'মার্কেটিং / ট্র্যাকিং', 'route' => 'admin.marketing-settings.index', 'active' => 'admin.marketing-settings.*'],
+                ['label' => 'সাইট ভেরিফিকেশন ও মেটা ট্যাগ', 'route' => 'admin.site-meta-tags.index', 'active' => 'admin.site-meta-tags.*'],
                 ['label' => 'মেইল সেটিং',      'route' => 'admin.mail-settings.edit',       'active' => 'admin.mail-settings.*'],
                 ['label' => 'আমার প্রোফাইল',   'route' => 'admin.profile.edit',             'active' => 'admin.profile.*'],
             ],
