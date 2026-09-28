@@ -54,6 +54,18 @@ class ServerLimits
         return $limits ? (int) min($limits) : 2 * 1024 * 1024;
     }
 
+    /** data-* attributes for the image-resize.js <script> tag (client-side size guard). */
+    public static function scriptAttributes(): \Illuminate\Support\HtmlString
+    {
+        try {
+            $request = self::safeRequestBytes();
+            $file = self::safeFileBytes();
+        } catch (\Throwable) {
+            return new \Illuminate\Support\HtmlString('');
+        }
+        return new \Illuminate\Support\HtmlString(sprintf('data-max-request="%d" data-max-file="%d"', $request, $file));
+    }
+
     public static function tempDir(): string
     {
         return (string) (ini_get('upload_tmp_dir') ?: sys_get_temp_dir());

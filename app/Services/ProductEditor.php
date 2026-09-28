@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\PriceSetting;
 use App\Models\Tag;
 use App\Support\ProductMedia;
+use App\Support\UploadErrors;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -160,7 +161,14 @@ class ProductEditor
         }
         $retail = filter_var($input['show_in_retail'], FILTER_VALIDATE_BOOLEAN);
         $wholesale = filter_var($input['show_in_wholesale'], FILTER_VALIDATE_BOOLEAN);
-        $image = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:10240'];
+        // Uploads that failed at the PHP level (too big, partial, temp dir) get one clear Bangla
+        // message each and are removed from the input so they are never reported as "not an image".
+        $uploadErrors = UploadErrors::collect($request);
+        foreach (array_keys($uploadErrors) as $failedKey) {
+            Arr::forget($input, $failedKey);
+        }
+        // 'bail': one message per image field.
+        $image = ['bail', 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:10240'];
         $rules = [
             'name_bn' => 'required|string|max:255', 'name_en' => 'nullable|string|max:255',
             'slug' => ['nullable', 'string', 'max:255', 'regex:~^[\pL\pN_-]+$~u', Rule::unique('products')->ignore($product?->id)],
@@ -192,7 +200,7 @@ class ProductEditor
             'meta_title' => 'nullable|string|max:70',
             'meta_description' => 'nullable|string|max:170',
             'meta_keywords' => 'nullable|string|max:255',
-            'og_image_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:10240'],
+            'og_image_file' => $image,
             'remove_og_image' => 'sometimes|boolean',
             'canonical_url' => $admin ? 'nullable|url:http,https|max:255' : 'exclude',
             'meta_robots' => $admin ? ['nullable', Rule::in(Product::META_ROBOTS)] : 'exclude',
@@ -204,11 +212,10 @@ class ProductEditor
             'meta_description.string' => 'Meta Description সঠিক লেখা নয়।',
             'meta_keywords.max' => 'Meta Keywords সর্বোচ্চ ২৫৫ অক্ষর হতে পারবে।',
             'meta_keywords.string' => 'Meta Keywords সঠিক লেখা নয়।',
-            'og_image_file.image' => 'Social Share ছবি অবশ্যই একটি ছবি ফাইল হতে হবে।',
-            'og_image_file.mimes' => 'Social Share ছবি JPG, PNG বা WebP হতে হবে।',
-            'og_image_file.extensions' => 'Social Share ছবি JPG, PNG বা WebP হতে হবে।',
-            'og_image_file.max' => 'Social Share ছবি সর্বোচ্চ ২ MB হতে পারবে।',
-            'og_image_file.uploaded' => 'Social Share ছবি আপলোড হয়নি। আবার চেষ্টা করুন।',
+            'video_file.file' => 'ভিডিও একটি ফাইল হতে হবে।',
+            'video_file.mimes' => 'ভিডিও শুধু MP4, WebM বা MOV হতে পারবে।',
+            'video_file.extensions' => 'ভিডিও শুধু MP4, WebM বা MOV হতে পারবে।',
+            'video_file.max' => 'ভিডিও সর্বোচ্চ ৫০ MB হতে পারবে।',
             'canonical_url.url' => 'Canonical URL একটি সঠিক http/https লিংক হতে হবে।',
             'canonical_url.max' => 'Canonical URL সর্বোচ্চ ২৫৫ অক্ষর হতে পারবে।',
             'meta_robots.in' => 'Robots-এর একটি সঠিক অপশন বেছে নিন।',
@@ -231,7 +238,23 @@ class ProductEditor
             }
             $rules[$group.'.*.image_file'] = $image;
         }
-        $validator = Validator::make($input, $rules, $messages);
+        $messages += UploadErrors::imageMessages(['main_image_file', 'og_image_file', 'gallery_images.*', 'variants.*.image_file', 'new_variants.*.image_file']);
+        // Human Bangla field names (gallery/variant keys by their actual index).
+        $attributes = ['main_image_file' => 'মূল ছবি', 'og_image_file' => 'শেয়ার ছবি', 'video_file' => 'ভিডিও'];
+        foreach (array_keys((array) ($input['gallery_images'] ?? [])) as $i) {
+            $attributes["gallery_images.$i"] = UploadErrors::label("gallery_images.$i");
+        }
+        foreach (['variants', 'new_variants'] as $group) {
+            foreach (array_keys((array) ($input[$group] ?? [])) as $id) {
+                $attributes["$group.$id.image_file"] = 'ভ্যারিয়েন্টের ছবি';
+            }
+        }
+        $validator = Validator::make($input, $rules, $messages, $attributes);
+        $validator->after(function ($v) use ($uploadErrors) {
+            foreach ($uploadErrors as $key => $message) {
+                $v->errors()->add($key, $message);
+            }
+        });
         $validator->after(function ($v) use ($input, $product, $retail, $wholesale) {
             if ($v->errors()->isNotEmpty()) { return; }
             if (! $retail && ! $wholesale) {

@@ -39,15 +39,16 @@ class CustomerReturnController extends CustomerBaseController
 
     public function store(Request $request)
     {
+        \App\Support\UploadErrors::guard($request, ['image' => 'ফেরতের ছবি']);
         $data = $request->validate([
             'order_id'      => 'required|integer',
             'order_item_id' => 'nullable|integer|exists:order_items,id',
             'reason'        => 'required|string|max:200',
             'details'       => 'nullable|string|max:1000',
-            'image'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
+            'image'         => 'bail|nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
         ], [
             'reason.required' => 'কারণ লিখুন।',
-        ]);
+        ] + \App\Support\UploadErrors::imageMessages(['image']), ['image' => 'ফেরতের ছবি']);
 
         $order = $this->findOwnOrder($data['order_id']);
         abort_unless($order->order_status === 'delivered', 403);

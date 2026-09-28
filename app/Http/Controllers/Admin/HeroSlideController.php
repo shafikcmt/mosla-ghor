@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\HeroSlide;
 use App\Support\AnnouncementUrl;
+use App\Support\UploadErrors;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -44,6 +45,7 @@ class HeroSlideController extends Controller
                 $fail('Use an internal path beginning with / or a valid http/https URL.');
             }
         };
+        UploadErrors::guard($request, ['image' => 'হিরো ছবি']); // failed uploads → one clear Bangla message
         $data = $request->validate([
             'title' => 'required|string|max:200', 'subtitle' => 'nullable|string|max:500',
             'eyebrow' => 'nullable|string|max:100', 'is_active' => 'nullable|boolean',
@@ -52,8 +54,8 @@ class HeroSlideController extends Controller
             'primary_url' => ['nullable', 'required_with:primary_label', 'string', 'max:300', $urlRule],
             'secondary_label' => 'nullable|required_with:secondary_url|string|max:60',
             'secondary_url' => ['nullable', 'required_with:secondary_label', 'string', 'max:300', $urlRule],
-            'image' => [$slide->exists ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
-        ]);
+            'image' => ['bail', $slide->exists ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+        ], UploadErrors::imageMessages(['image']), ['image' => 'হিরো ছবি']);
         unset($data['image']);
         $data['is_active'] = $request->boolean('is_active');
         $old = $slide->image_path;

@@ -48,6 +48,8 @@
     <form id="product-editor-form" action="{{ $editing ? route($prefix.'update', $product) : route($prefix.'store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         @if($editing) @method('PUT') @endif
+        {{-- Build of the code that rendered this form (detects tabs opened before a deploy). --}}
+        <input type="hidden" name="_build" value="{{ \App\Support\BuildInfo::commit() }}">
         @include($editorRole.'.products._form')
         <div class="pe-actions">
             <div><strong>সব পরিবর্তন একসাথে সংরক্ষণ করুন</strong><span>ছবি না বদলালে আগের ছবিই থাকবে।</span></div>

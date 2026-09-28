@@ -26,6 +26,20 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [\App\Http\Middleware\MaintenanceMode::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Whole request bigger than PHP's post_max_size (thrown before sessions/controllers run).
+        $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, $request) {
+            $limit = \App\Support\ServerLimits::human(\App\Support\ServerLimits::postMax());
+            \Illuminate\Support\Facades\Log::warning('Request larger than post_max_size', [
+                'content_length' => (int) $request->server('CONTENT_LENGTH'),
+                'post_max_size'  => ini_get('post_max_size'),
+                'path'           => $request->path(),
+            ]);
+            $message = "একবারে পাঠানো ফাইলগুলো মোট অনেক বড় (সার্ভারের সীমা {$limit})। কয়েকটি ছবি কম দিয়ে আবার চেষ্টা করুন — ছবি আমরা নিজে থেকে ছোট করে দিই।";
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message, 'layer' => 'php_post_max_size'], 413);
+            }
+            return response()->view('errors.413', ['message' => $message], 413);
+        });
         // Redirect back with a friendly message on CSRF token expiry (419)
         $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
             if ($request->expectsJson()) {

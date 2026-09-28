@@ -94,6 +94,6 @@
 
 @yield('scripts')
 @include('partials.marketing.pixel-events')
-<script src="{{ asset('js/image-resize.js') }}?v=20260929" defer></script>
+<script src="{{ asset('js/image-resize.js') }}?v=20260930" {{ \App\Support\ServerLimits::scriptAttributes() }} defer></script>
 </body>
 </html>

@@ -52,6 +52,7 @@ class OrderController extends Controller
                 : $request->input('alternative_number'),
         ]);
 
+        \App\Support\UploadErrors::guard($request); // a failed screenshot upload → one clear Bangla message (JSON 422)
         $validated = $request->validate([
             'full_name'                => ['required', 'string', 'max:100'],
             'mobile_number'            => ['required', 'string', 'regex:/^01[3-9]\d{8}$/'],
@@ -72,7 +73,7 @@ class OrderController extends Controller
             'sender_number'            => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:30'],
             'transaction_id'           => [$isManualPayment ? 'required' : 'nullable', 'string', 'max:100'],
             'paid_amount'              => [$isManualPayment ? 'required' : 'nullable', 'numeric', 'min:0'],
-            'payment_screenshot'       => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'payment_screenshot'       => ['bail', 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'items'            => [$isComboOrder ? 'nullable' : 'required', 'array', 'min:1', 'max:20'],
             'items.*.price_id' => ['required_with:items', 'integer', 'exists:product_prices,id'],
         ], [
@@ -90,7 +91,7 @@ class OrderController extends Controller
             'items.required'               => 'কমপক্ষে একটি পণ্য যোগ করুন।',
             'items.min'                    => 'কমপক্ষে একটি পণ্য যোগ করুন।',
             'items.max'                    => 'সর্বোচ্চ ২০টি পণ্য যোগ করা যাবে।',
-        ]);
+        ] + \App\Support\UploadErrors::imageMessages(['payment_screenshot']), ['payment_screenshot' => 'পেমেন্ট স্ক্রিনশট']);
 
         // ── Verify BD address hierarchy (prevents tampered IDs from DevTools) ────
         $bdDivision = BdDivision::where('id', (int) $validated['bd_division_id'])

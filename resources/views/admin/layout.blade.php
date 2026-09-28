@@ -328,7 +328,8 @@
                 </div>
             @endif
 
-            @if($errors->any())
+            {{-- Pages with their own error box (the product editor) set hide_global_errors. --}}
+            @if($errors->any() && ! trim($__env->yieldContent('hide_global_errors')))
                 <div class="mb-5 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
                     <p class="font-medium mb-1">অনুগ্রহ করে নিচের ত্রুটিগুলো ঠিক করুন:</p>
                     <ul class="list-disc list-inside space-y-0.5 mt-1">
@@ -362,6 +363,6 @@ function closeSidebar() {
 window.addEventListener('pageshow', closeSidebar);
 </script>
 
-<script src="{{ asset('js/image-resize.js') }}?v=20260929" defer></script>
+<script src="{{ asset('js/image-resize.js') }}?v=20260930" {{ \App\Support\ServerLimits::scriptAttributes() }} defer></script>
 </body>
 </html>

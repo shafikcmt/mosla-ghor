@@ -130,13 +130,14 @@ class ProductController extends Controller
 
         $isCustomer = Auth::check() && Auth::user()->role === 'customer';
 
+        \App\Support\UploadErrors::guard($request, ['image' => 'রিভিউয়ের ছবি']);
         $validated = $request->validate([
             'rating'           => ['required', 'integer', 'min:1', 'max:5'],
             'comment'          => ['required', 'string', 'max:2000'],
             'customer_name'    => [$isCustomer ? 'nullable' : 'required', 'string', 'max:100'],
             'customer_contact' => ['nullable', 'string', 'max:100'],
-            'image'            => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
-        ]);
+            'image'            => ['bail', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+        ], \App\Support\UploadErrors::imageMessages(['image']), ['image' => 'রিভিউয়ের ছবি']);
 
         $name = $isCustomer
             ? (Auth::user()->name ?: $request->input('customer_name'))

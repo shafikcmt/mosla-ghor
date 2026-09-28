@@ -7,8 +7,15 @@
 // Canvas output never contains EXIF/GPS. Any failure keeps the original file.
 (function () {
     'use strict';
-    var MAX_BYTES = 1.8 * 1024 * 1024; // stay under a 2 MB PHP limit
+    // Server limits (bytes) from the <script> tag: measured nginx/PHP limit or PHP's settings.
+    var me = document.currentScript;
+    var LIMIT_REQUEST = me ? parseInt(me.getAttribute('data-max-request'), 10) || 0 : 0;
+    var LIMIT_FILE = me ? parseInt(me.getAttribute('data-max-file'), 10) || 0 : 0;
+    // Aim each resized image well under the limits (never below 300 KB).
+    var MAX_BYTES = Math.max(300 * 1024, Math.min(1.8 * 1024 * 1024,
+        LIMIT_FILE ? LIMIT_FILE * 0.9 : Infinity, LIMIT_REQUEST ? LIMIT_REQUEST * 0.9 : Infinity));
     var pending = 0;
+    var mb = function (b) { return (b / 1048576).toFixed(1) + ' MB'; };
 
     function setBusy(form, busy) {
         if (!form) return;
@@ -150,9 +157,46 @@
         handle(input);
     }, true);
 
-    // Never submit while a resize is still running.
+    function guardMessage(form, text) {
+        var box = form.querySelector('[data-upload-guard]');
+        if (!box) {
+            box = document.createElement('div');
+            box.setAttribute('data-upload-guard', '');
+            box.setAttribute('role', 'alert');
+            box.style.cssText = 'margin:0 0 16px;padding:12px 16px;border:1px solid #fca5a5;background:#fff1f2;color:#9f1239;border-radius:8px;font-size:14px';
+            form.insertBefore(box, form.firstChild);
+        }
+        box.textContent = text;
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Never submit while a resize is still running, or when the files can't fit the server's limits
+    // (a friendly Bangla message instead of nginx's raw "413 Request Entity Too Large").
     document.addEventListener('submit', function (e) {
-        if (pending > 0) { e.preventDefault(); e.stopImmediatePropagation(); }
+        var form = e.target;
+        if (pending > 0) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+        if (!form || !form.querySelectorAll || !(LIMIT_FILE || LIMIT_REQUEST)) return;
+        var total = 0, tooBig = null;
+        form.querySelectorAll('input[type=file]').forEach(function (input) {
+            if (input.disabled) return;
+            Array.prototype.forEach.call(input.files || [], function (f) {
+                total += f.size;
+                if (LIMIT_FILE && f.size > LIMIT_FILE && !tooBig) tooBig = f;
+            });
+        });
+        var text = '';
+        if (tooBig) {
+            text = '“' + tooBig.name + '” ফাইলটি ' + mb(tooBig.size) + ' — সার্ভার প্রতি ফাইলে ' + mb(LIMIT_FILE) +
+                ' পর্যন্ত নেয়। ছোট ছবি দিন অথবা আবার বেছে নিন — আমরা নিজে থেকে ছোট করে দিই।';
+        } else if (LIMIT_REQUEST && total > LIMIT_REQUEST * 0.95) {
+            text = 'ছবিগুলো মোট ' + mb(total) + ' — সার্ভার একবারে ' + mb(LIMIT_REQUEST) +
+                ' পর্যন্ত নেয়। কয়েকটি ছবি সরিয়ে আগে সংরক্ষণ করুন, তারপর বাকিগুলো যোগ করুন।';
+        }
+        if (text) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            guardMessage(form, text);
+        }
     }, true);
 
     window.MoslaImageResize = { pending: function () { return pending; } };

@@ -25,15 +25,16 @@ class ProfileController extends Controller
     {
         $vendor = $this->vendor();
 
+        \App\Support\UploadErrors::guard($request); // failed uploads → one clear Bangla message
         $request->validate([
             'owner_name'    => 'required|string|max:100',
             'phone'         => 'required|string|max:20|unique:vendors,phone,' . $vendor->id,
             'address'       => 'nullable|string|max:500',
             'business_type' => 'nullable|string|max:100',
-            'logo'          => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
-            'banner'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
+            'logo'          => 'bail|nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
+            'banner'        => 'bail|nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
             'payment_info'  => 'nullable|string|max:1000',
-        ]);
+        ], \App\Support\UploadErrors::imageMessages(['logo', 'banner']), ['logo' => 'লোগো', 'banner' => 'ব্যানার']);
 
         $updates = [
             'owner_name'    => $request->owner_name,

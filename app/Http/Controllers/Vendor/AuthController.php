@@ -44,6 +44,7 @@ class AuthController extends Controller
         // the canonical 01XXXXXXXXX form everywhere.
         $request->merge(['phone' => Phone::normalize($request->input('phone')) ?? trim((string) $request->input('phone'))]);
 
+        \App\Support\UploadErrors::guard($request); // failed uploads → one clear Bangla message
         $data = $request->validate([
             'shop_name'   => 'required|string|max:150',
             'owner_name'  => 'required|string|max:100',
@@ -52,9 +53,19 @@ class AuthController extends Controller
             'password'    => 'required|string|min:8|confirmed',
             'address'     => 'nullable|string|max:500',
             'business_type' => 'nullable|string|max:100',
-            'logo'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
-            'kyc_document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'logo'        => 'bail|nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
+            'kyc_document' => 'bail|nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
         ], [
+            // Explicit Bangla messages first: with array union (+) the left side wins.
+            'kyc_document.uploaded' => 'KYC ডকুমেন্ট আপলোড হয়নি। আবার বেছে নিন।',
+            'kyc_document.file'     => 'KYC ডকুমেন্ট একটি ফাইল হতে হবে।',
+            'kyc_document.mimes'    => 'KYC ডকুমেন্ট শুধু JPG, PNG বা PDF হতে পারবে।',
+            'kyc_document.max'      => 'KYC ডকুমেন্ট সর্বোচ্চ ৫ MB হতে পারবে।',
+            'logo.uploaded'         => 'লোগো আপলোড হয়নি। আবার বেছে নিন।',
+            'logo.image'            => 'লোগো একটি ছবি হতে হবে (JPG, PNG বা WebP)।',
+            'logo.mimes'            => 'লোগো শুধু JPG, PNG বা WebP হতে পারবে।',
+            'logo.max'              => 'লোগো সর্বোচ্চ ১০ MB হতে পারবে।',
+        ] + [
             'shop_name.required'  => 'দোকানের নাম দিন।',
             'owner_name.required' => 'মালিকের নাম দিন।',
             'phone.required'      => 'ফোন নম্বর দিন।',
