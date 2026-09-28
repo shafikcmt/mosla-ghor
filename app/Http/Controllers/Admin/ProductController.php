@@ -177,7 +177,21 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $product = app(ProductEditor::class)->save($request, admin: true);
-        return redirect()->route('admin.products.edit', $product)->with('success', 'পণ্য তৈরি হয়েছে।');
+        return $this->redirectAfterSave($request, $product, 'পণ্য তৈরি হয়েছে।');
+    }
+
+    /**
+     * "সংরক্ষণ করে নতুন পণ্য যোগ করুন": only the exact value 'new' goes to a fresh create
+     * form; anything else (or nothing) keeps today's redirect to the edit page.
+     */
+    private function redirectAfterSave(Request $request, Product $product, string $message)
+    {
+        if ($request->input('after_save') === 'new') {
+            return redirect()->route('admin.products.create')->with('pe_saved', [
+                'name' => $product->name_bn, 'edit_url' => route('admin.products.edit', $product),
+            ]);
+        }
+        return redirect()->route('admin.products.edit', $product)->with('success', $message);
     }
 
     public function show(Product $product)
@@ -197,8 +211,8 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
-        app(ProductEditor::class)->save($request, $product, admin: true);
-        return redirect()->route('admin.products.edit', $product)->with('success', 'পণ্য আপডেট হয়েছে।');
+        $product = app(ProductEditor::class)->save($request, $product, admin: true);
+        return $this->redirectAfterSave($request, $product, 'পণ্য আপডেট হয়েছে।');
     }
 
     public function destroy(Product $product)

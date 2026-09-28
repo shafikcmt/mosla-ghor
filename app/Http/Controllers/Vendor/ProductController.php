@@ -76,8 +76,32 @@ class ProductController extends Controller
         $product = app(ProductEditor::class)->save($request, trusted: [
             'vendor_id' => $vendor->id, 'approval_status' => $autoApprove ? 'approved' : 'pending',
         ]);
-        return redirect()->route('vendor.products.edit', $product)
-            ->with('success', 'পণ্য তৈরি হয়েছে।' . ($autoApprove ? '' : ' অ্যাডমিন অনুমোদনের পর ওয়েবসাইটে দেখাবে।'));
+        return $this->redirectAfterSave($request, $product,
+            'পণ্য তৈরি হয়েছে।' . ($autoApprove ? '' : ' অ্যাডমিন অনুমোদনের পর ওয়েবসাইটে দেখাবে।'));
+    }
+
+    /** Same check that guards create/store (approved vendor + permission on). */
+    public static function canAddProducts(): bool
+    {
+        return (bool) Auth::user()?->vendor?->isApproved() && VendorSettings::vendorCanAddProduct();
+    }
+
+    /**
+     * "সংরক্ষণ করে নতুন পণ্য যোগ করুন": exact value 'new' only. If this vendor may not add
+     * products, the save still happens and they stay on the edit page with a note.
+     */
+    private function redirectAfterSave(Request $request, Product $product, string $message)
+    {
+        if ($request->input('after_save') === 'new') {
+            if (self::canAddProducts()) {
+                return redirect()->route('vendor.products.create')->with('pe_saved', [
+                    'name' => $product->name_bn, 'edit_url' => route('vendor.products.edit', $product),
+                ]);
+            }
+            return redirect()->route('vendor.products.edit', $product)->with('success', $message)
+                ->with('pe_note', 'পণ্যটি সংরক্ষিত হয়েছে। এই মুহূর্তে নতুন পণ্য যোগ করার অনুমতি নেই, তাই এই পণ্যের পেজেই রাখা হলো।');
+        }
+        return redirect()->route('vendor.products.edit', $product)->with('success', $message);
     }
 
     public function edit(Product $product)
@@ -96,8 +120,8 @@ class ProductController extends Controller
     {
         $this->requireApproved();
         $this->authorizeProduct($product);
-        app(ProductEditor::class)->save($request, $product);
-        return redirect()->route('vendor.products.edit', $product)->with('success', 'পণ্য আপডেট হয়েছে।');
+        $product = app(ProductEditor::class)->save($request, $product);
+        return $this->redirectAfterSave($request, $product, 'পণ্য আপডেট হয়েছে।');
     }
 
     public function destroy(Product $product)

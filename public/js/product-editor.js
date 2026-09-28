@@ -88,6 +88,15 @@ document.querySelectorAll('[data-product-editor]').forEach(editor => {
     tagInput.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); addTags(); } });
     editor.querySelector('[data-tag-add]').addEventListener('click', addTags);
     editor.querySelector('form').addEventListener('submit', event => { if (!addTags()) event.preventDefault(); });
+    // Double-submit guard: disable both save buttons once the submit really goes ahead.
+    // Done on the next tick so the clicked button's name/value (after_save=new) is still sent.
+    const submitButtons = () => editor.querySelectorAll('[data-pe-submit]');
+    editor.querySelector('form').addEventListener('submit', event => {
+        if (event.defaultPrevented) return;
+        setTimeout(() => submitButtons().forEach(button => { button.disabled = true; }), 0);
+    });
+    // Coming back via the browser's Back button restores a disabled page from cache: re-enable.
+    window.addEventListener('pageshow', () => submitButtons().forEach(button => { button.disabled = false; }));
     tagSource.hidden = true;
     editor.querySelector('[data-tags]').hidden = false;
     renderTags();
