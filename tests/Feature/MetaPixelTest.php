@@ -463,4 +463,138 @@ JS;
         $this->assertTrue(app(\Illuminate\Cookie\Middleware\EncryptCookies::class)->isDisabled('_fbp'));
         $this->assertTrue(app(\Illuminate\Cookie\Middleware\EncryptCookies::class)->isDisabled('_fbc'));
     }
+
+    // ── Risk 1: scope 'own' AddToCart must fail closed ─────────────────────
+
+    public function test_scope_own_sends_admin_product_allow_list_without_vendor_data(): void
+    {
+        $this->enable(['platform_pixel_scope' => 'own'], false);
+
+        $html = $this->get('/products/admin-cumin')->assertOk()->getContent();
+        $cfg = $this->config($html);
+        $this->assertTrue($cfg['own']);
+        $this->assertContains($this->adminProduct->id, $cfg['adminProducts']);
+        $this->assertNotContains($this->productA->id, $cfg['adminProducts'], 'Vendor products are never on the platform allow-list.');
+        $this->assertNotContains($this->productB->id, $cfg['adminProducts']);
+        // Only product ids: no vendor ids or vendor pixel ids are exposed by the allow-list.
+        $this->assertStringNotContainsString(self::VENDOR_A, $html);
+        $this->assertStringNotContainsString(self::VENDOR_B, $html);
+
+        // A vendor product page: its id stays off the allow-list, so JS cannot send it to the platform.
+        $cfg = $this->config($this->get('/products/vendor-b-turmeric')->getContent());
+        $this->assertNotContains($this->productB->id, $cfg['adminProducts']);
+    }
+
+    public function test_scope_all_has_no_admin_product_list(): void
+    {
+        $this->enable();
+        $cfg = $this->config($this->get('/products/admin-cumin')->getContent());
+        $this->assertFalse($cfg['own']);
+        $this->assertArrayNotHasKey('adminProducts', $cfg);
+    }
+
+    public function test_add_to_cart_script_fails_closed_for_unknown_owner_in_scope_own(): void
+    {
+        $js = file_get_contents(public_path('js/mosla-pixel.js'));
+        $this->assertStringContainsString('adminProducts', $js);
+        $this->assertMatchesRegularExpression('/platformAllowed\s*=\s*!cfg\.own\s*\|\|\s*\(!vendorId\s*&&/', $js);
+    }
+
+    // ── Risk 2: fixed combos carry the product owner for tracking only ─────
+
+    private function combo(array $lines): int
+    {
+        $comboId = DB::table('combos')->insertGetId($this->fillRequired('combos', [
+            'name' => 'Pixel combo', 'slug' => 'pixel-combo-'.random_int(1000, 9999), 'sell_type' => 'retail',
+            'sell_price' => array_sum(array_column($lines, 2)), 'is_active' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]));
+        foreach ($lines as [$product, $pack, $lineTotal]) {
+            DB::table('combo_items')->insert($this->fillRequired('combo_items', [
+                'combo_id' => $comboId, 'sell_type' => 'retail', 'product_id' => $product->id, 'product_price_id' => $pack->id,
+                'quantity_gram' => 1000, 'unit_price' => $lineTotal, 'line_total' => $lineTotal,
+                'created_at' => now(), 'updated_at' => now(),
+            ]));
+        }
+        return $comboId;
+    }
+
+    /** A fixed-combo order exactly as OrderController stores it: order_items.vendor_id is NULL. */
+    private function comboOrder(int $comboId, array $lines, float $grandTotal): Order
+    {
+        $row = ['order_number' => 'MM-PXC-'.random_int(1000, 9999), 'mobile_number' => '01712345678', 'grand_total' => $grandTotal,
+            'combo_id' => $comboId, 'order_type' => 'fixed_combo', 'created_at' => now(), 'updated_at' => now()];
+        $orderId = DB::table('orders')->insertGetId($this->fillRequired('orders', $row));
+        foreach ($lines as [$product, $pack, $lineTotal]) {
+            DB::table('order_items')->insert($this->fillRequired('order_items', [
+                'order_id' => $orderId, 'product_id' => $product->id, 'price_id' => $pack->id, 'vendor_id' => null,
+                'product_name' => $product->name_bn, 'line_total' => $lineTotal, 'unit_price' => $lineTotal,
+                'created_at' => now(), 'updated_at' => now(),
+            ]));
+        }
+        return Order::findOrFail($orderId);
+    }
+
+    public function test_fixed_combo_checkout_splits_vendor_items(): void
+    {
+        $this->enable(['platform_pixel_scope' => 'own']);
+        $this->vendorPixel($this->vendorA, self::VENDOR_A);
+        $admin1kg = $this->pack($this->adminProduct);
+        $a1kg = $this->pack($this->productA);
+        $comboId = $this->combo([[$this->adminProduct, $admin1kg, 1000], [$this->productA, $a1kg, 400]]);
+
+        $this->post(route('checkout.start'), ['combo_id' => $comboId])->assertRedirect(route('checkout.review'));
+        $cfg = $this->config($this->get(route('checkout.review'))->assertOk()->getContent());
+
+        $platform = $this->eventsFor($cfg, self::PLATFORM, 'InitiateCheckout')[0]['params'];
+        $this->assertSame([$this->adminProduct->id.'-'.$admin1kg->id], $platform['content_ids'], 'Scope own: vendor combo item stays off the platform pixel.');
+        $this->assertEquals(1000, $platform['value']);
+
+        $vendor = $this->eventsFor($cfg, self::VENDOR_A, 'InitiateCheckout');
+        $this->assertCount(1, $vendor, 'The vendor now sees its combo item.');
+        $this->assertSame([$this->productA->id.'-'.$a1kg->id], $vendor[0]['params']['content_ids']);
+        $this->assertEquals(400, $vendor[0]['params']['value']);
+    }
+
+    public function test_fixed_combo_purchase_uses_product_owner_without_changing_the_order(): void
+    {
+        $this->enable(['platform_pixel_scope' => 'own']);
+        $this->vendorPixel($this->vendorA, self::VENDOR_A);
+        $admin1kg = $this->pack($this->adminProduct);
+        $a1kg = $this->pack($this->productA);
+        $lines = [[$this->adminProduct, $admin1kg, 1000], [$this->productA, $a1kg, 400]];
+        $order = $this->comboOrder($this->combo($lines), $lines, 1460);
+
+        $cfg = $this->config($this->withSession([MetaPixel::PURCHASE_KEY => $order->order_number])
+            ->get(route('order.success', $order->order_number))->assertOk()->getContent());
+
+        $platform = $this->eventsFor($cfg, self::PLATFORM, 'Purchase');
+        $this->assertCount(1, $platform);
+        $this->assertSame([$this->adminProduct->id.'-'.$admin1kg->id], $platform[0]['params']['content_ids']);
+        $this->assertEquals(1000, $platform[0]['params']['value']);
+
+        $vendor = $this->eventsFor($cfg, self::VENDOR_A, 'Purchase');
+        $this->assertCount(1, $vendor);
+        $this->assertSame($order->order_number.'-'.$this->vendorA->id, $vendor[0]['eventID']);
+        $this->assertEquals(400, $vendor[0]['params']['value']);
+        $this->assertSame([$this->productA->id => $this->vendorA->id], $cfg['productVendors']);
+
+        // Analytics only: the stored order is untouched.
+        $this->assertSame(0, DB::table('order_items')->where('order_id', $order->id)->whereNotNull('vendor_id')->count());
+    }
+
+    public function test_non_combo_order_keeps_null_vendor_as_admin(): void
+    {
+        // A regular order line with NULL vendor_id is an admin item even if the product is
+        // later reassigned; the owner fallback applies to fixed combos only.
+        $this->enable(['platform_pixel_scope' => 'own']);
+        $this->vendorPixel($this->vendorA, self::VENDOR_A);
+        $a1kg = $this->pack($this->productA);
+        $order = $this->order([[$this->productA, $a1kg, 400]], 460);
+        DB::table('order_items')->where('order_id', $order->id)->update(['vendor_id' => null]);
+
+        $cfg = $this->config($this->withSession([MetaPixel::PURCHASE_KEY => $order->order_number])
+            ->get(route('order.success', $order->order_number))->getContent());
+        $this->assertSame([], $this->eventsFor($cfg, self::VENDOR_A, 'Purchase'));
+        $this->assertCount(1, $this->eventsFor($cfg, self::PLATFORM, 'Purchase'));
+    }
 }

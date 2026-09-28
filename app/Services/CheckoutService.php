@@ -105,6 +105,9 @@ class CheckoutService
                 'quantity_gram' => $item->quantity_gram,
                 'unit_price'    => (float) $item->unit_price,
                 'line_total'    => (float) $item->line_total,
+                // Analytics only (Meta Pixel split per vendor). Order creation builds its own
+                // combo items in OrderController and is not affected by this field.
+                'vendor_id'     => $item->product?->vendor_id,
                 'label'         => null,
                 'image'         => $item->product?->main_image ?? null,
             ];

@@ -175,24 +175,85 @@ class MetaPixel
         self::save($state);
     }
 
+    /** Register an order's items with the same vendor resolution Purchase uses. */
+    public static function registerOrder(Order $order): void
+    {
+        self::registerItems(self::orderItems($order));
+    }
+
+    /**
+     * Order lines for tracking. Fixed-combo orders store order_items.vendor_id = NULL
+     * (OrderController builds combo items without it), so for those orders only the
+     * owner is taken from the product. Analytics only: the order itself is never changed.
+     */
+    private static function orderItems(Order $order): array
+    {
+        $order->loadMissing('items');
+        $isCombo = $order->combo_id || $order->order_type === 'fixed_combo';
+        $owners = [];
+        if ($isCombo) {
+            $missing = $order->items->whereNull('vendor_id')->pluck('product_id')->filter()->unique()->all();
+            if ($missing) {
+                try {
+                    $owners = Product::whereIn('id', $missing)->pluck('vendor_id', 'id')->all();
+                } catch (\Throwable $e) {
+                    Log::warning('Meta Pixel combo owner lookup failed.', ['error' => get_class($e)]);
+                }
+            }
+        }
+
+        return $order->items->map(fn ($i) => [
+            'product_id' => $i->product_id, 'price_id' => $i->price_id,
+            'vendor_id' => $i->vendor_id ?: ($owners[$i->product_id] ?? null),
+            'line_total' => $i->line_total, 'quantity' => 1,
+        ])->all();
+    }
+
+    /**
+     * Scope 'own' only: ids of admin-owned products (vendor_id NULL). The browser sends
+     * AddToCart to the platform pixel only for these, so an item whose owner the page
+     * didn't register can never leak a vendor product to the platform pixel (fail closed).
+     * Contains product ids only — never vendor ids or vendor pixel ids.
+     */
+    private static function adminProductIds(): array
+    {
+        $state = self::state();
+        if (! array_key_exists('adminProducts', $state)) {
+            try {
+                $state['adminProducts'] = Product::whereNull('vendor_id')->pluck('id')->map(fn ($id) => (int) $id)->all();
+            } catch (\Throwable $e) {
+                Log::warning('Meta Pixel admin product lookup failed.', ['error' => get_class($e)]);
+                $state['adminProducts'] = [];
+            }
+            self::save($state);
+        }
+        return $state['adminProducts'];
+    }
+
     /** Config for client-side AddToCart: only what the browser needs to route items correctly. */
     public static function clientConfig(): array
     {
+        $own = self::platformScopeOwn();
         $productVendors = self::state()['productVendors'] ?? [];
         $vendors = $productVendors
             ? array_intersect_key(self::vendorPixels(), array_flip(array_values($productVendors)))
             : [];
-        if (! self::platformScopeOwn()) {
+        if (! $own) {
             $productVendors = array_filter($productVendors, fn ($vendorId) => isset($vendors[$vendorId]));
         }
 
-        return [
+        $config = [
             'platform' => self::platformIds(),
-            'own' => self::platformScopeOwn(),
+            'own' => $own,
             'vendors' => (object) $vendors,
             'productVendors' => (object) $productVendors,
             'currency' => self::CURRENCY,
         ];
+        if ($own && $config['platform']) {
+            $config['adminProducts'] = self::adminProductIds();
+        }
+
+        return $config;
     }
 
     // ── Event builders ──────────────────────────────────────────────────────
@@ -246,11 +307,7 @@ class MetaPixel
         if (! self::active()) {
             return;
         }
-        $order->loadMissing('items');
-        $lines = self::lines($order->items->map(fn ($i) => [
-            'product_id' => $i->product_id, 'price_id' => $i->price_id, 'vendor_id' => $i->vendor_id,
-            'line_total' => $i->line_total, 'quantity' => 1,
-        ]));
+        $lines = self::lines(self::orderItems($order));
 
         if (self::platformScopeOwn()) {
             $platformLines = array_filter($lines, fn ($l) => $l['vendor_id'] === null);

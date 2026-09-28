@@ -48,7 +48,10 @@
             content_name: item.nameBn || undefined,
             value: price, currency: cfg.currency || 'BDT'
         };
-        if (!(cfg.own && vendorId)) {
+        // Scope 'own': platform gets AddToCart only for products the server confirmed as
+        // admin-owned. Unknown owner = not sent (fail closed), never guessed as admin.
+        var platformAllowed = !cfg.own || (!vendorId && (cfg.adminProducts || []).indexOf(productId) !== -1);
+        if (platformAllowed) {
             (cfg.platform || []).forEach(function (pid) { track(pid, 'AddToCart', params); });
         }
         var vendorPixel = vendorId ? (cfg.vendors || {})[vendorId] : null;
