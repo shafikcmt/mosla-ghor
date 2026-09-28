@@ -109,8 +109,7 @@ class ProductEditor
                 }
                 $new = ! $product->exists;
                 $product->fill($fields + $trusted)->save();
-                if ($retail && ($new || ! $wasRetail || (float) $oldPrice !== (float) $product->retail_price_1kg
-                    || ! $product->prices()->whereNull('product_variant_id')->where('sell_type', 'retail')->exists())) {
+                if ($product->shouldResyncPrices($new, $wasRetail, $oldPrice)) {
                     $product->syncPrices();
                 }
                 if ($retail) {

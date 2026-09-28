@@ -9,6 +9,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
@@ -16,16 +19,145 @@ class ProductController extends Controller
 
     public function index()
     {
-        $products = Product::orderBy('sort_order')->orderBy('id')->paginate(20);
+        $products = Product::withCount('variants')->orderBy('sort_order')->orderBy('id')->paginate(20);
+        $stats = $this->stats();
+        $quickEdit = $products->getCollection()->mapWithKeys(fn ($p) => [$p->id => $this->quickEditData($p)]);
 
-        $stats = [
+        return view('admin.products.index', compact('products', 'stats', 'quickEdit'));
+    }
+
+    private function stats(): array
+    {
+        return [
             'total'     => Product::count(),
             'active'    => Product::where('is_active', true)->count(),
             'retail'    => Product::where('is_active', true)->where('show_in_retail', true)->count(),
             'wholesale' => Product::where('is_active', true)->where('show_in_wholesale', true)->count(),
         ];
+    }
 
-        return view('admin.products.index', compact('products', 'stats'));
+    /**
+     * Inline "quick edit" from the product list: price, stock, visibility and order
+     * only. Deliberately not routed through ProductEditor::save (no media/variants/tags).
+     */
+    public function quickUpdate(Request $request, Product $product)
+    {
+        $hasVariants = $product->variants()->exists();
+        $unitManaged = $product->isUnitManaged();
+
+        $validator = Validator::make($request->all(), [
+            'retail_price_1kg'    => $hasVariants ? 'prohibited' : 'sometimes|nullable|numeric|min:0.01|max:99999999.99',
+            'stock'               => $unitManaged ? 'prohibited' : 'sometimes|required|integer|min:0|max:2147483647',
+            'low_stock_threshold' => 'sometimes|nullable|numeric|min:0|max:999999999.999',
+            'sort_order'          => 'sometimes|nullable|integer|min:0|max:999999',
+            'is_active'           => 'sometimes|boolean',
+            'show_in_retail'      => 'sometimes|boolean',
+            'show_in_wholesale'   => 'sometimes|boolean',
+        ], [
+            'retail_price_1kg.prohibited' => 'ভ্যারিয়েন্টের দাম পূর্ণ সম্পাদনায় বদলান।',
+            'retail_price_1kg.numeric'    => 'খুচরা দাম একটি সংখ্যা হতে হবে।',
+            'retail_price_1kg.min'        => 'খুচরা দাম ০-এর বেশি হতে হবে।',
+            'retail_price_1kg.max'        => 'খুচরা দাম অনেক বেশি।',
+            'stock.prohibited'            => 'এই পণ্যের স্টক স্টক ব্যবস্থাপনা পেজ থেকে বদলান।',
+            'stock.required'              => 'স্টক দিন।',
+            'stock.integer'               => 'স্টক পূর্ণ সংখ্যা হতে হবে।',
+            'stock.min'                   => 'স্টক ০ বা তার বেশি হতে হবে।',
+            'stock.max'                   => 'স্টক অনেক বেশি।',
+            'low_stock_threshold.numeric' => 'কম স্টকের সীমা একটি সংখ্যা হতে হবে।',
+            'low_stock_threshold.min'     => 'কম স্টকের সীমা ০ বা তার বেশি হতে হবে।',
+            'low_stock_threshold.max'     => 'কম স্টকের সীমা অনেক বেশি।',
+            'sort_order.integer'          => 'ক্রম পূর্ণ সংখ্যা হতে হবে।',
+            'sort_order.min'              => 'ক্রম ০ বা তার বেশি হতে হবে।',
+            'sort_order.max'              => 'ক্রম অনেক বেশি।',
+            'is_active.boolean'           => 'সক্রিয় অবস্থা সঠিক নয়।',
+            'show_in_retail.boolean'      => 'খুচরা অপশন সঠিক নয়।',
+            'show_in_wholesale.boolean'   => 'পাইকারি অপশন সঠিক নয়।',
+        ]);
+        $validator->after(function ($v) use ($request, $product) {
+            if ($v->errors()->isNotEmpty()) { return; }
+            $retail = $request->has('show_in_retail') ? $request->boolean('show_in_retail') : (bool) $product->show_in_retail;
+            $wholesale = $request->has('show_in_wholesale') ? $request->boolean('show_in_wholesale') : (bool) $product->show_in_wholesale;
+            if (! $retail && ! $wholesale) {
+                $v->errors()->add('show_in_retail', 'অন্তত একটি বিক্রয় মাধ্যম (খুচরা বা পাইকারি) চালু রাখুন।');
+            }
+            $price = $request->filled('retail_price_1kg') ? (float) $request->input('retail_price_1kg') : (float) $product->retail_price_1kg;
+            if ($retail && $price <= 0) {
+                $v->errors()->add('retail_price_1kg', $product->variants()->exists()
+                    ? 'খুচরা চালু করতে পূর্ণ সম্পাদনায় দাম দিন।'
+                    : 'খুচরা চালু করতে ১ কেজির দাম দিন।');
+            }
+        });
+        $data = $validator->validate();
+
+        $changes = DB::transaction(function () use ($product, $data) {
+            $product = Product::lockForUpdate()->findOrFail($product->id);
+            $wasRetail = (bool) $product->show_in_retail;
+            $oldPrice = $product->retail_price_1kg;
+
+            $fields = Arr::only($data, ['stock', 'is_active', 'show_in_retail', 'show_in_wholesale']);
+            if (isset($data['retail_price_1kg'])) {
+                $fields['retail_price_1kg'] = $data['retail_price_1kg'];
+            }
+            if (array_key_exists('low_stock_threshold', $data)) {
+                $fields['low_stock_threshold'] = $data['low_stock_threshold'] ?? 0;
+            }
+            if (array_key_exists('sort_order', $data)) {
+                $fields['sort_order'] = $data['sort_order'] ?? 0;
+            }
+            $product->fill($fields);
+            $product->is_wholesale = $product->show_in_wholesale && ! $product->show_in_retail;
+
+            $changes = [];
+            foreach ($product->getDirty() as $key => $value) {
+                $changes[$key] = ['old' => $product->getOriginal($key), 'new' => $product->{$key}];
+            }
+            $product->save();
+
+            if ($product->shouldResyncPrices(false, $wasRetail, $oldPrice)) {
+                $product->syncPrices(); // manual-override packs keep their final_price
+            }
+
+            return $changes;
+        });
+
+        $product->refresh();
+        if ($changes) {
+            Log::info('Admin product quick edit', [
+                'user_id' => $request->user()?->id, 'product_id' => $product->id, 'changes' => $changes,
+            ]);
+        }
+
+        $packs = $product->prices()->whereNull('product_variant_id')->where('sell_type', 'retail')->get()
+            ->map(fn ($p) => [
+                'label' => $p->label, 'final_price' => (float) $p->final_price,
+                'is_manual_override' => (bool) $p->is_manual_override, 'is_active' => (bool) $p->is_active,
+            ])->values();
+
+        return response()->json([
+            'message' => $changes ? 'পরিবর্তন সংরক্ষণ হয়েছে।' : 'কোনো পরিবর্তন ছিল না।',
+            'product' => $this->quickEditData($product),
+            'packs'   => $packs,
+            'stats'   => $this->stats(),
+        ]);
+    }
+
+    /** Row state shared by the list view (data attribute) and the quickUpdate JSON. */
+    public function quickEditData(Product $product): array
+    {
+        return [
+            'id'                  => $product->id,
+            'retail_price_1kg'    => (float) $product->retail_price_1kg,
+            'stock'               => (int) $product->stock,
+            'low_stock_threshold' => (float) $product->low_stock_threshold,
+            'sort_order'          => (int) $product->sort_order,
+            'is_active'           => (bool) $product->is_active,
+            'show_in_retail'      => (bool) $product->show_in_retail,
+            'show_in_wholesale'   => (bool) $product->show_in_wholesale,
+            'has_variants'        => ($product->variants_count ?? $product->variants()->count()) > 0,
+            'unit_managed'        => $product->isUnitManaged(),
+            'update_url'          => route('admin.products.quick-update', $product),
+            'edit_url'            => route('admin.products.edit', $product),
+        ];
     }
 
     /** Include existing inactive categories so editing preserves the selection. */

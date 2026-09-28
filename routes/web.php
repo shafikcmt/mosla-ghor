@@ -359,6 +359,7 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
 
     Route::resource('categories', AdminCategoryController::class);
 
+    Route::patch('products/{product}/quick-update', [AdminProductController::class, 'quickUpdate'])->name('products.quick-update');
     Route::resource('products', AdminProductController::class);
 
     Route::get('delivery-settings', [AdminDeliverySettingController::class, 'index'])->name('delivery-settings.index');

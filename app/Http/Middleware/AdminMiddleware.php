@@ -11,6 +11,11 @@ class AdminMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // AJAX/JSON callers (e.g. product quick edit) get a status code, not a login redirect.
+        if ($request->expectsJson() && (! Auth::check() || ! Auth::user()->is_admin)) {
+            return response()->json(['message' => Auth::check() ? 'এই কাজের অনুমতি নেই।' : 'আবার লগইন করুন।'], Auth::check() ? 403 : 401);
+        }
+
         if (! Auth::check()) {
             return redirect()->route('admin.login');
         }

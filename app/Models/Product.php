@@ -359,6 +359,21 @@ class Product extends Model
         });
     }
 
+    /**
+     * Whether retail pack prices must be regenerated after a save: retail is on and
+     * the product is new, retail was just switched on, the 1kg price changed, or the
+     * product has no base retail packs yet. Shared by the full editor and quick edit.
+     */
+    public function shouldResyncPrices(bool $wasNew, bool $wasRetail, $oldPrice): bool
+    {
+        if (! $this->show_in_retail) {
+            return false;
+        }
+
+        return $wasNew || ! $wasRetail || (float) $oldPrice !== (float) $this->retail_price_1kg
+            || ! $this->prices()->whereNull('product_variant_id')->where('sell_type', 'retail')->exists();
+    }
+
     // Create or refresh all standard pack-size rows in product_prices.
     // Rows with is_manual_override = true keep their final_price untouched.
     public function syncPrices(): void
