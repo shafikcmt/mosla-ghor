@@ -26,6 +26,7 @@
         .c-child:not(.active){ color:#4b5563; }
         .c-child:not(.active):hover { background:#ecfdf5; }
     </style>
+    @include('partials.marketing.pixel-head')
 </head>
 <body class="min-h-screen">
 
@@ -201,5 +202,6 @@
     window.addEventListener('pageshow', closeSidebar);
 </script>
 @yield('scripts')
+@include('partials.marketing.pixel-events')
 </body>
 </html>

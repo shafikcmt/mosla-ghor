@@ -24,6 +24,7 @@
     <div class="px-5 py-4 flex-1">
         <ul class="space-y-1.5">
             @foreach($combo->items as $item)
+            @php if ($item->product) \App\Support\MetaPixel::registerProduct($item->product); @endphp
             <li class="flex justify-between items-baseline text-sm">
                 <span class="font-medium text-[#14532d]">{{ $item->product?->name_bn ?? 'পণ্য' }}</span>
                 <span class="text-gray-400 text-xs ml-2 flex-shrink-0">

@@ -1,5 +1,6 @@
 @extends('storefront.layout')
 @section('title', 'পেমেন্ট মেথড')
+@php /* Meta Pixel: split per vendor server-side */ \App\Support\MetaPixel::checkoutEvent('AddPaymentInfo', $items); @endphp
 
 @section('content')
 @php

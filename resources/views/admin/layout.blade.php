@@ -139,6 +139,7 @@
                 ['label' => 'ডেলিভারি সেটিং',  'route' => 'admin.delivery-settings.index', 'active' => 'admin.delivery-settings.*'],
                 ['label' => 'জেনারেল সেটিং',   'route' => 'admin.general-settings.index',   'active' => 'admin.general-settings.*'],
                 ['label' => 'লগইন সেটিং',      'route' => 'admin.auth-settings.index',      'active' => 'admin.auth-settings.*'],
+                ['label' => 'মার্কেটিং / ট্র্যাকিং', 'route' => 'admin.marketing-settings.index', 'active' => 'admin.marketing-settings.*'],
                 ['label' => 'মেইল সেটিং',      'route' => 'admin.mail-settings.edit',       'active' => 'admin.mail-settings.*'],
                 ['label' => 'আমার প্রোফাইল',   'route' => 'admin.profile.edit',             'active' => 'admin.profile.*'],
             ],

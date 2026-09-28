@@ -39,6 +39,11 @@ class Vendor extends Model
         return $this->hasMany(Product::class);
     }
 
+    public function marketingSetting(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(VendorMarketingSetting::class);
+    }
+
     public function combos(): HasMany
     {
         return $this->hasMany(Combo::class);

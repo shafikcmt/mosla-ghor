@@ -4,6 +4,7 @@
     parent foreach scope. All element IDs are preserved for the homepage JS.
 --}}
             @php
+                \App\Support\MetaPixel::registerProduct($product);
                 $directRetail = $product->activePrices->filter(fn($pr) => is_null($pr->product_variant_id))->where('sell_type', 'retail');
                 $initRetailPrices = $directRetail->isNotEmpty()
                     ? $directRetail

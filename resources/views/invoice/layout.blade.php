@@ -17,6 +17,7 @@
             @page     { margin: 1.2cm; size: A4 portrait; }
         }
     </style>
+    @include('partials.marketing.pixel-head')
 </head>
 <body class="min-h-screen flex flex-col">
 
@@ -40,5 +41,6 @@
     {{ $siteName }} — MoslaMart
 </footer>
 
+@include('partials.marketing.pixel-events')
 </body>
 </html>

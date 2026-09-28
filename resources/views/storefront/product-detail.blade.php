@@ -39,6 +39,9 @@
     $lowestRetail   = $hasRetail ? (float) $retailPacks->min('final_price') : null;
     $moqLabel       = $product->moqLabel();
 
+    // Meta Pixel ViewContent → platform (per scope) + this product's vendor only.
+    \App\Support\MetaPixel::viewContent($product, $lowestRetail);
+
     // Enquiry is public (guest allowed). Autofill from the logged-in customer profile.
     $isCustomer   = auth()->check() && auth()->user()->role === 'customer';
     $authCustomer = $isCustomer ? auth()->user()->customer : null;

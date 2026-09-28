@@ -29,6 +29,7 @@
             @page { margin: 1.5cm; size: A4 portrait; }
         }
     </style>
+    @include('partials.marketing.pixel-head')
 </head>
 <body class="min-h-screen flex flex-col">
 
@@ -303,5 +304,6 @@
     <p class="text-center text-green-700 text-xs">&copy; {{ date('Y') }} {{ $siteName }} — সমস্ত অধিকার সংরক্ষিত।</p>
 </footer>
 
+@include('partials.marketing.pixel-events')
 </body>
 </html>

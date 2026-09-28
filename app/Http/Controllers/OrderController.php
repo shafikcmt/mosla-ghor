@@ -416,6 +416,9 @@ class OrderController extends Controller
         // browser that actually placed this order (anti-hijack).
         $request->session()->put('claimable_order', $order->order_number);
 
+        // One-time flag: the success page fires the Meta Purchase event only for this browser, once.
+        $request->session()->put(\App\Support\MetaPixel::PURCHASE_KEY, $order->order_number);
+
         return response()->json([
             'success'  => true,
             'redirect' => route('order.success', $order->order_number),
@@ -500,6 +503,12 @@ class OrderController extends Controller
         $order = Order::with('items')
             ->where('order_number', $orderNumber)
             ->firstOrFail();
+
+        // Purchase fires once, only in the browser that placed the order (refresh / shared link: nothing).
+        if (session(\App\Support\MetaPixel::PURCHASE_KEY) === $order->order_number) {
+            session()->forget(\App\Support\MetaPixel::PURCHASE_KEY);
+            \App\Support\MetaPixel::purchase($order);
+        }
 
         $whatsappNumber = WebsiteSetting::get('whatsapp_number');
         $siteName       = WebsiteSetting::get('site_name', 'মসলা ঘর');

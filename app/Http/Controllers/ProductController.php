@@ -239,6 +239,9 @@ class ProductController extends Controller
             'status'             => 'pending',
         ]);
 
+        // Meta Pixel Lead on the next page (platform per scope + this product's vendor).
+        \App\Support\MetaPixel::leadForProduct($product, 'lead-'.$enquiry->id);
+
         // Alerts: admin + assigned supplier; confirmation to the customer.
         Notify::admins(new EnquiryReceivedNotification($enquiry, 'admin'));
         Notify::vendor($product->vendor, new EnquiryReceivedNotification($enquiry, 'vendor'));

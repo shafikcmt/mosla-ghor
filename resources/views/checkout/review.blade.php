@@ -1,5 +1,6 @@
 @extends('storefront.layout')
 @section('title', 'অর্ডার রিভিউ')
+@php /* Meta Pixel: split per vendor server-side */ \App\Support\MetaPixel::checkoutEvent('InitiateCheckout', $items); @endphp
 
 @section('content')
 <div class="max-w-3xl mx-auto px-4 py-6">

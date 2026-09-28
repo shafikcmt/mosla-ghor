@@ -1,5 +1,6 @@
 @extends('storefront.layout')
 @section('title', 'অর্ডার সাময়িকভাবে বন্ধ')
+@php /* no tracking on maintenance pages */ \App\Support\MetaPixel::disableForPage(); @endphp
 
 @section('head')
     <meta name="robots" content="noindex, nofollow">

@@ -313,6 +313,8 @@ Route::prefix('vendor')->name('vendor.')->middleware('vendor')->group(function (
 
     Route::get('profile',  [VendorProfileController::class, 'index'])->name('profile.index');
     Route::put('profile',  [VendorProfileController::class, 'update'])->name('profile.update');
+    Route::get('profile/marketing', [\App\Http\Controllers\Vendor\MarketingController::class, 'edit'])->name('profile.marketing');
+    Route::put('profile/marketing', [\App\Http\Controllers\Vendor\MarketingController::class, 'update'])->name('profile.marketing.update');
 
     // ── Paykari Combo (Vendor) ─────────────────────────────────────────────
     Route::prefix('paykari-combo')->name('paykari-combo.')->group(function () {
@@ -357,6 +359,9 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('website-settings', [AdminWebsiteSettingController::class, 'index'])->name('website-settings.index');
     Route::post('website-settings', [AdminWebsiteSettingController::class, 'update'])->name('website-settings.update');
     Route::post('maintenance', [\App\Http\Controllers\Admin\MaintenanceSettingController::class, 'update'])->name('maintenance.update');
+    Route::get('marketing-settings', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'index'])->name('marketing-settings.index');
+    Route::post('marketing-settings', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'update'])->name('marketing-settings.update');
+    Route::post('marketing-settings/vendors/{vendorSetting}/toggle', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'toggleVendor'])->name('marketing-settings.vendors.toggle');
     Route::get('maintenance/preview', [\App\Http\Controllers\Admin\MaintenanceSettingController::class, 'preview'])->name('maintenance.preview');
 
     Route::resource('categories', AdminCategoryController::class);

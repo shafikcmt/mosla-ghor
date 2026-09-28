@@ -5,6 +5,8 @@
 
 <h2 class="text-lg font-bold text-gray-800 mb-6">শপ প্রোফাইল</h2>
 
+@include('vendor.profile._tabs', ['active' => 'profile'])
+
 <form method="POST" action="{{ route('vendor.profile.update') }}" enctype="multipart/form-data">
     @csrf @method('PUT')
 

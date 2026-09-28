@@ -34,6 +34,7 @@
 
     @include('partials.storefront.product-media-assets')
     @yield('head')
+    @include('partials.marketing.pixel-head')
 </head>
 <body class="min-h-screen flex flex-col">
 
@@ -91,5 +92,6 @@
 @include('partials.bottom-nav')
 
 @yield('scripts')
+@include('partials.marketing.pixel-events')
 </body>
 </html>

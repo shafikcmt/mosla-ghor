@@ -20,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'guest.allowed' => \App\Http\Middleware\GuestAllowed::class,
 
         ]);
+        // Meta's first-party cookies are set by fbevents.js, not Laravel — never try to decrypt them.
+        $middleware->encryptCookies(except: ['_fbp', '_fbc']);
         // Admin-controlled maintenance mode (after session/auth so admins can be recognised).
         $middleware->web(append: [\App\Http\Middleware\MaintenanceMode::class]);
     })

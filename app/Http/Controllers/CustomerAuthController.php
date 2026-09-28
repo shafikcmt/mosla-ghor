@@ -71,6 +71,9 @@ class CustomerAuthController extends Controller
 
         Auth::login($user);
 
+        // Meta Pixel CompleteRegistration on the next page (platform pixel only).
+        \App\Support\MetaPixel::completeRegistration('reg-'.$user->id);
+
         return $this->postAuthRedirect($request)
             ->with('success', 'অ্যাকাউন্ট তৈরি হয়েছে। স্বাগতম!');
     }

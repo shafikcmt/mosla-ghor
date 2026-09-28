@@ -3,6 +3,7 @@
     Receives $product and $listMode from the parent foreach scope.
 --}}
             @php
+                \App\Support\MetaPixel::registerProduct($product);
                 $directRetail = $product->activePrices->filter(fn($pr) => is_null($pr->product_variant_id))->where('sell_type', 'retail');
                 $initRetailPrices = $directRetail->isNotEmpty()
                     ? $directRetail
