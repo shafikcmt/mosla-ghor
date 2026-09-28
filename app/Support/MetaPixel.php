@@ -252,18 +252,7 @@ class MetaPixel
             'line_total' => $i->line_total, 'quantity' => 1,
         ]));
 
-        if (self::platformScopeOwn()) {
-            $platformLines = array_filter($lines, fn ($l) => $l['vendor_id'] === null);
-            $platformValue = null; // sum of admin items (from cartParams)
-        } else {
-            $platformLines = $lines;
-            $platformValue = (float) $order->grand_total;
-        }
-        if ($platformLines) {
-            $params = self::cartParams($platformLines);
-            if ($platformValue !== null) {
-                $params['value'] = round($platformValue, 2);
-            }
+        if ($params = self::platformPurchaseParams($order, self::platformScopeOwn())) {
             foreach (self::platformIds() as $id) {
                 self::add($id, 'Purchase', $params, (string) $order->order_number);
             }
@@ -282,6 +271,28 @@ class MetaPixel
                 // tracking metadata only
             }
         }
+    }
+
+    /** Shared browser/server Purchase commerce data. No dispatch or request state. */
+    public static function platformPurchaseParams(Order $order, bool $own): ?array
+    {
+        $order->loadMissing('items');
+        $lines = self::lines($order->items->map(fn ($item) => [
+            'product_id' => $item->product_id, 'price_id' => $item->price_id,
+            'vendor_id' => $item->vendor_id, 'line_total' => $item->line_total, 'quantity' => 1,
+        ]));
+        if ($own) {
+            $lines = array_filter($lines, fn ($line) => $line['vendor_id'] === null);
+        }
+        if (! $lines) {
+            return null;
+        }
+        $params = self::cartParams($lines);
+        if (! $own) {
+            $params['value'] = round((float) $order->grand_total, 2);
+        }
+
+        return $params;
     }
 
     /** Lead for a single-product enquiry (platform per scope + the product's vendor). */

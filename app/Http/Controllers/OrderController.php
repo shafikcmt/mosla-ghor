@@ -291,7 +291,7 @@ class OrderController extends Controller
                 $validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge,
                 $grandTotal, $orderNumber, $isManualPayment, $orderType, $zone, $location,
                 $orderComboId, $bdDivision, $bdDistrict, $bdUpazila, $bdUnion, $neededByProduct,
-                $paymentMode, $paymentDiscount, $estimatedDelivery, $customerAddressId
+                $paymentMode, $paymentDiscount, $estimatedDelivery, $customerAddressId, $request
             ) {
                 // Re-validate stock with row-level locks to prevent race conditions
                 foreach ($neededByProduct as $productId => $neededGram) {
@@ -354,6 +354,8 @@ class OrderController extends Controller
                 }
 
                 $order->update(['stock_deducted_at' => now()]);
+
+                app(\App\Services\RecordMetaPurchase::class)->record($order, $request);
 
                 return $order;
             });
