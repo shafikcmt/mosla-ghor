@@ -19,6 +19,7 @@ class UploadDiagnosticsTest extends TestCase
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
         $this->artisan('migrate', ['--force' => true])->assertExitCode(0);
         $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+        Storage::fake('local'); // settings page writes a persistence marker
     }
 
     private function admin(): User

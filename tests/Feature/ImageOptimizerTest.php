@@ -22,6 +22,7 @@ class ImageOptimizerTest extends TestCase
         $this->assertSame(':memory:', config('database.connections.sqlite.database'));
         $this->artisan('migrate', ['--force' => true])->assertExitCode(0);
         $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+        \Illuminate\Support\Facades\Storage::fake('local'); // settings page writes a persistence marker
         Storage::fake('public');
         ImageOptimizer::$forceWebp = true;
     }

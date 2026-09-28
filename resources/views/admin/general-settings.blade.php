@@ -129,6 +129,19 @@
                         <tr><td class="py-1 text-gray-500">স্টোরেজে খালি জায়গা</td><td class="py-1 font-mono text-right">{{ $L::human($free) }}</td></tr>
                         <tr><td class="py-1 text-gray-500">পরীক্ষায় পাওয়া আসল সীমা (nginx + PHP)</td><td class="py-1 font-mono text-right" data-measured>{{ $measured ? $L::human($measured).' ('.\Illuminate\Support\Carbon::parse($measuredAt)->timezone('Asia/Dhaka')->format('d M, h:i A').')' : 'এখনও পরীক্ষা হয়নি' }}</td></tr>
                         <tr><td class="py-1 text-gray-500">চলমান কোড (commit)</td><td class="py-1 font-mono text-right">{{ \App\Support\BuildInfo::commit() }}</td></tr>
+                        @php $persist = \App\Support\StoragePersistence::status(); @endphp
+                        <tr data-persistence="{{ $persist['survived'] ? 'survived' : ($persist['ok'] ? 'waiting' : 'error') }}">
+                            <td class="py-1 text-gray-500">প্রাইভেট স্টোরেজ (deploy-এর পরও থাকে কি?)</td>
+                            <td class="py-1 text-right {{ $persist['survived'] ? 'text-green-700' : ($persist['ok'] ? 'text-gray-500' : 'text-red-600') }}">
+                                @if(! $persist['ok'])
+                                    ❌ লেখা যায়নি
+                                @elseif($persist['survived'])
+                                    ✅ টিকে আছে — {{ $persist['created_commit'] }} থেকে ({{ \Illuminate\Support\Carbon::parse($persist['created_at'])->timezone('Asia/Dhaka')->format('d M, h:i A') }})
+                                @else
+                                    ⏳ মার্কার তৈরি ({{ $persist['created_commit'] }}, {{ \Illuminate\Support\Carbon::parse($persist['created_at'])->timezone('Asia/Dhaka')->format('d M, h:i A') }}) — পরের deploy-এর পর দেখুন
+                                @endif
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
                 <button type="button" data-upload-probe
