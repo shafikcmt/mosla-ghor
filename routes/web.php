@@ -400,6 +400,8 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('general-settings', [AdminGeneralSettingController::class, 'index'])->name('general-settings.index');
     Route::post('general-settings', [AdminGeneralSettingController::class, 'update'])->name('general-settings.update');
     Route::post('general-settings/images', [AdminGeneralSettingController::class, 'updateImages'])->name('general-settings.images');
+    Route::post('diagnostics/upload-probe', [\App\Http\Controllers\Admin\UploadDiagnosticsController::class, 'probe'])->name('diagnostics.upload-probe');
+    Route::post('diagnostics/upload-result', [\App\Http\Controllers\Admin\UploadDiagnosticsController::class, 'saveResult'])->name('diagnostics.upload-result');
 
     Route::get('auth-settings',  [AdminAuthSettingController::class, 'index'])->name('auth-settings.index');
     Route::post('auth-settings', [AdminAuthSettingController::class, 'update'])->name('auth-settings.update');

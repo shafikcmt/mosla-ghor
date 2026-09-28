@@ -109,11 +109,100 @@
             <p class="text-xs mt-1 {{ $webp ? 'text-green-700' : 'text-gray-500' }}">
                 সার্ভার WebP: {{ $webp ? 'সমর্থিত' : 'নেই — সার্ভার JPEG/PNG ব্যবহার করবে; ব্রাউজার থেকে WebP আপলোড আগের মতোই কাজ করবে' }}
             </p>
+
+            {{-- ── Live server upload limits (no shell needed) ───────────── --}}
+            @php
+                $L = \App\Support\ServerLimits::class;
+                $measured = $L::measured();
+                $measuredAt = \App\Models\WebsiteSetting::get($L::MEASURED_AT_KEY);
+                $free = $L::freeDiskBytes();
+            @endphp
+            <div class="mt-5 border-t border-gray-100 pt-4" id="upload-limits">
+                <h4 class="text-xs font-semibold text-gray-600 mb-2">সার্ভারের আপলোড সীমা (এই মুহূর্তে লাইভ)</h4>
+                <table class="w-full text-xs" data-limits>
+                    <tbody class="divide-y divide-gray-100">
+                        <tr><td class="py-1 text-gray-500">upload_max_filesize (প্রতি ফাইল)</td><td class="py-1 font-mono text-right">{{ ini_get('upload_max_filesize') }}</td></tr>
+                        <tr><td class="py-1 text-gray-500">post_max_size (পুরো সেভ)</td><td class="py-1 font-mono text-right">{{ ini_get('post_max_size') }}</td></tr>
+                        <tr><td class="py-1 text-gray-500">max_file_uploads</td><td class="py-1 font-mono text-right">{{ ini_get('max_file_uploads') }}</td></tr>
+                        <tr><td class="py-1 text-gray-500">memory_limit</td><td class="py-1 font-mono text-right">{{ ini_get('memory_limit') }}</td></tr>
+                        <tr><td class="py-1 text-gray-500">আপলোডের temp ফোল্ডার</td><td class="py-1 text-right {{ $L::tempDirWritable() ? 'text-green-700' : 'text-red-600' }}">{{ $L::tempDirWritable() ? '✅ লেখা যায়' : '❌ লেখা যায় না' }}</td></tr>
+                        <tr><td class="py-1 text-gray-500">স্টোরেজে খালি জায়গা</td><td class="py-1 font-mono text-right">{{ $L::human($free) }}</td></tr>
+                        <tr><td class="py-1 text-gray-500">পরীক্ষায় পাওয়া আসল সীমা (nginx + PHP)</td><td class="py-1 font-mono text-right" data-measured>{{ $measured ? $L::human($measured).' ('.\Illuminate\Support\Carbon::parse($measuredAt)->timezone('Asia/Dhaka')->format('d M, h:i A').')' : 'এখনও পরীক্ষা হয়নি' }}</td></tr>
+                        <tr><td class="py-1 text-gray-500">চলমান কোড (commit)</td><td class="py-1 font-mono text-right">{{ \App\Support\BuildInfo::commit() }}</td></tr>
+                    </tbody>
+                </table>
+                <button type="button" data-upload-probe
+                        data-probe-url="{{ route('admin.diagnostics.upload-probe') }}" data-result-url="{{ route('admin.diagnostics.upload-result') }}"
+                        class="mt-3 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded text-sm font-medium hover:bg-gray-50">আপলোড সীমা পরীক্ষা</button>
+                <p class="text-xs text-gray-400 mt-1">০.৫, ১, ২, ৫ ও ১০ MB পাঠিয়ে দেখে কোনটা পৌঁছায় — কোনো ফাইল সংরক্ষণ হয় না।</p>
+                <div data-probe-output class="text-xs mt-2"></div>
+            </div>
         </div>
         <div class="px-6 py-5">
             <button type="submit" class="bg-gray-800 text-white px-6 py-2.5 rounded text-sm font-semibold hover:bg-gray-700 transition-colors">ছবির সেটিং সংরক্ষণ</button>
         </div>
     </form>
 </div>
+
+<script>
+(function () {
+    var btn = document.querySelector('[data-upload-probe]');
+    if (!btn) return;
+    var out = document.querySelector('[data-probe-output]');
+    var csrf = document.querySelector('input[name=_token]');
+    var steps = [0.5, 1, 2, 5, 10];
+    var label = function (mb) { return (mb < 1 ? (mb * 1024) + ' KB' : mb + ' MB'); };
+    var row = function (text, ok) {
+        var p = document.createElement('p');
+        p.textContent = text;
+        p.style.color = ok ? '#047857' : '#b91c1c';
+        out.appendChild(p);
+    };
+    btn.addEventListener('click', async function () {
+        btn.disabled = true;
+        out.textContent = '';
+        var largest = 0;
+        for (var i = 0; i < steps.length; i++) {
+            var bytes = Math.round(steps[i] * 1024 * 1024);
+            var fd = new FormData();
+            fd.append('probe', new Blob([new Uint8Array(bytes)], { type: 'application/octet-stream' }), 'probe.bin');
+            var why = '';
+            try {
+                var res = await fetch(btn.dataset.probeUrl, {
+                    method: 'POST', body: fd, credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf ? csrf.value : '' }
+                });
+                var json = null;
+                try { json = await res.clone().json(); } catch (e) { json = null; }
+                if (res.ok && json && json.ok) {
+                    largest = bytes;
+                    row('✅ ' + label(steps[i]) + ' পৌঁছেছে', true);
+                    continue;
+                }
+                if (res.status === 413 && !json) why = 'nginx (client_max_body_size) আটকে দিয়েছে';
+                else if (res.status === 413) why = 'PHP post_max_size আটকে দিয়েছে';
+                else if (json && json.layer === 'php_upload_max_filesize') why = 'PHP upload_max_filesize আটকে দিয়েছে';
+                else why = 'ব্যর্থ (HTTP ' + res.status + ')';
+            } catch (e) {
+                why = 'সংযোগ বিচ্ছিন্ন — সম্ভবত সার্ভার/প্রক্সি আটকে দিয়েছে';
+            }
+            row('❌ ' + label(steps[i]) + ': ' + why, false);
+            break;
+        }
+        try {
+            var save = await fetch(btn.dataset.resultUrl, {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf ? csrf.value : '' },
+                body: JSON.stringify({ largest_ok_bytes: largest })
+            });
+            var sj = await save.json();
+            var m = document.querySelector('[data-measured]');
+            if (m && sj.saved) m.textContent = sj.saved + ' (এইমাত্র)';
+            row('সবচেয়ে বড় যেটা পৌঁছেছে: ' + (largest ? (largest / 1048576).toFixed(1) + ' MB' : 'কিছুই না') + ' — সেভ করার সময় এই সীমা মানা হবে।', largest > 0);
+        } catch (e) { /* result not saved; table still shows the run */ }
+        btn.disabled = false;
+    });
+})();
+</script>
 
 @endsection

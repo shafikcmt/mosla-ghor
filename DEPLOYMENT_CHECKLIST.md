@@ -104,6 +104,17 @@ php artisan route:cache
 php artisan view:cache
 ```
 
+After every deploy:
+- **Reload any admin/vendor tabs that were open before the deploy.** A page opened
+  earlier still runs the old HTML/JS (e.g. no browser-side image resize), and its
+  uploads can hit the server's size limits. Forms from an older build show
+  "পেজটি পুরোনো — রিফ্রেশ করুন" on upload errors.
+- Compiled Blade views re-check file timestamps (Laravel default), so `view:cache`
+  is optional; if a page still looks outdated, run `php artisan view:clear`
+  (or `php artisan optimize:clear`) and reload.
+- Check **Admin → জেনারেল সেটিং → ছবি কম্প্রেশন**: "চলমান কোড (commit)" should show the
+  commit you just pushed, and "Image library" should be ✅.
+
 Do **not** run `db:seed` on re-deploy unless intentionally resetting reference data (products, zones, couriers). All seeders are idempotent (safe if accidentally re-run — they use `updateOrCreate`/`firstOrCreate`).
 
 ---
