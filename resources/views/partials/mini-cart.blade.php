@@ -79,10 +79,26 @@
                 <span id="ms-cart-subtotal" class="font-serif-bn font-bold text-[#14532d] text-lg">৳০</span>
             </div>
             <p class="text-[11px] text-gray-400 leading-snug">ডেলিভারি চার্জ ও প্যাকেজিং চেকআউটে যুক্ত হবে।</p>
+            @if(\App\Support\AuthSettings::guestBlocked('checkout'))
+            {{-- Guest checkout off: the cart is carried through checkout.start, then login/register → Review. --}}
+            <div class="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                <p class="text-sm font-semibold text-amber-900 text-center mb-2">অর্ডার করতে লগইন করুন</p>
+                <div class="grid {{ \App\Support\AuthSettings::customerRegistrationEnabled() ? 'grid-cols-2' : 'grid-cols-1' }} gap-2">
+                    <button type="button" onclick="msCartCheckout('login')"
+                            class="bg-[#c9a227] hover:bg-[#e2bb45] text-[#0f3d22] font-bold text-sm py-2.5 rounded-lg transition shadow">লগইন</button>
+                    @if(\App\Support\AuthSettings::customerRegistrationEnabled())
+                    <button type="button" onclick="msCartCheckout('register')"
+                            class="border border-[#14532d] text-[#14532d] font-bold text-sm py-2.5 rounded-lg hover:bg-green-50 transition">রেজিস্টার</button>
+                    @endif
+                </div>
+                <p class="text-[11px] text-amber-800 text-center mt-2 leading-snug">আপনার কার্ট সংরক্ষিত থাকবে — লগইনের পর সরাসরি অর্ডার রিভিউ পেজে যাবেন।</p>
+            </div>
+            @else
             <button onclick="msCartCheckout()"
                     class="w-full bg-[#c9a227] hover:bg-[#e2bb45] text-[#0f3d22] font-bold text-sm py-3 rounded-xl transition shadow">
                 চেকআউট / অর্ডার করুন →
             </button>
+            @endif
             <div class="grid grid-cols-2 gap-2">
                 <a href="/#combo-builder" onclick="msCartClose()"
                    class="text-center border border-[#14532d] text-[#14532d] text-xs font-semibold py-2 rounded-lg hover:bg-green-50 transition">+ কম্বো / বক্স</a>
@@ -445,7 +461,8 @@
     };
 
     // ── Retail checkout: hand the box to the existing checkout.start flow ──
-    window.msCartCheckout = function () {
+    // intent 'login' | 'register' (guest checkout off): checkout.start saves the cart, then sends the guest there.
+    window.msCartCheckout = function (intent) {
         const items = msCart.get();
         if (!items.length) return;
         const form = document.createElement('form');
@@ -455,6 +472,11 @@
         csrf.type = 'hidden'; csrf.name = '_token';
         csrf.value = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '';
         form.appendChild(csrf);
+        if (intent) {
+            const ai = document.createElement('input');
+            ai.type = 'hidden'; ai.name = 'auth_intent'; ai.value = intent;
+            form.appendChild(ai);
+        }
         items.forEach(function (it, i) {
             const inp = document.createElement('input');
             inp.type = 'hidden'; inp.name = 'items[' + i + ']'; inp.value = it.priceId;

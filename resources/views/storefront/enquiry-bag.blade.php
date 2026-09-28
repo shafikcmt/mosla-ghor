@@ -40,7 +40,10 @@
     <div>
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sticky top-20">
             <h2 class="text-sm font-bold text-gray-800 mb-3">আপনার তথ্য</h2>
-            <form id="bag-form" action="{{ route('paykari-combo.enquiry.store') }}" method="POST" class="space-y-3">
+            @if(\App\Support\AuthSettings::guestBlocked('enquiry'))
+                @include('partials.storefront.guest-login-prompt', ['feature' => 'enquiry'])
+            @endif
+            <form id="bag-form" action="{{ route('paykari-combo.enquiry.store') }}" method="POST" class="space-y-3" @if(\App\Support\AuthSettings::guestBlocked('enquiry')) hidden @endif>
                 @csrf
                 <div id="bag-items-hidden"></div>
 

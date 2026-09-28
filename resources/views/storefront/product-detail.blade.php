@@ -398,7 +398,10 @@
 
             {{-- In-page enquiry form (slide section, NOT a popup) — guest + logged-in --}}
             <div id="pd-enquiry-form" class="{{ $errors->any() && old('quantity_kg') ? '' : 'hidden' }} mt-4">
-                <form action="{{ route('products.enquiry.store', $product->slug) }}" method="POST" class="space-y-3">
+                @if(\App\Support\AuthSettings::guestBlocked('enquiry'))
+                    @include('partials.storefront.guest-login-prompt', ['feature' => 'enquiry'])
+                @endif
+                <form action="{{ route('products.enquiry.store', $product->slug) }}" method="POST" class="space-y-3" @if(\App\Support\AuthSettings::guestBlocked('enquiry')) hidden @endif>
                     @csrf
                     @if($wholesaleView)<input type="hidden" name="from_wholesale" value="1">@endif
 
@@ -554,7 +557,10 @@
     {{-- Submit review form --}}
     <div class="border-t border-gray-100 pt-6">
         <h3 class="text-base font-bold text-gray-800 mb-3">একটি রিভিউ লিখুন</h3>
-        <form action="{{ route('products.reviews.store', $product->slug) }}" method="POST" enctype="multipart/form-data" class="space-y-3 max-w-xl">
+        @if(\App\Support\AuthSettings::guestBlocked('review'))
+            <div class="max-w-xl">@include('partials.storefront.guest-login-prompt', ['feature' => 'review', 'back' => request()->getRequestUri().'#reviews'])</div>
+        @endif
+        <form action="{{ route('products.reviews.store', $product->slug) }}" method="POST" enctype="multipart/form-data" class="space-y-3 max-w-xl" @if(\App\Support\AuthSettings::guestBlocked('review')) hidden @endif>
             @csrf
 
             <div>

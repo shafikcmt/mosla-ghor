@@ -50,6 +50,15 @@ class CheckoutController extends Controller
             'address_id' => session('checkout.address_id'),
         ]]);
 
+        // Guest checkout off: the cart is now safe in the session; sign in (or register) and land on Review.
+        if (\App\Support\AuthSettings::guestBlocked('checkout')) {
+            $toRegister = $request->input('auth_intent') === 'register' && \App\Support\AuthSettings::customerRegistrationEnabled();
+            return redirect()->to($toRegister
+                ? \App\Support\AuthSettings::registerUrl('/checkout/review')
+                : \App\Support\AuthSettings::loginUrl('/checkout/review'))
+                ->with('error', 'অর্ডার করতে লগইন করুন।');
+        }
+
         return redirect()->route('checkout.review');
     }
 

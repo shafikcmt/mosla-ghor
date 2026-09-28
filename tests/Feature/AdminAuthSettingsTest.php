@@ -37,6 +37,10 @@ class AdminAuthSettingsTest extends TestCase
             'otp_expiry_minutes'          => '5',
             'otp_resend_cooldown_seconds' => '60',
             'otp_max_attempts'            => '5',
+            // The form renders the guest toggles checked by default (guest access = on).
+            'guest_checkout_enabled'      => '1',
+            'guest_enquiry_enabled'       => '1',
+            'guest_review_enabled'        => '1',
         ], $overrides);
     }
 

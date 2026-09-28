@@ -35,6 +35,7 @@ class AuthSettingController extends Controller
         'vendor_password_login', 'vendor_otp_login', 'vendor_auto_approve',
         'otp_sms_enabled', 'otp_whatsapp_enabled', 'otp_email_enabled',
         'show_email_field_register',
+        'guest_checkout_enabled', 'guest_enquiry_enabled', 'guest_review_enabled',
     ];
 
     public function index()
@@ -66,6 +67,15 @@ class AuthSettingController extends Controller
             'otp_resend_cooldown_seconds.required' => 'পুনরায় পাঠানোর সময় দিন।',
             'otp_max_attempts.required'            => 'সর্বোচ্চ চেষ্টার সংখ্যা দিন।',
         ]);
+
+        // Guest checkout off needs a working customer login, or nobody could order at all.
+        if (! $request->has('guest_checkout_enabled')
+            && (! $request->has('customer_login_enabled')
+                || (! $request->has('customer_password_login') && ! $request->has('customer_otp_login')))) {
+            return back()->withErrors([
+                'guest_checkout_enabled' => 'গেস্ট চেকআউট বন্ধ করতে হলে কাস্টমার লগইন এবং অন্তত একটি লগইন পদ্ধতি (পাসওয়ার্ড বা OTP) চালু রাখতে হবে — না হলে কেউ অর্ডার করতে পারবে না। সেটিং সংরক্ষণ হয়নি।',
+            ]);
+        }
 
         $boolKeys = array_merge(
             array_keys(self::PAGE_BOOL_DEFAULTS),

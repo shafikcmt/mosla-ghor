@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin'         => \App\Http\Middleware\AdminMiddleware::class,
             'vendor'        => \App\Http\Middleware\VendorMiddleware::class,
             'customer-auth' => \App\Http\Middleware\CustomerMiddleware::class,
+            'guest.allowed' => \App\Http\Middleware\GuestAllowed::class,
 
         ]);
         // Admin-controlled maintenance mode (after session/auth so admins can be recognised).

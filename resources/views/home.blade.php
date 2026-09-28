@@ -886,9 +886,12 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                 $pcPhone = $pcCustomer->mobile_number ?? '';
                 $pcAddr  = $pcCustomer->last_full_address ?? '';
             @endphp
+            @if(\App\Support\AuthSettings::guestBlocked('enquiry'))
+                @include('partials.storefront.guest-login-prompt', ['feature' => 'enquiry', 'back' => '/?mode=wholesale#products'])
+            @endif
             <form id="paykari-enquiry-form"
                   action="{{ route('paykari-combo.enquiry.store') }}"
-                  method="POST">
+                  method="POST" @if(\App\Support\AuthSettings::guestBlocked('enquiry')) hidden @endif>
                 @csrf
                 <div id="paykari-form-items-hidden"></div>
 

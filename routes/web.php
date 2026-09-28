@@ -95,16 +95,16 @@ Route::get('/products', function (\Illuminate\Http\Request $request) {
 
 // ── Public product detail (SEO-friendly) ───────────────────────────────────
 Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
-Route::post('/products/{product:slug}/reviews', [ProductController::class, 'storeReview'])->name('products.reviews.store');
+Route::post('/products/{product:slug}/reviews', [ProductController::class, 'storeReview'])->middleware('guest.allowed:review')->name('products.reviews.store');
 
 // Public wholesale enquiry (guest or logged-in). Rate-limited for abuse safety.
 Route::post('/products/{product:slug}/enquiry', [ProductController::class, 'storeEnquiry'])
-    ->middleware('throttle:10,1')
+    ->middleware(['throttle:10,1', 'guest.allowed:enquiry'])
     ->name('products.enquiry.store');
 
 // Public Paykari combo (bulk) enquiry — guest or logged-in.
 Route::post('/paykari-combo/enquiry', [\App\Http\Controllers\Customer\PaykariComboEnquiryController::class, 'store'])
-    ->middleware('throttle:10,1')
+    ->middleware(['throttle:10,1', 'guest.allowed:enquiry'])
     ->name('paykari-combo.enquiry.store');
 
 // Public wholesale enquiry bag (manage multiple products + submit). Guest allowed.
@@ -223,14 +223,14 @@ Route::get('/address/unions/{upazila}', [AddressController::class, 'unions'])->n
 
 // ── Meesho-style multi-step checkout (Cart → Review → Payment). Guests allowed. ──
 Route::post('/checkout/start',                  [CheckoutController::class, 'start'])->name('checkout.start');
-Route::get('/checkout/review',                  [CheckoutController::class, 'review'])->name('checkout.review');
-Route::post('/checkout/address',                [CheckoutController::class, 'storeAddress'])->name('checkout.address.store');
-Route::post('/checkout/select-address/{address}', [CheckoutController::class, 'selectAddress'])->name('checkout.address.select');
-Route::get('/checkout/payment',                 [CheckoutController::class, 'payment'])->name('checkout.payment');
+Route::get('/checkout/review',                  [CheckoutController::class, 'review'])->middleware('guest.allowed:checkout')->name('checkout.review');
+Route::post('/checkout/address',                [CheckoutController::class, 'storeAddress'])->middleware('guest.allowed:checkout')->name('checkout.address.store');
+Route::post('/checkout/select-address/{address}', [CheckoutController::class, 'selectAddress'])->middleware('guest.allowed:checkout')->name('checkout.address.select');
+Route::get('/checkout/payment',                 [CheckoutController::class, 'payment'])->middleware('guest.allowed:checkout')->name('checkout.payment');
 // Privacy-safe "is this phone already registered?" check for guest checkout (returns only a boolean).
-Route::post('/checkout/check-phone',            [CheckoutController::class, 'checkPhone'])->name('checkout.check-phone');
+Route::post('/checkout/check-phone',            [CheckoutController::class, 'checkPhone'])->middleware('guest.allowed:checkout')->name('checkout.check-phone');
 
-Route::post('/order', [OrderController::class, 'store'])->name('order.store');
+Route::post('/order', [OrderController::class, 'store'])->middleware('guest.allowed:checkout')->name('order.store');
 Route::get('/order/success/{orderNumber}', [OrderController::class, 'success'])->name('order.success');
 // Guests claim their auto-created account through the single canonical signed
 // set-password flow (customer.set-password.*), surfaced on the order success page.

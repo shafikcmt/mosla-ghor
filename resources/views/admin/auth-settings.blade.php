@@ -90,6 +90,41 @@
         </div>
     </div>
 
+    {{-- Guest (not logged in) permissions --}}
+    @php
+        $gcOff    = ($settings['guest_checkout_enabled'] ?? '1') !== '1';
+        $regOff   = ($settings['customer_registration_enabled'] ?? '1') !== '1';
+    @endphp
+    <div class="bg-white rounded shadow mb-5" id="guest-access">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">গেস্ট (লগইন ছাড়া) অনুমতি</h3>
+            <p class="text-xs text-gray-400 mt-1">বন্ধ করলে লগইন ছাড়া এই কাজগুলো করা যাবে না। লগইন করা সবাই আগের মতোই পারবেন।</p>
+        </div>
+        <div class="px-6 py-5 space-y-4">
+            @if($gcOff && $regOff)
+                <div class="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded px-4 py-3">
+                    ⚠️ গেস্ট চেকআউট ও কাস্টমার রেজিস্ট্রেশন দুটোই বন্ধ — নতুন কাস্টমার অর্ডার করতে পারবে না। শুধু আগের অ্যাকাউন্টধারীরা লগইন করে অর্ডার করতে পারবেন।
+                </div>
+            @endif
+
+            @foreach([
+                'guest_checkout_enabled' => ['গেস্ট চেকআউট', 'লগইন ছাড়া অর্ডার করা যাবে। বন্ধ করলে কার্টে "অর্ডার করতে লগইন করুন" দেখাবে; কার্ট সংরক্ষিত থাকবে। বন্ধ করতে কাস্টমার লগইন চালু থাকতে হবে।'],
+                'guest_enquiry_enabled'  => ['গেস্ট Enquiry', 'লগইন ছাড়া পাইকারি ও কম্বো enquiry পাঠানো যাবে।'],
+                'guest_review_enabled'   => ['গেস্ট রিভিউ', 'লগইন ছাড়া পণ্যের রিভিউ দেওয়া যাবে।'],
+            ] as $key => [$label, $help])
+            <label class="flex items-center justify-between py-3 border-b border-gray-50">
+                <div>
+                    <p class="text-sm font-medium text-gray-800">{{ $label }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ $help }}</p>
+                </div>
+                <input type="checkbox" name="{{ $key }}"
+                       {{ ($settings[$key] ?? '1') === '1' ? 'checked' : '' }}
+                       class="w-5 h-5 rounded text-[#14532d] border-gray-300 focus:ring-[#14532d]">
+            </label>
+            @endforeach
+        </div>
+    </div>
+
     {{-- Vendor Section --}}
     <div class="bg-white rounded shadow mb-5">
         <div class="px-6 py-4 border-b border-gray-100">
