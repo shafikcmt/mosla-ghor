@@ -6,7 +6,7 @@
     $canAddNew = $editorRole === 'admin' || \App\Http\Controllers\Vendor\ProductController::canAddProducts();
     $peSaved = session('pe_saved');
 @endphp
-<link rel="stylesheet" href="{{ asset('css/product-editor.css') }}?v=20260930">
+<link rel="stylesheet" href="{{ asset('css/product-editor.css') }}?v=20260930b">
 <div class="pe" data-product-editor data-upload-url="{{ route($prefix.'uploads') }}">
     <header class="pe-heading">
         <div>

@@ -36,6 +36,7 @@ class ProductEditor
                     'sku', 'category', 'brand', 'unit', 'purchase_price', 'selling_price', 'low_stock_threshold',
                     'is_active', 'show_in_retail', 'show_in_wholesale',
                     'meta_title', 'meta_description', 'meta_keywords',
+                    'main_image_alt', 'og_image_alt',
                 ]);
                 // Canonical/robots can deindex or redirect ranking — admin only.
                 if ($admin) {
@@ -129,6 +130,15 @@ class ProductEditor
                 }
                 if ($remove || $request->hasFile('gallery_images') || $galleryTokens) {
                     $fields['gallery_images'] = array_values($gallery);
+                }
+                // Gallery alt text, keyed by sha256 of the image path; only for images still in the gallery.
+                if (array_key_exists('gallery_alts', $data) || isset($fields['gallery_images'])) {
+                    $alts = array_merge((array) ($product->gallery_alts ?? []), array_map(
+                        fn ($v) => is_string($v) ? trim($v) : '', (array) ($data['gallery_alts'] ?? [])
+                    ));
+                    $current = array_map(fn ($p) => hash('sha256', $p), $fields['gallery_images'] ?? ($product->gallery_images ?? []));
+                    $alts = array_filter(array_intersect_key($alts, array_flip($current)), fn ($v) => $v !== '');
+                    $fields['gallery_alts'] = $alts ?: null;
                 }
                 if ($request->hasFile('video_file')) {
                     $fields['video_path'] = $media->store($request->file('video_file'), 'products/videos', 'video_file');
@@ -233,6 +243,11 @@ class ProductEditor
             'remove_og_image' => 'sometimes|boolean',
             'canonical_url' => $admin ? 'nullable|url:http,https|max:255' : 'exclude',
             'meta_robots' => $admin ? ['nullable', Rule::in(Product::META_ROBOTS)] : 'exclude',
+            // Image alt text (SEO / accessibility); empty = product-name fallback.
+            'main_image_alt' => ['nullable', 'string', 'max:255', 'not_regex:/[<>]/'],
+            'og_image_alt' => ['nullable', 'string', 'max:255', 'not_regex:/[<>]/'],
+            'gallery_alts' => 'sometimes|nullable|array|max:100',
+            'gallery_alts.*' => ['nullable', 'string', 'max:255', 'not_regex:/[<>]/'],
             // One-image-per-request uploads (see TempUpload).
             'main_image_token' => 'nullable|string|max:2000',
             'og_image_token' => 'nullable|string|max:2000',
@@ -272,8 +287,14 @@ class ProductEditor
             }
             $rules[$group.'.*.image_file'] = $image;
             $rules[$group.'.*.image_token'] = 'nullable|string|max:2000';
+            $rules[$group.'.*.image_alt'] = ['nullable', 'string', 'max:255', 'not_regex:/[<>]/'];
         }
         $messages += UploadErrors::imageMessages(['main_image_file', 'og_image_file', 'gallery_images.*', 'variants.*.image_file', 'new_variants.*.image_file']);
+        foreach (['main_image_alt' => 'মূল ছবির বিবরণ (alt)', 'og_image_alt' => 'শেয়ার ছবির বিবরণ (alt)', 'gallery_alts.*' => 'গ্যালারির ছবির বিবরণ (alt)',
+            'variants.*.image_alt' => 'ভ্যারিয়েন্ট ছবির বিবরণ (alt)', 'new_variants.*.image_alt' => 'ভ্যারিয়েন্ট ছবির বিবরণ (alt)'] as $key => $label) {
+            $messages["$key.max"] = "{$label} সর্বোচ্চ ২৫৫ অক্ষর হতে পারবে।";
+            $messages["$key.not_regex"] = "{$label}-এ < বা > চিহ্ন দেওয়া যাবে না।";
+        }
         // Human Bangla field names (gallery/variant keys by their actual index).
         $attributes = ['main_image_file' => 'মূল ছবি', 'og_image_file' => 'শেয়ার ছবি', 'video_file' => 'ভিডিও'];
         foreach (array_keys((array) ($input['gallery_images'] ?? [])) as $i) {

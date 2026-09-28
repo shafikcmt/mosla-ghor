@@ -112,7 +112,8 @@
             @endif
             <label>ছবি {{ $ogUrl ? 'বদলান' : 'যোগ করুন' }}<input type="file" name="og_image_file" accept="image/jpeg,image/png,image/webp" data-preview-input data-async-upload="og" data-token-name="og_image_token" {{ \App\Support\ImageOptimizer::inputAttributes('og') }}></label>
 @include('partials.products.upload-tokens', ['name' => 'og_image_token', 'oldKey' => 'og_image_token', 'kind' => 'og'])
-            <small>Facebook/WhatsApp-এ শেয়ার করলে দেখাবে। 1200×630 প্রস্তাবিত · JPG / PNG / WebP · সর্বোচ্চ ২ MB। খালি রাখলে মূল ছবি ব্যবহার হবে।</small>
+            <small>Facebook/WhatsApp-এ শেয়ার করলে দেখাবে। নিজে থেকে 1200×630 JPEG হবে · JPG / PNG / WebP · সর্বোচ্চ ১০ MB। খালি রাখলে মূল ছবি ব্যবহার হবে।</small>
+            <label>শেয়ার ছবির বিবরণ (alt) <span class="pe-hint">ঐচ্ছিক</span><input name="og_image_alt" maxlength="255" value="{{ old('og_image_alt', $product?->og_image_alt) }}" placeholder="খালি রাখলে মূল ছবির বিবরণ / পণ্যের নাম"></label>
         </div>
         @if($editorRole === 'admin')
         <details class="pe-details" @if(old('canonical_url', $product?->canonical_url) || old('meta_robots', $product?->meta_robots)) open @endif>

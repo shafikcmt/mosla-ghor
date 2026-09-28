@@ -25,6 +25,7 @@ class ProductVariant extends Model
         'is_active',
         'is_default',
         'attributes',
+        'image_alt',
     ];
 
     protected $casts = [
@@ -49,6 +50,17 @@ class ProductVariant extends Model
             return null;
         }
         return \App\Support\ProductMedia::url($this->image);
+    }
+
+    /** Alt text: custom value, else "{product} — {variant}". */
+    public function imageAlt(?string $productName = null): string
+    {
+        $custom = trim((string) $this->image_alt);
+        if ($custom !== '') {
+            return $custom;
+        }
+        $productName ??= $this->product?->display_name;
+        return trim(($productName ? $productName.' — ' : '').$this->name);
     }
 
     /**

@@ -10,6 +10,7 @@
         <label>মূল ছবি {{ $mainUrl ? 'বদলান' : 'যোগ করুন' }}<input type="file" name="main_image_file" accept="image/jpeg,image/png,image/webp" data-preview-input data-async-upload="main" data-token-name="main_image_token" {{ \App\Support\ImageOptimizer::inputAttributes('product') }}></label>
 @include('partials.products.upload-tokens', ['name' => 'main_image_token', 'oldKey' => 'main_image_token', 'kind' => 'main'])
         <small>JPG / PNG / WebP · সর্বোচ্চ ১০ MB — বড় ছবি নিজে থেকে ছোট হয়ে আপলোড হবে।</small>
+        <label>মূল ছবির বিবরণ (alt) <span class="pe-hint">ঐচ্ছিক</span><input name="main_image_alt" maxlength="255" value="{{ old('main_image_alt', $product?->main_image_alt) }}" placeholder="{{ $product?->display_name ?: 'খালি রাখলে পণ্যের নাম' }}"><small>Google ও স্ক্রিন-রিডার এই লেখা পড়ে। যেমন: “গোটা জিরা ২৫০ গ্রাম প্যাক”। খালি রাখলে পণ্যের নাম ব্যবহার হবে।</small></label>
         <details class="pe-details"><summary>বাহ্যিক ছবির লিংক ব্যবহার করুন</summary>
             <label>ছবির URL<input type="url" name="main_image" value="{{ old('main_image', preg_match('~^https?://~i', $product?->main_image ?? '') ? $product->main_image : '') }}" placeholder="https://…" maxlength="255"><small>খালি রাখলে বর্তমান ছবি মুছবে না। ফাইল আপলোড করলে সেটি অগ্রাধিকার পাবে।</small></label>
         </details>
@@ -19,16 +20,18 @@
         <div class="pe-gallery">
             @foreach($product?->gallery_images ?? [] as $path)
             @php $token = hash('sha256', $path); @endphp
-            <label class="pe-gallery-item">
-                <img src="{{ \App\Support\ProductMedia::url($path) }}" alt="গ্যালারি ছবি {{ $loop->iteration }}" loading="lazy">
+            <div class="pe-gallery-item">
+                <img src="{{ \App\Support\ProductMedia::url($path) }}" alt="{{ $product->imageAlt($path, $loop->iteration + 1) }}" loading="lazy">
                 <small title="{{ basename($path) }}">{{ \Illuminate\Support\Str::limit(basename($path), 22) }}</small>
-                <span><input type="checkbox" name="remove_gallery[]" value="{{ $token }}" @checked(in_array($token, old('remove_gallery', []), true))> মুছুন</span>
-            </label>
+                <label class="pe-check"><input type="checkbox" name="remove_gallery[]" value="{{ $token }}" @checked(in_array($token, old('remove_gallery', []), true))> মুছুন</label>
+                <input name="gallery_alts[{{ $token }}]" maxlength="255" aria-label="গ্যালারির {{ \App\Support\UploadErrors::bn($loop->iteration) }} নম্বর ছবির বিবরণ (alt)"
+                       value="{{ old('gallery_alts.'.$token, ($product->gallery_alts ?? [])[$token] ?? '') }}" placeholder="ছবির বিবরণ (alt)">
+            </div>
             @endforeach
         </div>
         <label>আরও ছবি যোগ করুন<input type="file" name="gallery_images[]" accept="image/jpeg,image/png,image/webp" multiple data-async-upload="gallery" data-token-name="gallery_tokens[]" {{ \App\Support\ImageOptimizer::inputAttributes('product') }}></label>
 @include('partials.products.upload-tokens', ['name' => 'gallery_tokens[]', 'oldKey' => 'gallery_tokens', 'kind' => 'gallery'])
-        <small>একসাথে সর্বোচ্চ ২০টি, প্রতিটি ১০ MB। প্রতিটি ছবি আলাদাভাবে আপলোড হয় এবং আগের ছবির সাথে যোগ হবে।</small>
+        <small>একসাথে সর্বোচ্চ ২০টি, প্রতিটি ১০ MB। প্রতিটি ছবি আলাদাভাবে আপলোড হয় এবং আগের ছবির সাথে যোগ হবে। নতুন ছবির বিবরণ (alt) সংরক্ষণের পর দিতে পারবেন।</small>
     </div>
     <label>ভিডিও লিংক<input type="url" name="video_url" value="{{ old('video_url', $product?->video_url) }}" maxlength="255" placeholder="YouTube বা বাহ্যিক https:// লিংক"></label>
     <div>

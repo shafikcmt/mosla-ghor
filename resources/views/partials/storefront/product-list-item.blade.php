@@ -19,7 +19,7 @@
                 {{-- Thumb --}}
                 <div class="w-28 sm:w-36 flex-shrink-0 relative h-36 bg-gray-50">
                     @if($product->main_image)
-                        <img src="{{ \App\Support\ProductMedia::url($product->main_image) }}" alt="{{ $product->name_bn }}" loading="lazy" decoding="async"
+                        <img src="{{ \App\Support\ProductMedia::url($product->main_image) }}" alt="{{ $product->mainImageAlt() }}" loading="lazy" decoding="async"
                              class="w-full h-full product-artwork">
                     @else
                         <div class="w-full h-full bg-gradient-to-br from-[#14532d] to-[#1a6b3a] flex items-center justify-center">

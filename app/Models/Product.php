@@ -50,6 +50,9 @@ class Product extends Model
         'og_image',
         'canonical_url',
         'meta_robots',
+        'main_image_alt',
+        'og_image_alt',
+        'gallery_alts',
     ];
 
     /** Allowed values for the admin-only robots override. */
@@ -57,6 +60,7 @@ class Product extends Model
 
     protected $casts = [
         'gallery_images'            => 'array',
+        'gallery_alts'              => 'array',
         'retail_price_1kg'          => 'decimal:2',
         'wholesale_price_1kg'       => 'decimal:2',
         'purchase_price'            => 'decimal:2',
@@ -236,6 +240,34 @@ class Product extends Model
     {
         return \App\Support\ProductMedia::url($this->og_image)
             ?: (\App\Support\ProductMedia::url($this->main_image) ?: asset('images/product-placeholder.svg'));
+    }
+
+    // ── Image alt text (custom value when set, otherwise product-name fallback) ──
+    public function mainImageAlt(): string
+    {
+        return trim((string) $this->main_image_alt) ?: $this->display_name;
+    }
+
+    public function ogImageAlt(): string
+    {
+        return trim((string) $this->og_image_alt) ?: $this->mainImageAlt();
+    }
+
+    /** Alt for any product image path: main, a gallery image (keyed by sha256 of its path), or fallback. */
+    public function imageAlt(?string $path, int $position = 1): string
+    {
+        if ($path !== null && $path === $this->main_image) {
+            return $this->mainImageAlt();
+        }
+        if ($path !== null) {
+            $custom = trim((string) (($this->gallery_alts ?? [])[hash('sha256', $path)] ?? ''));
+            if ($custom !== '') {
+                return $custom;
+            }
+        }
+        return $position > 1
+            ? $this->display_name.' — ছবি '.\App\Support\UploadErrors::bn($position)
+            : $this->display_name;
     }
 
     public function seoCanonical(): string

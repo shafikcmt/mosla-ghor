@@ -16,6 +16,7 @@
             <label>ভ্যারিয়েন্ট ছবি<input type="file" name="{{ $field }}[image_file]" accept="image/jpeg,image/png,image/webp" data-preview-input data-async-upload="variant" data-token-name="{{ $field }}[image_token]" {{ \App\Support\ImageOptimizer::inputAttributes('product') }}></label>
 @include('partials.products.upload-tokens', ['name' => $field.'[image_token]', 'oldKey' => str_replace(['[', ']'], ['.', ''], $field).'.image_token', 'kind' => 'variant'])
             @if($variant?->image)<label class="pe-check"><input type="checkbox" name="{{ $field }}[remove_image]" value="1" @checked($row['remove_image'] ?? false)> ছবি মুছুন</label>@endif
+            <label>ছবির বিবরণ (alt) <span class="pe-hint">ঐচ্ছিক</span><input name="{{ $field }}[image_alt]" maxlength="255" value="{{ $row['image_alt'] ?? $variant?->image_alt ?? '' }}" placeholder="খালি রাখলে পণ্য — ভ্যারিয়েন্টের নাম"></label>
         </div>
     </div>
     <div data-attributes class="pe-attributes">

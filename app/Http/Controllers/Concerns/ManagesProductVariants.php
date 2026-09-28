@@ -28,7 +28,7 @@ trait ManagesProductVariants
                 }
                 $fields = [];
                 if (! $existing) { $fields['is_active'] = true; }
-                foreach (['sku', 'retail_price', 'sale_price', 'stock', 'is_active'] as $key) {
+                foreach (['sku', 'retail_price', 'sale_price', 'stock', 'is_active', 'image_alt'] as $key) {
                     if (array_key_exists($key, $row)) { $fields[$key] = $row[$key]; }
                 }
                 if (array_key_exists('attributes', $row)) {

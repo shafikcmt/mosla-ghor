@@ -7,6 +7,10 @@
 
     $main    = $imgUrl($product->main_image) ?: asset('images/product-placeholder.svg');
     $gallery = collect($product->gallery_images ?? [])->map($imgUrl)->filter()->values();
+    // Gallery with alt text (custom per image, else "name — ছবি N").
+    $galleryItems = collect($product->gallery_images ?? [])->values()
+        ->map(fn ($p, $i) => ['url' => $imgUrl($p), 'alt' => $product->imageAlt($p, $i + 2)])
+        ->filter(fn ($g) => $g['url'])->values();
 
     // Build a YouTube embed URL from a watch/share link, if present.
     $youtubeEmbed = null;
@@ -75,6 +79,8 @@
     <meta property="og:title" content="{{ $ogTitle }}">
     <meta property="og:description" content="{{ $metaDesc }}">
     <meta property="og:image" content="{{ $product->seoImage() }}">
+    <meta property="og:image:alt" content="{{ $product->ogImageAlt() }}">
+    <meta name="twitter:image:alt" content="{{ $product->ogImageAlt() }}">
     <meta property="og:url" content="{{ $canonical }}">
     <meta name="twitter:card" content="summary_large_image">
 
@@ -165,7 +171,7 @@
     <div>
         <div class="product-detail-frame rounded-xl overflow-hidden border border-gray-100 bg-gray-50 aspect-square">
             <button type="button" id="pd-image-pane" class="product-image-stage pd-pane" data-product-image-stage aria-label="Open product image viewer">
-            <img id="pd-main-image" src="{{ $main }}" alt="{{ $product->display_name }}"
+            <img id="pd-main-image" src="{{ $main }}" alt="{{ $product->mainImageAlt() }}"
                  class="product-detail-artwork">
             </button>
             @if($youtubeEmbed)
@@ -185,12 +191,12 @@
         <div class="mt-3 flex flex-wrap gap-2">
             <button type="button" data-product-thumbnail="{{ $main }}" aria-label="Show main product image" aria-pressed="true"
                     class="pd-thumb active w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent">
-                <img src="{{ $main }}" alt="{{ $product->display_name }}" class="w-full h-full product-artwork" loading="lazy" decoding="async">
+                <img src="{{ $main }}" alt="{{ $product->mainImageAlt() }}" class="w-full h-full product-artwork" loading="lazy" decoding="async">
             </button>
-            @foreach($gallery as $g)
-            <button type="button" data-product-thumbnail="{{ $g }}" aria-label="Show product image {{ $loop->iteration + 1 }}" aria-pressed="false"
+            @foreach($galleryItems as $g)
+            <button type="button" data-product-thumbnail="{{ $g['url'] }}" data-product-alt="{{ $g['alt'] }}" aria-label="Show product image {{ $loop->iteration + 1 }}" aria-pressed="false"
                     class="pd-thumb w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent">
-                <img src="{{ $g }}" alt="{{ $product->display_name }}" class="w-full h-full product-artwork" loading="lazy" decoding="async">
+                <img src="{{ $g['url'] }}" alt="{{ $g['alt'] }}" class="w-full h-full product-artwork" loading="lazy" decoding="async">
             </button>
             @endforeach
             @if($youtubeEmbed)
@@ -279,7 +285,7 @@
                             data-price="{{ $vPrice !== null ? $vPrice : '' }}"
                             onclick="pdSelectVariant(this)">
                         @if($vUrl)
-                            <img src="{{ $vUrl }}" alt="{{ $variant->name }}" class="w-7 h-7 rounded-md product-artwork border border-gray-100">
+                            <img src="{{ $vUrl }}" alt="{{ $variant->imageAlt($product->display_name) }}" class="w-7 h-7 rounded-md product-artwork border border-gray-100">
                         @endif
                         <span>{{ $variant->name }}</span>
                         @if($vPrice !== null)

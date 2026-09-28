@@ -113,5 +113,10 @@
         if (!urls.includes(main.src)) urls.unshift(main.src);
         window.MoslaProductViewer.open(urls, urls.indexOf(main.src), main.alt, stage);
     });
-    thumbs.forEach(button => button.addEventListener('click', () => window.pdShowImage(button.dataset.productThumbnail, button)));
+    thumbs.forEach(button => button.addEventListener('click', () => {
+        window.pdShowImage(button.dataset.productThumbnail, button);
+        // Keep the main image's alt text in sync with the chosen image (SEO/accessibility).
+        const alt = button.dataset.productAlt || button.querySelector('img')?.alt;
+        if (alt) main.alt = alt;
+    }));
 })();
