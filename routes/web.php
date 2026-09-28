@@ -268,6 +268,8 @@ Route::prefix('vendor')->name('vendor.')->group(function () {
 Route::prefix('vendor')->name('vendor.')->middleware('vendor')->group(function () {
     Route::get('dashboard', [VendorDashboardController::class, 'index'])->name('dashboard');
 
+    Route::post('products/uploads', [\App\Http\Controllers\ProductImageUploadController::class, 'store'])
+        ->middleware('throttle:60,1')->name('products.uploads');
     Route::resource('products', VendorProductController::class)->except(['show']);
 
     // ── Stock management ───────────────────────────────────────────────────
@@ -375,6 +377,8 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::resource('categories', AdminCategoryController::class);
 
     Route::patch('products/{product}/quick-update', [AdminProductController::class, 'quickUpdate'])->name('products.quick-update');
+    Route::post('products/uploads', [\App\Http\Controllers\ProductImageUploadController::class, 'store'])
+        ->middleware('throttle:60,1')->name('products.uploads');
     Route::resource('products', AdminProductController::class);
 
     Route::get('delivery-settings', [AdminDeliverySettingController::class, 'index'])->name('delivery-settings.index');

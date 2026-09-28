@@ -7,8 +7,9 @@
         <small>বর্তমান ছবি — নতুন ছবি না দিলে এটি থাকবে।</small>
         <label class="pe-check pe-remove"><input type="checkbox" name="remove_main_image" value="1" @checked(old('remove_main_image'))> বর্তমান ছবি মুছুন</label>
         @endif
-        <label>মূল ছবি {{ $mainUrl ? 'বদলান' : 'যোগ করুন' }}<input type="file" name="main_image_file" accept="image/jpeg,image/png,image/webp" data-preview-input {{ \App\Support\ImageOptimizer::inputAttributes('product') }}></label>
-        <small>JPG / PNG / WebP · সর্বোচ্চ ৫ MB</small>
+        <label>মূল ছবি {{ $mainUrl ? 'বদলান' : 'যোগ করুন' }}<input type="file" name="main_image_file" accept="image/jpeg,image/png,image/webp" data-preview-input data-async-upload="main" data-token-name="main_image_token" {{ \App\Support\ImageOptimizer::inputAttributes('product') }}></label>
+@include('partials.products.upload-tokens', ['name' => 'main_image_token', 'oldKey' => 'main_image_token', 'kind' => 'main'])
+        <small>JPG / PNG / WebP · সর্বোচ্চ ১০ MB — বড় ছবি নিজে থেকে ছোট হয়ে আপলোড হবে।</small>
         <details class="pe-details"><summary>বাহ্যিক ছবির লিংক ব্যবহার করুন</summary>
             <label>ছবির URL<input type="url" name="main_image" value="{{ old('main_image', preg_match('~^https?://~i', $product?->main_image ?? '') ? $product->main_image : '') }}" placeholder="https://…" maxlength="255"><small>খালি রাখলে বর্তমান ছবি মুছবে না। ফাইল আপলোড করলে সেটি অগ্রাধিকার পাবে।</small></label>
         </details>
@@ -25,8 +26,9 @@
             </label>
             @endforeach
         </div>
-        <label>আরও ছবি যোগ করুন<input type="file" name="gallery_images[]" accept="image/jpeg,image/png,image/webp" multiple {{ \App\Support\ImageOptimizer::inputAttributes('product') }}></label>
-        <small>প্রতি আপলোডে সর্বোচ্চ ২০টি, প্রতিটি ৫ MB। আগের ছবির সাথে যোগ হবে।</small>
+        <label>আরও ছবি যোগ করুন<input type="file" name="gallery_images[]" accept="image/jpeg,image/png,image/webp" multiple data-async-upload="gallery" data-token-name="gallery_tokens[]" {{ \App\Support\ImageOptimizer::inputAttributes('product') }}></label>
+@include('partials.products.upload-tokens', ['name' => 'gallery_tokens[]', 'oldKey' => 'gallery_tokens', 'kind' => 'gallery'])
+        <small>একসাথে সর্বোচ্চ ২০টি, প্রতিটি ১০ MB। প্রতিটি ছবি আলাদাভাবে আপলোড হয় এবং আগের ছবির সাথে যোগ হবে।</small>
     </div>
     <label>ভিডিও লিংক<input type="url" name="video_url" value="{{ old('video_url', $product?->video_url) }}" maxlength="255" placeholder="YouTube বা বাহ্যিক https:// লিংক"></label>
     <div>

@@ -13,7 +13,8 @@
         @endforeach
         <div data-media-preview>
             <img data-preview class="pe-main-preview" src="{{ $variant?->imageUrl() }}" alt="ভ্যারিয়েন্টের বর্তমান ছবি" @if(!$variant?->image) hidden @endif>
-            <label>ভ্যারিয়েন্ট ছবি<input type="file" name="{{ $field }}[image_file]" accept="image/jpeg,image/png,image/webp" data-preview-input {{ \App\Support\ImageOptimizer::inputAttributes('product') }}></label>
+            <label>ভ্যারিয়েন্ট ছবি<input type="file" name="{{ $field }}[image_file]" accept="image/jpeg,image/png,image/webp" data-preview-input data-async-upload="variant" data-token-name="{{ $field }}[image_token]" {{ \App\Support\ImageOptimizer::inputAttributes('product') }}></label>
+@include('partials.products.upload-tokens', ['name' => $field.'[image_token]', 'oldKey' => str_replace(['[', ']'], ['.', ''], $field).'.image_token', 'kind' => 'variant'])
             @if($variant?->image)<label class="pe-check"><input type="checkbox" name="{{ $field }}[remove_image]" value="1" @checked($row['remove_image'] ?? false)> ছবি মুছুন</label>@endif
         </div>
     </div>

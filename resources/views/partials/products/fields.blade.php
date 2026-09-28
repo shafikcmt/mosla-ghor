@@ -110,7 +110,8 @@
             @if($ogUrl)
             <label class="pe-check pe-remove"><input type="checkbox" name="remove_og_image" value="1" @checked(old('remove_og_image'))> বর্তমান ছবি মুছুন</label>
             @endif
-            <label>ছবি {{ $ogUrl ? 'বদলান' : 'যোগ করুন' }}<input type="file" name="og_image_file" accept="image/jpeg,image/png,image/webp" data-preview-input {{ \App\Support\ImageOptimizer::inputAttributes('og') }}></label>
+            <label>ছবি {{ $ogUrl ? 'বদলান' : 'যোগ করুন' }}<input type="file" name="og_image_file" accept="image/jpeg,image/png,image/webp" data-preview-input data-async-upload="og" data-token-name="og_image_token" {{ \App\Support\ImageOptimizer::inputAttributes('og') }}></label>
+@include('partials.products.upload-tokens', ['name' => 'og_image_token', 'oldKey' => 'og_image_token', 'kind' => 'og'])
             <small>Facebook/WhatsApp-এ শেয়ার করলে দেখাবে। 1200×630 প্রস্তাবিত · JPG / PNG / WebP · সর্বোচ্চ ২ MB। খালি রাখলে মূল ছবি ব্যবহার হবে।</small>
         </div>
         @if($editorRole === 'admin')

@@ -129,5 +129,124 @@ document.querySelectorAll('[data-product-editor]').forEach(editor => {
         tagInput.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ',') setTimeout(updateSeo); });
         updateSeo();
     }
+    // ── One image per request (so nginx/PHP request limits never apply to the whole form) ──
+    // After the browser resize, each chosen image is uploaded on its own; the form then sends
+    // only tokens. Without JavaScript the plain file inputs still work (server fallback).
+    const uploadUrl = editor.dataset.uploadUrl;
+    const csrfToken = editor.querySelector('input[name=_token]')?.value || '';
+    let uploading = 0;
+    const uploadMessage = text => {
+        let box = editor.querySelector('[data-upload-block]');
+        if (!box) {
+            box = document.createElement('p');
+            box.className = 'pe-note';
+            box.setAttribute('data-upload-block', '');
+            box.setAttribute('role', 'alert');
+            editor.querySelector('.pe-actions').insertAdjacentElement('beforebegin', box);
+        }
+        box.textContent = text;
+        box.hidden = !text;
+        if (text) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+    const listFor = input => {
+        const anchor = input.closest('label') || input;
+        let list = anchor.nextElementSibling;
+        if (!list || !list.matches('[data-upload-list]')) {
+            list = document.createElement('div');
+            list.className = 'pe-uploads';
+            list.setAttribute('data-upload-list', '');
+            anchor.insertAdjacentElement('afterend', list);
+        }
+        return list;
+    };
+    const uploadOne = (input, file, item) => {
+        const bar = item.querySelector('progress');
+        const status = item.querySelector('[data-status]');
+        const retry = item.querySelector('[data-retry]');
+        item.dataset.state = 'uploading';
+        bar.hidden = false; bar.value = 0; retry.hidden = true;
+        status.textContent = 'আপলোড হচ্ছে…';
+        uploading++;
+        const form = new FormData();
+        form.append('file', file);
+        form.append('kind', input.dataset.asyncUpload);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', uploadUrl);
+        xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.upload.onprogress = e => { if (e.lengthComputable) bar.value = Math.round(e.loaded / e.total * 100); };
+        xhr.onloadend = () => {
+            uploading--;
+            bar.hidden = true;
+            let json = null;
+            try { json = JSON.parse(xhr.responseText); } catch (e) { json = null; }
+            if (xhr.status === 200 && json && json.token) {
+                item.dataset.state = 'done';
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = input.dataset.tokenName;
+                hidden.value = json.token;
+                item.appendChild(hidden);
+                if (json.url) item.querySelector('img').src = json.url;
+                status.textContent = '✓ আপলোড হয়েছে — সংরক্ষণ করলে যোগ হবে';
+            } else {
+                item.dataset.state = 'failed';
+                let msg = 'আপলোড হয়নি। আবার চেষ্টা করুন।';
+                if (xhr.status === 413) msg = 'ছবিটি সার্ভারের সীমার চেয়ে বড় — ছোট ছবি দিন।';
+                else if (xhr.status === 419) msg = 'সেশনের মেয়াদ শেষ — পেজ রিফ্রেশ করুন।';
+                else if (json && json.errors) msg = Object.values(json.errors)[0][0];
+                else if (json && json.message) msg = json.message;
+                else if (xhr.status === 0) msg = 'সংযোগ বিচ্ছিন্ন — আবার চেষ্টা করুন।';
+                status.textContent = msg;
+                retry.hidden = false;
+            }
+            if (!uploading && !editor.querySelector('.pe-upload[data-state=failed]')) uploadMessage('');
+        };
+        xhr.send(form);
+    };
+    const addItem = (input, file) => {
+        const list = listFor(input);
+        if (input.dataset.asyncUpload !== 'gallery') {
+            // Single-image fields: the newest choice replaces earlier ones.
+            list.querySelectorAll('.pe-upload:not([data-state=uploading])').forEach(el => el.remove());
+        }
+        const item = document.createElement('div');
+        item.className = 'pe-upload';
+        item.innerHTML = '<img alt=""><div class="pe-upload-body"><small data-name></small><progress max="100" value="0"></progress>'
+            + '<small data-status></small><span class="pe-upload-actions">'
+            + '<button type="button" class="pe-button pe-secondary" data-retry hidden>আবার চেষ্টা</button>'
+            + '<button type="button" class="pe-button pe-secondary" data-remove>সরান</button></span></div>';
+        item.querySelector('[data-name]').textContent = file.name;
+        item.querySelector('img').src = URL.createObjectURL(file);
+        item.querySelector('[data-retry]').addEventListener('click', () => uploadOne(input, file, item));
+        list.appendChild(item);
+        uploadOne(input, file, item);
+    };
+    editor.addEventListener('click', event => {
+        const remove = event.target.closest('[data-remove]');
+        if (!remove) return;
+        const item = remove.closest('.pe-upload');
+        if (item && item.dataset.state !== 'uploading') item.remove();
+    });
+    editor.addEventListener('change', event => {
+        const input = event.target;
+        if (!uploadUrl || !input.matches || !input.matches('input[type=file][data-async-upload]')) return;
+        // Wait for image-resize.js to hand over the resized files (it re-dispatches 'change').
+        if (input.hasAttribute('data-resize') && !input.dataset.msResized) return;
+        const files = Array.from(input.files || []);
+        if (!files.length || !window.FormData || !window.XMLHttpRequest) return;
+        files.forEach(file => addItem(input, file));
+        input.value = ''; // the form sends tokens, not the files
+    });
+    editor.querySelector('form').addEventListener('submit', event => {
+        if (uploading > 0) {
+            event.preventDefault();
+            uploadMessage('ছবি আপলোড শেষ হওয়া পর্যন্ত অপেক্ষা করুন, তারপর সংরক্ষণ করুন।');
+        } else if (editor.querySelector('.pe-upload[data-state=failed]')) {
+            event.preventDefault();
+            uploadMessage('একটি ছবি আপলোড হয়নি — “আবার চেষ্টা” চাপুন অথবা ছবিটি সরিয়ে দিন।');
+        }
+    }, true); // capture: runs before the double-submit guard
     editor.querySelector('.pe-errors')?.focus();
 });

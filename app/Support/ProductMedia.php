@@ -14,6 +14,7 @@ class ProductMedia
 {
     private array $created = [];
     private array $obsolete = [];
+    private array $tempDone = [];
 
     public static function url(?string $path): ?string
     {
@@ -51,6 +52,28 @@ class ProductMedia
         return 'storage/' . $path;
     }
 
+    /**
+     * Move an already-optimised temp upload (see TempUpload) into its final folder. The copy is
+     * rolled back if the save fails (the temp file stays, so the token can be re-used); the temp
+     * file is deleted only after the database commits.
+     */
+    public function adopt(string $tmpPath, string $folder, string $field): string
+    {
+        $final = trim($folder, '/').'/'.basename($tmpPath);
+        try {
+            $ok = Storage::disk('public')->copy($tmpPath, $final);
+        } catch (\Throwable $e) {
+            report($e);
+            $ok = false;
+        }
+        if (! $ok) {
+            throw ValidationException::withMessages([$field => 'ছবিটি সংরক্ষণ করা যায়নি। আগের ছবি অক্ষত আছে; আবার চেষ্টা করুন।']);
+        }
+        $this->created[] = $final;
+        $this->tempDone[] = $tmpPath;
+        return 'storage/'.$final;
+    }
+
     public function retire(?string $path): void
     {
         if ($path) {
@@ -67,6 +90,11 @@ class ProductMedia
 
     public function committed(): void
     {
+        foreach (array_unique($this->tempDone) as $tmp) {
+            if (str_starts_with($tmp, TempUpload::ROOT.'/')) {
+                $this->delete($tmp);
+            }
+        }
         foreach (array_unique($this->obsolete) as $storedPath) {
             $path = self::localPath($storedPath);
             if (! $path) {

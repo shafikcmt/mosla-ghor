@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Models\Product;
 use App\Support\ProductMedia;
+use App\Support\TempUpload;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -39,7 +40,16 @@ trait ManagesProductVariants
                 $fields['name'] = trim($row['name'] ?? '') ?: implode(' / ', array_column($fields['attributes'] ?? [], 'value'));
                 if (! $existing) { $fields['sort_order'] = (int) $product->variants()->max('sort_order') + 1; }
                 $field = "$group.$id.image_file";
-                if ($request->hasFile($field)) {
+                $tmp = ! empty($row['image_token'])
+                    ? TempUpload::resolve($row['image_token'], (int) $request->user()?->id, 'variant')
+                    : null;
+                if (! empty($row['image_token']) && ! $tmp) {
+                    throw ValidationException::withMessages(["$group.$id.image_token" => 'ভ্যারিয়েন্টের ছবির আপলোডের মেয়াদ শেষ বা অবৈধ — ছবিটি আবার বেছে নিন।']);
+                }
+                if ($tmp) {
+                    $fields['image'] = $media->adopt($tmp, 'products/variants', "$group.$id.image_token");
+                    $media->retire($variant->image);
+                } elseif ($request->hasFile($field)) {
                     $fields['image'] = $media->store($request->file($field), 'products/variants', $field);
                     $media->retire($variant->image);
                 } elseif (! empty($row['remove_image'])) {

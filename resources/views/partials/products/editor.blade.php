@@ -6,8 +6,8 @@
     $canAddNew = $editorRole === 'admin' || \App\Http\Controllers\Vendor\ProductController::canAddProducts();
     $peSaved = session('pe_saved');
 @endphp
-<link rel="stylesheet" href="{{ asset('css/product-editor.css') }}?v=20260929">
-<div class="pe" data-product-editor>
+<link rel="stylesheet" href="{{ asset('css/product-editor.css') }}?v=20260930">
+<div class="pe" data-product-editor data-upload-url="{{ route($prefix.'uploads') }}">
     <header class="pe-heading">
         <div>
             <a href="{{ route($prefix.'index') }}" class="pe-back">← পণ্য তালিকা</a>
@@ -72,4 +72,4 @@
     </details>
     @endif
 </div>
-<script src="{{ asset('js/product-editor.js') }}?v=20260929" defer></script>
+<script src="{{ asset('js/product-editor.js') }}?v=20260930" defer></script>

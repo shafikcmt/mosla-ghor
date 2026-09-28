@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\PriceSetting;
 use App\Models\Tag;
 use App\Support\ProductMedia;
+use App\Support\TempUpload;
 use App\Support\UploadErrors;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -63,8 +64,25 @@ class ProductEditor
                 if (array_key_exists('video_url', $data)) {
                     $fields['video_url'] = $data['video_url'];
                 }
+                // Images uploaded one-per-request by the editor arrive as tokens (see TempUpload);
+                // a direct file upload is the no-JavaScript fallback.
+                $uid = (int) $request->user()?->id;
+                $adopt = function (string $key, string $kind, string $folder) use ($data, $uid, $media): ?string {
+                    $token = $data[$key] ?? null;
+                    if (! $token) {
+                        return null;
+                    }
+                    $tmp = TempUpload::resolve($token, $uid, $kind);
+                    if (! $tmp) {
+                        throw ValidationException::withMessages([$key => 'ছবির আপলোডের মেয়াদ শেষ বা অবৈধ — ছবিটি আবার বেছে নিন।']);
+                    }
+                    return $media->adopt($tmp, $folder, $key);
+                };
                 // Empty/missing external URL never clears an existing uploaded image.
-                if ($request->hasFile('main_image_file')) {
+                if ($adopted = $adopt('main_image_token', 'main', 'products/images')) {
+                    $fields['main_image'] = $adopted;
+                    $media->retire($product->main_image);
+                } elseif ($request->hasFile('main_image_file')) {
                     $fields['main_image'] = $media->store($request->file('main_image_file'), 'products/images', 'main_image_file');
                     $media->retire($product->main_image);
                 } elseif ($request->boolean('remove_main_image')) {
@@ -76,7 +94,10 @@ class ProductEditor
                         $media->retire($product->main_image);
                     }
                 }
-                if ($request->hasFile('og_image_file')) {
+                if ($adopted = $adopt('og_image_token', 'og', 'products/images')) {
+                    $fields['og_image'] = $adopted;
+                    $media->retire($product->og_image);
+                } elseif ($request->hasFile('og_image_file')) {
                     $fields['og_image'] = $media->store($request->file('og_image_file'), 'products/images', 'og_image_file');
                     $media->retire($product->og_image);
                 } elseif ($request->boolean('remove_og_image')) {
@@ -98,7 +119,15 @@ class ProductEditor
                 foreach ($request->file('gallery_images', []) as $file) {
                     $gallery[] = $media->store($file, 'products/images', 'gallery_images');
                 }
-                if ($remove || $request->hasFile('gallery_images')) {
+                $galleryTokens = array_values(array_filter((array) ($data['gallery_tokens'] ?? [])));
+                foreach ($galleryTokens as $i => $token) {
+                    $tmp = TempUpload::resolve($token, $uid, 'gallery');
+                    if (! $tmp) {
+                        throw ValidationException::withMessages(["gallery_tokens.$i" => 'গ্যালারির ছবির আপলোডের মেয়াদ শেষ বা অবৈধ — ছবিটি আবার বেছে নিন।']);
+                    }
+                    $gallery[] = $media->adopt($tmp, 'products/images', "gallery_tokens.$i");
+                }
+                if ($remove || $request->hasFile('gallery_images') || $galleryTokens) {
                     $fields['gallery_images'] = array_values($gallery);
                 }
                 if ($request->hasFile('video_file')) {
@@ -204,6 +233,11 @@ class ProductEditor
             'remove_og_image' => 'sometimes|boolean',
             'canonical_url' => $admin ? 'nullable|url:http,https|max:255' : 'exclude',
             'meta_robots' => $admin ? ['nullable', Rule::in(Product::META_ROBOTS)] : 'exclude',
+            // One-image-per-request uploads (see TempUpload).
+            'main_image_token' => 'nullable|string|max:2000',
+            'og_image_token' => 'nullable|string|max:2000',
+            'gallery_tokens' => 'sometimes|nullable|array|max:20',
+            'gallery_tokens.*' => 'nullable|string|max:2000',
         ];
         $messages = [
             'meta_title.max' => 'Meta Title সর্বোচ্চ ৭০ অক্ষর হতে পারবে।',
@@ -237,6 +271,7 @@ class ProductEditor
                 $rules[$group.'.*.'.$key] = $rule;
             }
             $rules[$group.'.*.image_file'] = $image;
+            $rules[$group.'.*.image_token'] = 'nullable|string|max:2000';
         }
         $messages += UploadErrors::imageMessages(['main_image_file', 'og_image_file', 'gallery_images.*', 'variants.*.image_file', 'new_variants.*.image_file']);
         // Human Bangla field names (gallery/variant keys by their actual index).
@@ -253,6 +288,25 @@ class ProductEditor
         $validator->after(function ($v) use ($uploadErrors) {
             foreach ($uploadErrors as $key => $message) {
                 $v->errors()->add($key, $message);
+            }
+        });
+        // Tokens must belong to this user, be unexpired, match their kind and still exist.
+        $uid = (int) $request->user()?->id;
+        $validator->after(function ($v) use ($input, $uid) {
+            $check = function (string $key, $token, string $kind, string $label) use ($v, $uid) {
+                if (is_string($token) && $token !== '' && ! TempUpload::resolve($token, $uid, $kind)) {
+                    $v->errors()->add($key, "{$label}-এর আপলোডের মেয়াদ শেষ বা অবৈধ — ছবিটি আবার বেছে নিন।");
+                }
+            };
+            $check('main_image_token', $input['main_image_token'] ?? null, 'main', 'মূল ছবি');
+            $check('og_image_token', $input['og_image_token'] ?? null, 'og', 'শেয়ার ছবি');
+            foreach ((array) ($input['gallery_tokens'] ?? []) as $i => $token) {
+                $check("gallery_tokens.$i", $token, 'gallery', 'গ্যালারির ছবি');
+            }
+            foreach (['variants', 'new_variants'] as $group) {
+                foreach ((array) ($input[$group] ?? []) as $id => $row) {
+                    $check("$group.$id.image_token", is_array($row) ? ($row['image_token'] ?? null) : null, 'variant', 'ভ্যারিয়েন্টের ছবি');
+                }
             }
         });
         $validator->after(function ($v) use ($input, $product, $retail, $wholesale) {
