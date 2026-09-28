@@ -44,7 +44,16 @@ class Product extends Model
         'min_order_unit',
         'delivery_time',
         'payment_terms',
+        'meta_title',
+        'meta_description',
+        'meta_keywords',
+        'og_image',
+        'canonical_url',
+        'meta_robots',
     ];
+
+    /** Allowed values for the admin-only robots override. */
+    public const META_ROBOTS = ['index,follow', 'noindex,follow', 'noindex,nofollow'];
 
     protected $casts = [
         'gallery_images'            => 'array',
@@ -203,6 +212,35 @@ class Product extends Model
     public function getDisplayNameAttribute(): string
     {
         return $this->name_bn ?: $this->name_en;
+    }
+
+    // ── SEO (custom value when set, otherwise the auto-generated fallback) ────
+    /** Custom meta title, or the product name (the layout appends the site name). */
+    public function seoTitle(): string
+    {
+        return trim((string) $this->meta_title) ?: $this->display_name;
+    }
+
+    public function seoDescription(): string
+    {
+        return trim((string) $this->meta_description)
+            ?: \Illuminate\Support\Str::limit(strip_tags($this->short_description ?: $this->description ?: $this->display_name), 155);
+    }
+
+    public function seoKeywords(): ?string
+    {
+        return trim((string) $this->meta_keywords) ?: ($this->tags->pluck('name')->implode(', ') ?: null);
+    }
+
+    public function seoImage(): string
+    {
+        return \App\Support\ProductMedia::url($this->og_image)
+            ?: (\App\Support\ProductMedia::url($this->main_image) ?: asset('images/product-placeholder.svg'));
+    }
+
+    public function seoCanonical(): string
+    {
+        return trim((string) $this->canonical_url) ?: route('products.show', $this->slug);
     }
 
     // ── Wholesale (Paykari) ───────────────────────────────────────────────────

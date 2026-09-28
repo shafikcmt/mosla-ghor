@@ -33,7 +33,12 @@ class ProductEditor
                     'name_bn', 'name_en', 'category_id', 'short_description', 'description', 'stock',
                     'sku', 'category', 'brand', 'unit', 'purchase_price', 'selling_price', 'low_stock_threshold',
                     'is_active', 'show_in_retail', 'show_in_wholesale',
+                    'meta_title', 'meta_description', 'meta_keywords',
                 ]);
+                // Canonical/robots can deindex or redirect ranking — admin only.
+                if ($admin) {
+                    $fields += Arr::only($data, ['canonical_url', 'meta_robots']);
+                }
                 $retail = (bool) $data['show_in_retail'];
                 $wholesale = (bool) $data['show_in_wholesale'];
                 $fields['is_wholesale'] = $wholesale && ! $retail;
@@ -69,6 +74,13 @@ class ProductEditor
                     if ($fields['main_image'] !== $product->main_image) {
                         $media->retire($product->main_image);
                     }
+                }
+                if ($request->hasFile('og_image_file')) {
+                    $fields['og_image'] = $media->store($request->file('og_image_file'), 'products/images', 'og_image_file');
+                    $media->retire($product->og_image);
+                } elseif ($request->boolean('remove_og_image')) {
+                    $fields['og_image'] = null;
+                    $media->retire($product->og_image);
                 }
                 $gallery = $product->gallery_images ?? [];
                 $remove = $data['remove_gallery'] ?? [];
@@ -178,6 +190,29 @@ class ProductEditor
             'prices' => $retail ? 'sometimes|array|max:100' : 'exclude',
             'approval_status' => $admin && $product?->vendor_id ? 'sometimes|in:pending,approved,rejected' : 'exclude',
             'default_variant' => ['nullable', 'regex:/^(existing|new):[0-9]+$/'],
+            'meta_title' => 'nullable|string|max:70',
+            'meta_description' => 'nullable|string|max:170',
+            'meta_keywords' => 'nullable|string|max:255',
+            'og_image_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'extensions:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_og_image' => 'sometimes|boolean',
+            'canonical_url' => $admin ? 'nullable|url:http,https|max:255' : 'exclude',
+            'meta_robots' => $admin ? ['nullable', Rule::in(Product::META_ROBOTS)] : 'exclude',
+        ];
+        $messages = [
+            'meta_title.max' => 'Meta Title সর্বোচ্চ ৭০ অক্ষর হতে পারবে।',
+            'meta_title.string' => 'Meta Title সঠিক লেখা নয়।',
+            'meta_description.max' => 'Meta Description সর্বোচ্চ ১৭০ অক্ষর হতে পারবে।',
+            'meta_description.string' => 'Meta Description সঠিক লেখা নয়।',
+            'meta_keywords.max' => 'Meta Keywords সর্বোচ্চ ২৫৫ অক্ষর হতে পারবে।',
+            'meta_keywords.string' => 'Meta Keywords সঠিক লেখা নয়।',
+            'og_image_file.image' => 'Social Share ছবি অবশ্যই একটি ছবি ফাইল হতে হবে।',
+            'og_image_file.mimes' => 'Social Share ছবি JPG, PNG বা WebP হতে হবে।',
+            'og_image_file.extensions' => 'Social Share ছবি JPG, PNG বা WebP হতে হবে।',
+            'og_image_file.max' => 'Social Share ছবি সর্বোচ্চ ২ MB হতে পারবে।',
+            'og_image_file.uploaded' => 'Social Share ছবি আপলোড হয়নি। আবার চেষ্টা করুন।',
+            'canonical_url.url' => 'Canonical URL একটি সঠিক http/https লিংক হতে হবে।',
+            'canonical_url.max' => 'Canonical URL সর্বোচ্চ ২৫৫ অক্ষর হতে পারবে।',
+            'meta_robots.in' => 'Robots-এর একটি সঠিক অপশন বেছে নিন।',
         ];
         if ($retail) {
             $rules += ['prices.*' => 'array', 'prices.*.manual_price' => 'nullable|numeric|min:0.01|max:99999999.99',
@@ -197,7 +232,7 @@ class ProductEditor
             }
             $rules[$group.'.*.image_file'] = $image;
         }
-        $validator = Validator::make($input, $rules);
+        $validator = Validator::make($input, $rules, $messages);
         $validator->after(function ($v) use ($input, $product, $retail, $wholesale) {
             if ($v->errors()->isNotEmpty()) { return; }
             if (! $retail && ! $wholesale) {

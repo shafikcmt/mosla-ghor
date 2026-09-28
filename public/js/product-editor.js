@@ -91,5 +91,34 @@ document.querySelectorAll('[data-product-editor]').forEach(editor => {
     tagSource.hidden = true;
     editor.querySelector('[data-tags]').hidden = false;
     renderTags();
+    const seo = editor.querySelector('[data-seo]');
+    if (seo) {
+        const field = name => editor.querySelector(`[name="${name}"]`);
+        const bn = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+        const strip = html => { const div = document.createElement('div'); div.innerHTML = html; return div.textContent.replace(/\s+/g, ' ').trim(); };
+        const limit = (text, max) => [...text].length > max ? [...text].slice(0, max).join('').trimEnd() + '...' : text;
+        const slugify = text => text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        const updateSeo = () => {
+            const name = field('name_bn')?.value.trim() || field('name_en')?.value.trim() || 'পণ্যের নাম';
+            const autoDesc = limit(strip(field('short_description')?.value || field('description')?.value || '') || name, 155);
+            field('meta_title').placeholder = name;
+            field('meta_description').placeholder = autoDesc;
+            field('meta_keywords').placeholder = tagSource.value.trim() || 'খালি রাখলে ট্যাগগুলো ব্যবহার হবে';
+            seo.querySelector('[data-serp-title]').textContent = field('meta_title').value.trim() || `${name} — ${seo.dataset.siteName}`;
+            seo.querySelector('[data-serp-desc]').textContent = field('meta_description').value.trim() || autoDesc;
+            seo.querySelector('[data-serp-url]').textContent = seo.dataset.baseUrl + (field('slug')?.value.trim() || slugify(field('name_en')?.value || '') || '…');
+            seo.querySelectorAll('[data-seo-count]').forEach(input => {
+                const length = [...input.value].length;
+                const counter = input.closest('label').querySelector('[data-seo-counter]');
+                counter.textContent = bn(length);
+                counter.classList.toggle('pe-over', length > Number(input.dataset.seoCount));
+            });
+        };
+        editor.addEventListener('input', event => { if (event.target.name) updateSeo(); });
+        tagList.addEventListener('click', updateSeo);
+        editor.querySelector('[data-tag-add]').addEventListener('click', updateSeo);
+        tagInput.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ',') setTimeout(updateSeo); });
+        updateSeo();
+    }
     editor.querySelector('.pe-errors')?.focus();
 });

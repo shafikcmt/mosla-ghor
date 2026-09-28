@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    @include('partials.storefront.seo', ['pageTitle' => trim($__env->yieldContent('title')), 'pageDescription' => trim($__env->yieldContent('meta_description'))])
+    @include('partials.storefront.seo', ['pageTitle' => trim($__env->yieldContent('title')), 'fullTitle' => trim($__env->yieldContent('seo_title')), 'pageDescription' => trim($__env->yieldContent('meta_description'))])
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">

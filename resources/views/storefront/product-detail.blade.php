@@ -46,22 +46,32 @@
     $authPhone    = $authCustomer->mobile_number ?? '';
     $authAddress  = $authCustomer->last_full_address ?? '';
 
-    $metaDesc   = \Illuminate\Support\Str::limit(strip_tags($product->short_description ?: $product->description ?: $product->display_name), 155);
-    $canonical  = route('products.show', $product->slug);
+    // SEO: custom per-product values when set, otherwise the auto fallbacks (see Product::seo*()).
+    $customTitle = trim((string) $product->meta_title);
+    $metaDesc    = $product->seoDescription();
+    $keywords    = $product->seoKeywords();
+    $canonical   = $product->seoCanonical();
+    $ogTitle     = $customTitle ?: $product->seoTitle().' — '.$siteName;
 @endphp
 
 {{-- ─────────────────────────── SEO head ─────────────────────────── --}}
+@if($customTitle !== '')
+@section('seo_title', $customTitle)
+@endif
 @section('meta_description', $metaDesc)
 @section('head')
-    @if($product->tags->isNotEmpty())
-    <meta name="keywords" content="{{ $product->tags->pluck('name')->implode(', ') }}">
+    @if($product->meta_robots)
+    <meta name="robots" content="{{ $product->meta_robots }}">
+    @endif
+    @if($keywords)
+    <meta name="keywords" content="{{ $keywords }}">
     @endif
     <link rel="canonical" href="{{ $canonical }}">
 
     <meta property="og:type" content="product">
-    <meta property="og:title" content="{{ $product->display_name }} — {{ $siteName }}">
+    <meta property="og:title" content="{{ $ogTitle }}">
     <meta property="og:description" content="{{ $metaDesc }}">
-    <meta property="og:image" content="{{ $main }}">
+    <meta property="og:image" content="{{ $product->seoImage() }}">
     <meta property="og:url" content="{{ $canonical }}">
     <meta name="twitter:card" content="summary_large_image">
 

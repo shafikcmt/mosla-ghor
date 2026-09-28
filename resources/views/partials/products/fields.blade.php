@@ -66,7 +66,7 @@
     @include('partials.products.variants')
 </section>
 <section class="pe-card" id="pe-seo">
-    <div class="pe-section-title"><span>08</span><div><h2>SEO ও পণ্যের ট্যাগ</h2><p>প্রাসঙ্গিক কয়েকটি ট্যাগ পণ্য খুঁজে পেতে সাহায্য করে।</p></div></div>
+    <div class="pe-section-title"><span>08</span><div><h2>SEO ও ট্যাগ</h2><p>Google ও সোশ্যাল মিডিয়ায় পণ্যটি কীভাবে দেখাবে তা ঠিক করুন।</p></div></div>
     <label>পণ্যের লিংক (Slug)<input name="slug" value="{{ old('slug', $product?->slug) }}" maxlength="255" placeholder="যেমন: whole-cumin"><small>{{ $product ? 'আগের লিংক ঠিক রাখতে প্রয়োজন ছাড়া বদলাবেন না।' : 'খালি রাখলে নাম থেকে একটি লিংক তৈরি হবে।' }}</small></label>
     @php $tagValues = old('tags', $product?->tags->pluck('name')->all() ?? []); @endphp
     <label for="pe-tags">Product Tags</label>
@@ -78,7 +78,63 @@
         <button type="button" class="pe-button pe-secondary" data-tag-add>যোগ করুন</button>
     </div>
     <small>সর্বোচ্চ ২০টি ট্যাগ, প্রতিটি ৮০ অক্ষর। একই ট্যাগ একবারই সংরক্ষণ হবে।</small>
-    <p class="pe-note">SEO title পণ্যের নাম থেকে, description সংক্ষিপ্ত বিবরণ থেকে এবং canonical লিংক slug থেকে তৈরি হয়।</p>
+    @php
+        $seoAutoTitle = $product?->display_name ?: 'পণ্যের নাম';
+        $seoAutoDesc = $product ? \Illuminate\Support\Str::limit(strip_tags($product->short_description ?: $product->description ?: $product->display_name), 155) : 'সংক্ষিপ্ত বিবরণ থেকে স্বয়ংক্রিয়ভাবে তৈরি হবে';
+        $seoAutoKeywords = $product?->tags->pluck('name')->implode(', ') ?: 'খালি রাখলে ট্যাগগুলো ব্যবহার হবে';
+        $seoBaseUrl = url('/products').'/';
+        $ogUrl = \App\Support\ProductMedia::url($product?->og_image);
+    @endphp
+    <div class="pe-seo" data-seo data-site-name="{{ $siteName ?? config('app.name') }}" data-base-url="{{ $seoBaseUrl }}">
+        <div class="pe-serp" aria-label="Google সার্চ প্রিভিউ">
+            <small class="pe-serp-label">Google-এ যেমন দেখাবে</small>
+            <span class="pe-serp-url" data-serp-url>{{ $seoBaseUrl }}{{ $product?->slug }}</span>
+            <span class="pe-serp-title" data-serp-title>{{ $product?->meta_title ?: $seoAutoTitle.' — '.($siteName ?? config('app.name')) }}</span>
+            <span class="pe-serp-desc" data-serp-desc>{{ $product?->meta_description ?: $seoAutoDesc }}</span>
+        </div>
+        <label>Meta Title
+            <input name="meta_title" value="{{ old('meta_title', $product?->meta_title) }}" maxlength="70" placeholder="{{ $seoAutoTitle }}" data-seo-count="60">
+            <small><span data-seo-counter>০</span>/৬০ অক্ষর প্রস্তাবিত · দিলে এটিই পুরো পেজ টাইটেল হবে</small>
+        </label>
+        <label>Meta Description
+            <textarea name="meta_description" rows="3" maxlength="170" placeholder="{{ $seoAutoDesc }}" data-seo-count="155">{{ old('meta_description', $product?->meta_description) }}</textarea>
+            <small><span data-seo-counter>০</span>/১৫৫ অক্ষর প্রস্তাবিত</small>
+        </label>
+        <label>Meta Keywords
+            <input name="meta_keywords" value="{{ old('meta_keywords', $product?->meta_keywords) }}" maxlength="255" placeholder="{{ $seoAutoKeywords }}">
+            <small>কমা দিয়ে লিখুন। খালি রাখলে ট্যাগগুলো ব্যবহার হবে।</small>
+        </label>
+        <div data-media-preview>
+            <h3>Social Share ছবি</h3>
+            <img data-preview src="{{ $ogUrl }}" alt="বর্তমান Social Share ছবি" class="pe-og-preview" @if(!$ogUrl) hidden @endif>
+            @if($ogUrl)
+            <label class="pe-check pe-remove"><input type="checkbox" name="remove_og_image" value="1" @checked(old('remove_og_image'))> বর্তমান ছবি মুছুন</label>
+            @endif
+            <label>ছবি {{ $ogUrl ? 'বদলান' : 'যোগ করুন' }}<input type="file" name="og_image_file" accept="image/jpeg,image/png,image/webp" data-preview-input></label>
+            <small>Facebook/WhatsApp-এ শেয়ার করলে দেখাবে। 1200×630 প্রস্তাবিত · JPG / PNG / WebP · সর্বোচ্চ ২ MB। খালি রাখলে মূল ছবি ব্যবহার হবে।</small>
+        </div>
+        @if($editorRole === 'admin')
+        <details class="pe-details" @if(old('canonical_url', $product?->canonical_url) || old('meta_robots', $product?->meta_robots)) open @endif>
+            <summary>Advanced (শুধু অ্যাডমিন)</summary>
+            <div class="pe-grid">
+                <label>Canonical URL
+                    <input type="url" name="canonical_url" value="{{ old('canonical_url', $product?->canonical_url) }}" maxlength="255" placeholder="{{ $product ? route('products.show', $product->slug) : $seoBaseUrl.'…' }}">
+                    <small>ডুপ্লিকেট পেজ না থাকলে খালি রাখুন।</small>
+                </label>
+                <label>Robots
+                    <select name="meta_robots">
+                        <option value="">ডিফল্ট (সার্চে দেখাবে)</option>
+                        @foreach(\App\Models\Product::META_ROBOTS as $robots)
+                        <option value="{{ $robots }}" @selected(old('meta_robots', $product?->meta_robots) === $robots)>{{ $robots }}</option>
+                        @endforeach
+                    </select>
+                    <small>noindex দিলে পণ্যটি Google সার্চে দেখাবে না।</small>
+                </label>
+            </div>
+        </details>
+        @endif
+    </div>
+    <p class="pe-note">যে ঘর খালি রাখবেন, সেটির মান পণ্যের নাম, বিবরণ, ট্যাগ ও ছবি থেকে স্বয়ংক্রিয়ভাবে তৈরি হবে।</p>
 </section>
 <section class="pe-card" id="pe-publishing">
     <div class="pe-section-title"><span>09</span><div><h2>প্রকাশের অবস্থা</h2><p>সক্রিয় পণ্য নির্বাচিত বিক্রয় মাধ্যমে দেখা যাবে। Vendor পণ্যে অ্যাডমিন অনুমোদনও প্রয়োজন।</p></div></div>

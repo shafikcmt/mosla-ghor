@@ -3,7 +3,7 @@
     $prefix = $editorRole . '.products.';
     $retailPrices = $retailPrices ?? collect();
 @endphp
-<link rel="stylesheet" href="{{ asset('css/product-editor.css') }}?v=20260924">
+<link rel="stylesheet" href="{{ asset('css/product-editor.css') }}?v=20260928">
 <div class="pe" data-product-editor>
     <header class="pe-heading">
         <div>
@@ -21,7 +21,7 @@
     </div>
     @endif
     <nav class="pe-nav" aria-label="পণ্য ফর্মের বিভাগ">
-        @foreach(['basic'=>'তথ্য', 'channels'=>'বিক্রয় মাধ্যম', 'pricing'=>'দাম ও স্টক', 'media'=>'ছবি', 'variants'=>'ভ্যারিয়েন্ট', 'seo'=>'ট্যাগ', 'publishing'=>'প্রকাশ'] as $anchor=>$label)
+        @foreach(['basic'=>'তথ্য', 'channels'=>'বিক্রয় মাধ্যম', 'pricing'=>'দাম ও স্টক', 'media'=>'ছবি', 'variants'=>'ভ্যারিয়েন্ট', 'seo'=>'SEO', 'publishing'=>'প্রকাশ'] as $anchor=>$label)
         <a href="#pe-{{ $anchor }}">{{ $label }}</a>
         @endforeach
     </nav>
@@ -46,4 +46,4 @@
     </details>
     @endif
 </div>
-<script src="{{ asset('js/product-editor.js') }}?v=20260924" defer></script>
+<script src="{{ asset('js/product-editor.js') }}?v=20260928" defer></script>

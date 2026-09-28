@@ -68,7 +68,7 @@ class ProductMedia
             }
             // Legacy shared images may be referenced by more than one product.
             $aliases = array_unique([$storedPath, $path, 'storage/'.$path, '/storage/'.$path, str_replace('/', '\\', 'storage/'.$path)]);
-            $used = Product::whereIn('main_image', $aliases)->orWhereIn('video_path', $aliases)
+            $used = Product::whereIn('main_image', $aliases)->orWhereIn('video_path', $aliases)->orWhereIn('og_image', $aliases)
                 ->orWhere(function ($query) use ($aliases) {
                     foreach ($aliases as $alias) {
                         $query->orWhereJsonContains('gallery_images', $alias);
