@@ -17,9 +17,10 @@
         .nav-link:hover { background:#14532d; color:#fff; }
         .nav-link.active{ background:#1a6b3a; color:#fff; font-weight:600; }
         /* Accordion parent (group toggle) */
-        .nav-parent       { display:flex; align-items:center; gap:.6rem; width:100%; padding:.55rem .75rem; border-radius:.4rem; font-size:.8125rem; color:#bcd9bc; transition:background .15s,color .15s; text-align:left; }
+        .nav-parent       { display:flex; align-items:center; gap:.6rem; width:100%; padding:.55rem .35rem .55rem .75rem; border-radius:.4rem; font-size:.8125rem; color:#bcd9bc; transition:background .15s,color .15s; text-align:left; }
         .nav-parent:hover { background:#14532d; color:#fff; }
         .nav-parent.active{ color:#fff; font-weight:600; }
+        .nav-parent > span { flex:1 1 auto; min-width:0; line-height:1.3; overflow-wrap:anywhere; }
         .nav-parent .chevron { margin-left:auto; width:.85rem; height:.85rem; flex-shrink:0; transition:transform .2s ease; }
         .nav-parent.open .chevron { transform:rotate(90deg); }
         /* Accordion children */
@@ -69,7 +70,7 @@
 
     $menuGroups = [
         [
-            'label' => 'Catalog', 'icon' => $icons['box'],
+            'label' => 'Products', 'icon' => $icons['box'],
             'items' => [
                 ['label' => 'পণ্যসমূহ',  'route' => 'admin.products.index',   'active' => 'admin.products.*'],
                 ['label' => 'ক্যাটাগরি', 'route' => 'admin.categories.index', 'active' => 'admin.categories.*'],
@@ -77,7 +78,7 @@
             ],
         ],
         [
-            'label' => 'Sales', 'icon' => $icons['clip'],
+            'label' => 'Orders & Sales', 'icon' => $icons['clip'],
             'items' => [
                 ['label' => 'অর্ডার',   'route' => 'admin.orders.index',    'active' => ['admin.orders.index', 'admin.orders.show', 'admin.orders.invoice']],
                 ['label' => 'মুছে ফেলা অর্ডার', 'route' => 'admin.orders.trash', 'active' => 'admin.orders.trash'],
@@ -85,7 +86,7 @@
             ],
         ],
         [
-            'label' => 'Wholesale', 'icon' => $icons['chat'],
+            'label' => 'Wholesale Orders', 'icon' => $icons['chat'],
             'items' => [
                 ['label' => 'Enquiry সমূহ',     'route' => 'admin.wholesale.enquiry.index', 'active' => 'admin.wholesale.enquiry.*'],
                 ['label' => 'কোটেশন অনুমোদন',  'route' => 'admin.wholesale.quote.index',   'active' => 'admin.wholesale.quote.*'],
@@ -93,7 +94,7 @@
             ],
         ],
         [
-            'label' => 'Vendor Management', 'icon' => $icons['shop'],
+            'label' => 'Vendors', 'icon' => $icons['shop'],
             'items' => [
                 ['label' => 'ভেন্ডর / মার্চেন্ট', 'route' => 'admin.vendors.index',          'active' => 'admin.vendors.*'],
                 ['label' => 'ভেন্ডর পণ্য অনুমোদন', 'route' => 'admin.vendor-products.index', 'active' => 'admin.vendor-products.*'],
@@ -105,7 +106,7 @@
             ],
         ],
         [
-            'label' => 'Delivery', 'icon' => $icons['truck'],
+            'label' => 'Delivery & Courier', 'icon' => $icons['truck'],
             'items' => [
                 ['label' => 'কুরিয়ার',        'route' => 'admin.couriers.index',             'active' => 'admin.couriers.*'],
                 ['label' => 'ডেলিভারি রেট',    'route' => 'admin.delivery-rates.index',       'active' => 'admin.delivery-rates.*'],
@@ -116,14 +117,14 @@
             ],
         ],
         [
-            'label' => 'Customer Service', 'icon' => $icons['return'],
+            'label' => 'Customers & Support', 'icon' => $icons['return'],
             'items' => [
                 ['label' => 'রিটার্ন রিকোয়েস্ট', 'route' => 'admin.return-requests.index', 'active' => 'admin.return-requests.*'],
                 ['label' => 'সাপোর্ট টিকেট',      'route' => 'admin.support-tickets.index', 'active' => 'admin.support-tickets.*'],
             ],
         ],
         [
-            'label' => 'Content & Reviews', 'icon' => $icons['star'],
+            'label' => 'Reviews & Content', 'icon' => $icons['star'],
             'items' => [
                 ['label' => 'FAQ',           'route' => 'admin.faqs.index',            'active' => 'admin.faqs.*'],
                 ['label' => 'রিভিউ',         'route' => 'admin.reviews.index',         'active' => 'admin.reviews.*'],
