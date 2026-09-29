@@ -35,6 +35,63 @@
     </div>
 </div>
 
+@php
+    $hasFilters = $filters['search'] !== '' || $filters['owner'] || $filters['status'] || $filters['channel'] || $filters['category_id'] || $filters['vendor_id'];
+    $fieldClass = 'w-full sm:w-auto border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-green-500';
+    $placeholder = asset('images/product-placeholder.svg');
+@endphp
+
+{{-- Search + filters (GET; values are preserved across pages via withQueryString) --}}
+<form method="GET" action="{{ route('admin.products.index') }}" class="bg-white rounded shadow px-4 py-3 mb-4" role="search">
+    <div class="flex flex-col lg:flex-row gap-2">
+        <input type="search" name="search" value="{{ $filters['search'] }}" maxlength="100"
+               placeholder="নাম, স্লাগ, SKU, ভেন্ডর, ব্র্যান্ড বা ক্যাটাগরি দিয়ে খুঁজুন…"
+               aria-label="পণ্য খুঁজুন"
+               class="flex-1 min-w-0 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500">
+        <div class="flex gap-2 shrink-0">
+            <button type="submit" class="flex-1 bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 transition-colors">খুঁজুন</button>
+            @if($hasFilters)
+                <a href="{{ route('admin.products.index') }}" class="flex-1 text-center border border-gray-300 text-gray-600 px-4 py-2 rounded text-sm hover:bg-gray-50">রিসেট</a>
+            @endif
+        </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2 mt-2">
+        <select name="owner" class="{{ $fieldClass }}" onchange="this.form.requestSubmit()" aria-label="পণ্যের উৎস">
+            <option value="">সব পণ্য</option>
+            <option value="platform" @selected($filters['owner'] === 'platform')>আমার / প্ল্যাটফর্ম পণ্য</option>
+            <option value="vendor" @selected($filters['owner'] === 'vendor')>ভেন্ডর পণ্য</option>
+        </select>
+        <select name="status" class="{{ $fieldClass }}" onchange="this.form.requestSubmit()" aria-label="স্ট্যাটাস">
+            <option value="">সব স্ট্যাটাস</option>
+            <option value="active" @selected($filters['status'] === 'active')>সক্রিয়</option>
+            <option value="inactive" @selected($filters['status'] === 'inactive')>নিষ্ক্রিয়</option>
+        </select>
+        <select name="channel" class="{{ $fieldClass }}" onchange="this.form.requestSubmit()" aria-label="বিক্রয় মাধ্যম">
+            <option value="">খুচরা ও পাইকারি</option>
+            <option value="retail" @selected($filters['channel'] === 'retail')>খুচরা</option>
+            <option value="wholesale" @selected($filters['channel'] === 'wholesale')>পাইকারি</option>
+        </select>
+        <select name="category_id" class="{{ $fieldClass }}" onchange="this.form.requestSubmit()" aria-label="ক্যাটাগরি">
+            <option value="">সব ক্যাটাগরি</option>
+            @foreach($categories as $parent)
+                <option value="{{ $parent->id }}" @selected($filters['category_id'] === $parent->id)>{{ $parent->display_name }}</option>
+                @foreach($parent->children as $child)
+                    <option value="{{ $child->id }}" @selected($filters['category_id'] === $child->id)>— {{ $child->display_name }}</option>
+                @endforeach
+            @endforeach
+        </select>
+        <select name="vendor_id" class="{{ $fieldClass }}" onchange="this.form.requestSubmit()" aria-label="ভেন্ডর">
+            <option value="">সব ভেন্ডর</option>
+            @foreach($vendors as $vendor)
+                <option value="{{ $vendor->id }}" @selected($filters['vendor_id'] === $vendor->id)>{{ $vendor->shop_name }}</option>
+            @endforeach
+        </select>
+    </div>
+    @if($hasFilters)
+        <p class="text-xs text-gray-500 mt-2">ফলাফল: {{ $products->total() }}টি পণ্য</p>
+    @endif
+</form>
+
 <div class="bg-white shadow rounded overflow-x-auto">
     <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b text-gray-600 font-medium">
@@ -52,11 +109,23 @@
             <tr class="hover:bg-gray-50" data-qe-row data-qe='@json($quickEdit[$product->id])' data-qe-name="{{ $product->name_bn }}" data-qe-index="{{ $loop->iteration }}">
                 <td class="px-4 py-3 text-gray-400" data-cell="order">{{ $product->sort_order ?: $loop->iteration }}</td>
                 <td class="px-4 py-3">
-                    <div class="font-medium text-gray-900">{{ $product->name_bn }}</div>
-                    @if($product->name_en)
-                        <div class="text-xs text-gray-400">{{ $product->name_en }}</div>
-                    @endif
-                    <div class="text-xs text-gray-300 font-mono">{{ $product->slug }}</div>
+                    <div class="flex items-center gap-3 min-w-[200px]">
+                        @php $thumb = \App\Support\ProductMedia::url($product->main_image); @endphp
+                        <img src="{{ $thumb ?: $placeholder }}" alt="{{ $product->name_bn }}"
+                             width="48" height="48" loading="lazy" decoding="async"
+                             onerror="this.onerror=null;this.src='{{ $placeholder }}'"
+                             class="w-12 h-12 shrink-0 rounded-md object-cover bg-gray-50 border border-gray-100">
+                        <div class="min-w-0">
+                            <div class="font-medium text-gray-900">{{ $product->name_bn }}</div>
+                            @if($product->name_en)
+                                <div class="text-xs text-gray-400">{{ $product->name_en }}</div>
+                            @endif
+                            <div class="text-xs text-gray-300 font-mono break-all">{{ $product->slug }}</div>
+                            @if($product->vendor_id)
+                                <div class="text-[11px] text-purple-600">ভেন্ডর: {{ $product->vendor?->shop_name ?? '—' }}</div>
+                            @endif
+                        </div>
+                    </div>
                 </td>
                 <td class="px-4 py-3 text-gray-700 font-medium" data-cell="price">
                     ৳{{ number_format($product->retail_price_1kg, 0) }}
@@ -99,8 +168,13 @@
             @empty
             <tr>
                 <td colspan="6" class="px-4 py-12 text-center text-gray-400">
-                    কোনো পণ্য নেই।
-                    <a href="{{ route('admin.products.create') }}" class="text-blue-600 hover:underline ml-1">প্রথম পণ্য যোগ করুন</a>
+                    @if($hasFilters)
+                        খোঁজ বা ফিল্টারের সাথে কোনো পণ্য মেলেনি।
+                        <a href="{{ route('admin.products.index') }}" class="text-blue-600 hover:underline ml-1">সব পণ্য দেখুন</a>
+                    @else
+                        কোনো পণ্য নেই।
+                        <a href="{{ route('admin.products.create') }}" class="text-blue-600 hover:underline ml-1">প্রথম পণ্য যোগ করুন</a>
+                    @endif
                 </td>
             </tr>
             @endforelse

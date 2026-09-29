@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Vendor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
@@ -17,13 +18,69 @@ class ProductController extends Controller
 {
 
 
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::withCount('variants')->orderBy('sort_order')->orderBy('id')->paginate(20);
+        $filters = $this->listFilters($request);
+
+        $products = $this->filteredProducts($filters)
+            ->with('vendor:id,shop_name')
+            ->withCount('variants')
+            ->orderBy('sort_order')->orderBy('id')
+            ->paginate(20)
+            ->withQueryString();
         $stats = $this->stats();
         $quickEdit = $products->getCollection()->mapWithKeys(fn ($p) => [$p->id => $this->quickEditData($p)]);
+        $categories = $this->categoryOptions();
+        $vendors = Vendor::orderBy('shop_name')->get(['id', 'shop_name']);
 
-        return view('admin.products.index', compact('products', 'stats', 'quickEdit'));
+        return view('admin.products.index', compact('products', 'stats', 'quickEdit', 'filters', 'categories', 'vendors'));
+    }
+
+    /** Whitelisted list filters from the query string (unknown values are ignored). */
+    private function listFilters(Request $request): array
+    {
+        $pick = fn (string $key, array $allowed) => in_array($request->query($key), $allowed, true) ? $request->query($key) : '';
+        $id = fn (string $key) => ctype_digit((string) $request->query($key)) ? (int) $request->query($key) : null;
+
+        return [
+            'search'      => trim(mb_substr((string) $request->query('search', ''), 0, 100)),
+            'owner'       => $pick('owner', ['platform', 'vendor']),
+            'status'      => $pick('status', ['active', 'inactive']),
+            'channel'     => $pick('channel', ['retail', 'wholesale']),
+            'category_id' => $id('category_id'),
+            'vendor_id'   => $id('vendor_id'),
+        ];
+    }
+
+    /** Search + filters combined with AND. Ownership follows vendor_id (null = platform). */
+    private function filteredProducts(array $f)
+    {
+        return Product::query()
+            ->when($f['search'] !== '', function ($q) use ($f) {
+                // Explicit ESCAPE so % and _ match literally on both SQLite and MySQL.
+                $pattern = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $f['search']) . '%';
+                // Each column group is its own nested (a OR b) so it ANDs with the relation constraint.
+                $like = fn (array $columns) => function ($query) use ($columns, $pattern) {
+                    foreach ($columns as $column) {
+                        $query->orWhereRaw("{$column} LIKE ? ESCAPE '!'", [$pattern]);
+                    }
+                };
+                $q->where(function ($w) use ($like) {
+                    $w->where($like(['products.name_bn', 'products.name_en', 'products.slug', 'products.sku', 'products.brand', 'products.category']))
+                      ->orWhereHas('variants', fn ($v) => $v->where($like(['product_variants.sku'])))
+                      ->orWhereHas('vendor', fn ($v) => $v->where($like(['vendors.shop_name', 'vendors.owner_name'])))
+                      ->orWhereHas('category', fn ($c) => $c->where($like(['categories.name_bn', 'categories.name_en'])));
+                });
+            })
+            ->when($f['owner'] === 'platform', fn ($q) => $q->whereNull('vendor_id'))
+            ->when($f['owner'] === 'vendor', fn ($q) => $q->whereNotNull('vendor_id'))
+            ->when($f['vendor_id'], fn ($q, $vendorId) => $q->where('vendor_id', $vendorId))
+            ->when($f['status'] !== '', fn ($q) => $q->where('is_active', $f['status'] === 'active'))
+            ->when($f['channel'] === 'retail', fn ($q) => $q->where('show_in_retail', true))
+            ->when($f['channel'] === 'wholesale', fn ($q) => $q->where('show_in_wholesale', true))
+            // A parent category also matches products filed under its sub-categories.
+            ->when($f['category_id'], fn ($q, $categoryId) => $q->whereIn('category_id',
+                Category::where('id', $categoryId)->orWhere('parent_id', $categoryId)->select('id')));
     }
 
     private function stats(): array
@@ -219,7 +276,12 @@ class ProductController extends Controller
     {
         $this->deleteProductFiles($product);
 
-        return redirect()->route('admin.products.index')
+        // Return to the same filtered/paged list the delete was made from.
+        $index = route('admin.products.index');
+        $previous = url()->previous();
+        $target = ($previous === $index || str_starts_with($previous, $index . '?')) ? $previous : $index;
+
+        return redirect()->to($target)
             ->with('success', 'পণ্য মুছে ফেলা হয়েছে।');
     }
 
