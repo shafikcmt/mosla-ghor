@@ -49,13 +49,13 @@
                aria-label="পণ্য খুঁজুন"
                class="flex-1 min-w-0 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-500">
         <div class="flex gap-2 shrink-0">
-            <button type="submit" class="flex-1 sm:flex-none bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 transition-colors">খুঁজুন</button>
+            <button type="submit" class="flex-1 bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 transition-colors">খুঁজুন</button>
             @if($hasFilters)
-                <a href="{{ route('admin.products.index') }}" class="flex-1 sm:flex-none text-center border border-gray-300 text-gray-600 px-4 py-2 rounded text-sm hover:bg-gray-50">রিসেট</a>
+                <a href="{{ route('admin.products.index') }}" class="flex-1 text-center border border-gray-300 text-gray-600 px-4 py-2 rounded text-sm hover:bg-gray-50">রিসেট</a>
             @endif
         </div>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2 mt-2">
+    <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2 mt-2">
         <select name="owner" class="{{ $fieldClass }}" onchange="this.form.requestSubmit()" aria-label="পণ্যের উৎস">
             <option value="">সব পণ্য</option>
             <option value="platform" @selected($filters['owner'] === 'platform')>আমার / প্ল্যাটফর্ম পণ্য</option>
@@ -109,12 +109,12 @@
             <tr class="hover:bg-gray-50" data-qe-row data-qe='@json($quickEdit[$product->id])' data-qe-name="{{ $product->name_bn }}" data-qe-index="{{ $loop->iteration }}">
                 <td class="px-4 py-3 text-gray-400" data-cell="order">{{ $product->sort_order ?: $loop->iteration }}</td>
                 <td class="px-4 py-3">
-                    <div class="flex items-center gap-3 min-w-[220px]">
+                    <div class="flex items-center gap-3 min-w-[200px]">
                         @php $thumb = \App\Support\ProductMedia::url($product->main_image); @endphp
                         <img src="{{ $thumb ?: $placeholder }}" alt="{{ $product->name_bn }}"
                              width="48" height="48" loading="lazy" decoding="async"
                              onerror="this.onerror=null;this.src='{{ $placeholder }}'"
-                             class="w-12 h-12 flex-none rounded-md object-cover bg-gray-50 border border-gray-100">
+                             class="w-12 h-12 shrink-0 rounded-md object-cover bg-gray-50 border border-gray-100">
                         <div class="min-w-0">
                             <div class="font-medium text-gray-900">{{ $product->name_bn }}</div>
                             @if($product->name_en)
