@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Meta (Facebook) Pixel — browser events (Phase A).
+ * Meta (Facebook) Pixel — browser events (Phase A). Server-side copies of the
+ * platform events go through MetaCapi (Phase B) with the same event ids.
  *
  * Rules enforced here, in one place:
  *  - Pixel IDs are digits only (10–20); anything else is never output.
@@ -309,18 +310,7 @@ class MetaPixel
         }
         $lines = self::lines(self::orderItems($order));
 
-        if (self::platformScopeOwn()) {
-            $platformLines = array_filter($lines, fn ($l) => $l['vendor_id'] === null);
-            $platformValue = null; // sum of admin items (from cartParams)
-        } else {
-            $platformLines = $lines;
-            $platformValue = (float) $order->grand_total;
-        }
-        if ($platformLines) {
-            $params = self::cartParams($platformLines);
-            if ($platformValue !== null) {
-                $params['value'] = round($platformValue, 2);
-            }
+        if ($params = self::platformPurchaseParams($order, $lines)) {
             foreach (self::platformIds() as $id) {
                 self::add($id, 'Purchase', $params, (string) $order->order_number);
             }
@@ -341,25 +331,68 @@ class MetaPixel
         }
     }
 
+    /**
+     * Platform-pixel Purchase params for an order, or null when scope 'own' leaves no
+     * admin items. Shared by the browser event and the Conversions API so both carry
+     * the same value (scope all = grand total; scope own = admin items only).
+     */
+    public static function platformPurchaseParams(Order $order, ?array $lines = null): ?array
+    {
+        $lines ??= self::lines(self::orderItems($order));
+
+        if (self::platformScopeOwn()) {
+            $platformLines = array_filter($lines, fn ($l) => $l['vendor_id'] === null);
+            $platformValue = null; // sum of admin items (from cartParams)
+        } else {
+            $platformLines = $lines;
+            $platformValue = (float) $order->grand_total;
+        }
+        if (! $platformLines) {
+            return null;
+        }
+        $params = self::cartParams($platformLines);
+        if ($platformValue !== null) {
+            $params['value'] = round($platformValue, 2);
+        }
+        return $params;
+    }
+
+    public static function productLeadParams(Product $product): array
+    {
+        return [
+            'content_ids' => [(string) $product->id], 'content_type' => 'product_group',
+            'content_name' => $product->display_name, 'currency' => self::CURRENCY,
+        ];
+    }
+
+    /** May the platform pixel receive an event about this product (scope 'own' excludes vendor products)? */
+    public static function platformAllowsProduct(?int $vendorId): bool
+    {
+        return ! (self::platformScopeOwn() && $vendorId);
+    }
+
+    /** Platform-visible product ids of a combo enquiry (product_id => vendor_id|null). */
+    public static function platformComboIds(array $productVendorIds): array
+    {
+        $ids = [];
+        foreach ($productVendorIds as $productId => $vendorId) {
+            if (self::platformAllowsProduct($vendorId)) {
+                $ids[] = (string) $productId;
+            }
+        }
+        return $ids;
+    }
+
     /** Lead for a single-product enquiry (platform per scope + the product's vendor). */
     public static function leadForProduct(Product $product, string $eventId): void
     {
-        self::queueNextPage('Lead', [
-            'content_ids' => [(string) $product->id], 'content_type' => 'product_group',
-            'content_name' => $product->display_name, 'currency' => self::CURRENCY,
-        ], $eventId, $product->vendor_id, true);
+        self::queueNextPage('Lead', self::productLeadParams($product), $eventId, $product->vendor_id, true);
     }
 
     /** Lead for a multi-product (combo) enquiry: platform pixel only, items filtered by scope. */
     public static function leadForCombo(array $productVendorIds, string $eventId): void
     {
-        $ids = [];
-        foreach ($productVendorIds as $productId => $vendorId) {
-            if (! self::platformScopeOwn() || $vendorId === null) {
-                $ids[] = (string) $productId;
-            }
-        }
-        if ($ids) {
+        if ($ids = self::platformComboIds($productVendorIds)) {
             self::queueNextPage('Lead', ['content_ids' => $ids, 'content_type' => 'product_group', 'currency' => self::CURRENCY], $eventId, null, false);
         }
     }

@@ -242,6 +242,10 @@ class ProductController extends Controller
 
         // Meta Pixel Lead on the next page (platform per scope + this product's vendor).
         \App\Support\MetaPixel::leadForProduct($product, 'lead-'.$enquiry->id);
+        \App\Support\MetaCapi::leadForProduct($product, 'lead-'.$enquiry->id, [
+            'phone' => $validated['customer_phone'], 'email' => $validated['customer_email'] ?? null,
+            'name' => $validated['customer_name'], 'external_id' => $customer?->id,
+        ]);
 
         // Alerts: admin + assigned supplier; confirmation to the customer.
         Notify::admins(new EnquiryReceivedNotification($enquiry, 'admin'));

@@ -49,4 +49,9 @@ return [
         'from'     => env('WHATSAPP_FROM'),
     ],
 
+    // ── Meta Conversions API (token + switches live in admin → Marketing) ──
+    'meta' => [
+        'graph_version' => env('META_GRAPH_VERSION', 'v23.0'),
+    ],
+
 ];

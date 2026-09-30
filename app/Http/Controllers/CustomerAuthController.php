@@ -73,6 +73,9 @@ class CustomerAuthController extends Controller
 
         // Meta Pixel CompleteRegistration on the next page (platform pixel only).
         \App\Support\MetaPixel::completeRegistration('reg-'.$user->id);
+        \App\Support\MetaCapi::completeRegistration('reg-'.$user->id, [
+            'phone' => $data['mobile_number'], 'email' => $data['email'] ?? null, 'name' => $data['name'], 'external_id' => $customer->id,
+        ]);
 
         return $this->postAuthRedirect($request)
             ->with('success', 'অ্যাকাউন্ট তৈরি হয়েছে। স্বাগতম!');

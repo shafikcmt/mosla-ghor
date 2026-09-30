@@ -121,6 +121,7 @@
             'items' => [
                 ['label' => 'রিটার্ন রিকোয়েস্ট', 'route' => 'admin.return-requests.index', 'active' => 'admin.return-requests.*'],
                 ['label' => 'সাপোর্ট টিকেট',      'route' => 'admin.support-tickets.index', 'active' => 'admin.support-tickets.*'],
+                ['label' => 'Bot API ও সোশ্যাল লিড', 'route' => 'admin.bot-api.index',     'active' => 'admin.bot-api.*'],
             ],
         ],
         [

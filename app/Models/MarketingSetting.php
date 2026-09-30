@@ -4,13 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-/** Platform Meta Pixel settings (single row). CAPI token columns arrive in Phase B. */
+/** Platform Meta Pixel + Conversions API settings (single row). The CAPI token is encrypted at rest and never serialised. */
 class MarketingSetting extends Model
 {
     protected $fillable = [
         'pixel_enabled', 'pixel_ids', 'test_event_code', 'platform_pixel_scope',
         'track_admin_users', 'vendor_pixels_enabled', 'vendor_capi_allowed',
+        'capi_enabled', 'capi_access_token',
     ];
+
+    protected $hidden = ['capi_access_token'];
 
     protected $casts = [
         'pixel_enabled'         => 'boolean',
@@ -18,6 +21,10 @@ class MarketingSetting extends Model
         'track_admin_users'     => 'boolean',
         'vendor_pixels_enabled' => 'boolean',
         'vendor_capi_allowed'   => 'boolean',
+        'capi_enabled'          => 'boolean',
+        'capi_access_token'     => 'encrypted',
+        'capi_last_success_at'  => 'datetime',
+        'capi_last_error_at'    => 'datetime',
     ];
 
     /** firstOrCreate (never firstOrNew): an unsaved model makes update() silently match nothing. */
