@@ -21,7 +21,7 @@ class TempUpload
     public const ROOT = 'products/tmp';
     public const TTL_SECONDS = 12 * 3600;   // token lifetime
     public const STALE_SECONDS = 24 * 3600; // temp files older than this are cleaned
-    public const KINDS = ['main' => 'product', 'gallery' => 'product', 'variant' => 'product', 'og' => 'og'];
+    public const KINDS = ['main' => 'product', 'wholesale_main' => 'product', 'gallery' => 'product', 'variant' => 'product', 'og' => 'og'];
 
     /** @return array{token: string, url: string, path: string} */
     public static function store(UploadedFile $file, string $kind, int $userId): array

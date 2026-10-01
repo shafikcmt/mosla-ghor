@@ -5,7 +5,7 @@
     // Resolve a usable URL for a stored image path (local 'storage/...' or full http URL).
     $imgUrl = fn($p) => $p ? (\Illuminate\Support\Str::startsWith($p, 'http') ? $p : asset($p)) : null;
 
-    $main = $imgUrl($product->main_image) ?: 'https://placehold.co/600x600/f1f5f3/14532d?text=' . urlencode($product->display_name);
+    $main = $imgUrl($product->coverImage('wholesale')) ?: 'https://placehold.co/600x600/f1f5f3/14532d?text=' . urlencode($product->display_name);
     $gallery = collect($product->gallery_images ?? [])->map($imgUrl)->filter()->values();
 
     // Build a YouTube embed URL from a watch/share link, if present.
@@ -226,8 +226,9 @@
     <div class="flex gap-4 overflow-x-auto pb-3" style="scroll-snap-type: x mandatory;">
         @foreach($relatedProducts as $rp)
         @php
-            $rpImg = $rp->main_image
-                ? (\Illuminate\Support\Str::startsWith($rp->main_image, 'http') ? $rp->main_image : asset($rp->main_image))
+            $rpCover = $rp->coverImage('wholesale');
+            $rpImg = $rpCover
+                ? (\Illuminate\Support\Str::startsWith($rpCover, 'http') ? $rpCover : asset($rpCover))
                 : 'https://placehold.co/300x300/f1f5f3/14532d?text=' . urlencode($rp->display_name);
         @endphp
         <a href="{{ route('customer.wholesale.products.show', $rp->slug) }}"

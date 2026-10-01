@@ -25,6 +25,7 @@ $productsForJs = $products->map(function ($p) {
         'short_description' => $p->short_description,
         'description'       => $p->description,
         'main_image'        => \App\Support\ProductMedia::url($p->main_image),
+        'wholesale_main_image' => \App\Support\ProductMedia::url($p->wholesale_main_image),
         'min_order_quantity'=> $p->min_order_quantity ? (float) $p->min_order_quantity : null,
         'min_order_unit'    => $p->min_order_unit ?: null,
         'gallery_images'    => collect($p->gallery_images ?? [])->map(fn($img) => \App\Support\ProductMedia::url($img))->values()->all(),
@@ -1782,6 +1783,14 @@ function filterCardsByMode() {
             .querySelectorAll('[data-card-product="' + p.id + '"], [data-list-product="' + p.id + '"]')
             .forEach(function (el) { el.style.display = show ? '' : 'none'; });
     });
+    // Separate পাইকারি cover photo: swap card/list covers to match the active channel.
+    document.querySelectorAll('img[data-cover-wholesale]').forEach(function (img) {
+        const ch = isWholesale ? 'wholesale' : 'retail';
+        const src = img.getAttribute('data-cover-' + ch);
+        if (src && img.getAttribute('src') !== src) img.setAttribute('src', src);
+        const alt = img.getAttribute('data-alt-' + ch);
+        if (alt) img.setAttribute('alt', alt);
+    });
 
     const emptyEl = document.getElementById('ms-wholesale-empty');
     const cv = document.getElementById('card-view');
@@ -2136,7 +2145,7 @@ function addToPaykari(productId) {
     const ex = items.find(function (x) { return x.product_id === p.id && (x.variant_id || null) === variantId; });
     if (ex) { ex.quantity = qty; ex.unit = unit; }
     else {
-        items.push({ product_id: p.id, slug: p.slug, name: p.name_bn, image: p.main_image,
+        items.push({ product_id: p.id, slug: p.slug, name: p.name_bn, image: p.wholesale_main_image || p.main_image,
                      quantity: qty, unit: unit,
                      variant_id: variantId, variant_name: variantName,
                      min_qty: p.min_order_quantity || null, min_unit: p.min_order_unit || null });
@@ -2339,7 +2348,8 @@ function fillModal(p) {
     } else {
         // Build slides: images first, then local video if any
         modalSlides = [];
-        if (p.main_image) modalSlides.push({ type: 'image', src: p.main_image });
+        const cover = (activeTab === 'wholesale' && p.wholesale_main_image) ? p.wholesale_main_image : p.main_image;
+        if (cover) modalSlides.push({ type: 'image', src: cover });
         (p.gallery_images || []).forEach(img => modalSlides.push({ type: 'image', src: img }));
         if (p.video_path)  modalSlides.push({ type: 'video', src: p.video_path });
 

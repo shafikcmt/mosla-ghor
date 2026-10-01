@@ -72,4 +72,4 @@
     </details>
     @endif
 </div>
-<script src="{{ asset('js/product-editor.js') }}?v=20260930" defer></script>
+<script src="{{ asset('js/product-editor.js') }}?v=20261001" defer></script>

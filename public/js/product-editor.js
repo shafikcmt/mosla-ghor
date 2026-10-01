@@ -3,7 +3,8 @@ document.querySelectorAll('[data-product-editor]').forEach(editor => {
         const selected = {};
         editor.querySelectorAll('[data-channel]').forEach(input => { selected[input.dataset.channel] = input.checked; });
         editor.querySelectorAll('[data-channel-section]').forEach(section => {
-            section.hidden = section.disabled = !selected[section.dataset.channelSection];
+            const need = section.dataset.channelSection;
+            section.hidden = section.disabled = !(need === 'both' ? selected.retail && selected.wholesale : selected[need]);
         });
         editor.querySelector('.pe-channel-message').textContent = selected.retail || selected.wholesale
             ? 'বিক্রয় মাধ্যম বদলালেও সংরক্ষিত প্যাকের তথ্য থাকবে।' : 'অন্তত একটি বিক্রয় মাধ্যম বেছে নিন।';
