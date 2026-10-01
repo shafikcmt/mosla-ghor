@@ -62,7 +62,7 @@ class OrderController extends Controller
             'customer_email'           => ['nullable', 'email', 'max:150'],
             'bd_division_id'           => ['required', 'integer', 'exists:bd_divisions,id'],
             'bd_district_id'           => ['required', 'integer', 'exists:bd_districts,id'],
-            'bd_upazila_id'            => ['required', 'integer', 'exists:bd_upazilas,id'],
+            'bd_upazila_id'            => ['nullable', 'integer', 'exists:bd_upazilas,id'],
             'bd_union_id'              => ['nullable', 'integer', 'exists:bd_unions,id'],
             'combo_id'                 => ['nullable', 'integer', 'exists:combos,id'],
             'delivery_zone_id'         => ['required', 'integer', 'exists:delivery_zones,id'],
@@ -87,7 +87,6 @@ class OrderController extends Controller
             'paid_amount.required'         => 'পেমেন্ট করা পরিমাণ দিন।',
             'bd_division_id.required'      => 'বিভাগ বেছে নিন।',
             'bd_district_id.required'      => 'জেলা বেছে নিন।',
-            'bd_upazila_id.required'       => 'উপজেলা বেছে নিন।',
             'items.required'               => 'কমপক্ষে একটি পণ্য যোগ করুন।',
             'items.min'                    => 'কমপক্ষে একটি পণ্য যোগ করুন।',
             'items.max'                    => 'সর্বোচ্চ ২০টি পণ্য যোগ করা যাবে।',
@@ -107,19 +106,19 @@ class OrderController extends Controller
             return response()->json(['message' => 'জেলা পাওয়া যায়নি বা বিভাগের সাথে মিলছে না।', 'errors' => ['bd_district_id' => ['জেলা পাওয়া যায়নি।']]], 422);
         }
 
-        $bdUpazila = BdUpazila::where('id', (int) $validated['bd_upazila_id'])
+        $bdUpazila = BdUpazila::where('id', $validated['bd_upazila_id'] ?? null)
             ->where('district_id', $bdDistrict->id)
             ->where('is_active', true)->first();
-        if (! $bdUpazila) {
+        if (! empty($validated['bd_upazila_id']) && ! $bdUpazila) {
             return response()->json(['message' => 'উপজেলা পাওয়া যায়নি বা জেলার সাথে মিলছে না।', 'errors' => ['bd_upazila_id' => ['উপজেলা পাওয়া যায়নি।']]], 422);
         }
 
         $bdUnion = null;
         if (! empty($validated['bd_union_id'])) {
             $bdUnion = BdUnion::where('id', (int) $validated['bd_union_id'])
-                ->where('upazila_id', $bdUpazila->id)
+                ->where('upazila_id', $bdUpazila?->id)
                 ->where('is_active', true)->first();
-            if (! $bdUnion) {
+            if (! $bdUpazila || ! $bdUnion) {
                 return response()->json(['message' => 'ইউনিয়ন পাওয়া যায়নি বা উপজেলার সাথে মিলছে না।', 'errors' => ['bd_union_id' => ['ইউনিয়ন পাওয়া যায়নি।']]], 422);
             }
         }
@@ -336,11 +335,11 @@ class OrderController extends Controller
                     'combo_id'              => $orderComboId,
                     'bd_division_id'        => $bdDivision->id,
                     'bd_district_id'        => $bdDistrict->id,
-                    'bd_upazila_id'         => $bdUpazila->id,
+                    'bd_upazila_id'         => $bdUpazila?->id,
                     'bd_union_id'           => $bdUnion?->id,
                     'division_name'         => $bdDivision->bn_name,
                     'district_name'         => $bdDistrict->bn_name,
-                    'upazila_name'          => $bdUpazila->bn_name,
+                    'upazila_name'          => $bdUpazila?->bn_name,
                     'union_name'            => $bdUnion?->bn_name,
                 ]);
 

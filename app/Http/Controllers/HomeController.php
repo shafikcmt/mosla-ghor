@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\BdDistrict;
 use App\Models\BdDivision;
-use App\Models\BdUpazila;
 use App\Models\Category;
 use App\Models\Combo;
 use App\Models\Faq;
@@ -61,7 +60,6 @@ class HomeController extends Controller
 
         $bdDivisions = BdDivision::where('is_active', true)->orderBy('bn_name')->get(['id', 'name', 'bn_name']);
         $bdDistricts = BdDistrict::where('is_active', true)->orderBy('bn_name')->get(['id', 'division_id', 'name', 'bn_name']);
-        $bdUpazilas  = BdUpazila::where('is_active', true)->orderBy('bn_name')->get(['id', 'district_id', 'name', 'bn_name']);
 
         $fixedCombos = Combo::active()
             ->with(['items.product'])
@@ -107,7 +105,7 @@ class HomeController extends Controller
         return view('home', compact(
             'products', 'packagingCost', 'minOrderAmount', 'paymentSettings',
             'activeZones', 'zonesForJs', 'fixedCombos', 'fixedCombosForJs',
-            'bdDivisions', 'bdDistricts', 'bdUpazilas',
+            'bdDivisions', 'bdDistricts',
             'faqs', 'reviews', 'ws',
             'navCategories', 'selectedCategory', 'featuredProducts', 'heroSlides'
         ));

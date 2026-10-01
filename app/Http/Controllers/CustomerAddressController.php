@@ -71,6 +71,23 @@ class CustomerAddressController extends CustomerBaseController
             return $result;
         }
 
+        // The active-only dropdown cannot restore inactive or name-only legacy regions.
+        // Keep that stored history on unrelated edits, but never carry it to a new district.
+        if (! $request->filled('bd_upazila_id')
+            && ($address->bd_division_id
+                ? (int) $result['data']['bd_division_id'] === (int) $address->bd_division_id
+                : $result['data']['division_name'] === $address->division_name)
+            && ($address->bd_district_id
+                ? (int) $result['data']['bd_district_id'] === (int) $address->bd_district_id
+                : $result['data']['district_name'] === $address->district_name)
+            && (! $request->has('bd_upazila_id') || ! BdUpazila::where('id', $address->bd_upazila_id)
+                ->where('district_id', $address->bd_district_id)->where('is_active', true)->exists())
+        ) {
+            foreach (['bd_upazila_id', 'upazila_name', 'bd_union_id', 'union_name'] as $field) {
+                $result['data'][$field] = $address->$field;
+            }
+        }
+
         if ($result['is_default']) {
             CustomerAddress::where('user_id', Auth::id())->where('id', '!=', $address->id)->update(['is_default' => false]);
         }
@@ -105,7 +122,7 @@ class CustomerAddressController extends CustomerBaseController
             'full_address'         => 'required|string|max:500',
             'bd_division_id'       => 'required|integer|exists:bd_divisions,id',
             'bd_district_id'       => 'required|integer|exists:bd_districts,id',
-            'bd_upazila_id'        => 'required|integer|exists:bd_upazilas,id',
+            'bd_upazila_id'        => 'nullable|integer|exists:bd_upazilas,id',
             'bd_union_id'          => 'nullable|integer|exists:bd_unions,id',
             'delivery_zone_id'     => 'required|integer|exists:delivery_zones,id',
             'delivery_location_id' => 'required|integer|exists:delivery_locations,id',
@@ -117,7 +134,6 @@ class CustomerAddressController extends CustomerBaseController
             'full_address.required'         => 'পূর্ণ ঠিকানা লিখুন।',
             'bd_division_id.required'       => 'বিভাগ বেছে নিন।',
             'bd_district_id.required'       => 'জেলা বেছে নিন।',
-            'bd_upazila_id.required'        => 'উপজেলা বেছে নিন।',
             'delivery_zone_id.required'     => 'ডেলিভারি জোন বেছে নিন।',
             'delivery_location_id.required' => 'ডেলিভারি এলাকা বেছে নিন।',
         ]);
@@ -125,7 +141,7 @@ class CustomerAddressController extends CustomerBaseController
         try {
             $bd   = $this->checkout->verifyBdHierarchy(
                 (int) $data['bd_division_id'], (int) $data['bd_district_id'],
-                (int) $data['bd_upazila_id'], $data['bd_union_id'] ?? null
+                $data['bd_upazila_id'] ?? null, $data['bd_union_id'] ?? null
             );
             $zone = $this->checkout->resolveCharge((int) $data['delivery_zone_id'], (int) $data['delivery_location_id'], 0);
         } catch (CheckoutException $e) {
@@ -141,14 +157,14 @@ class CustomerAddressController extends CustomerBaseController
                 'full_address'         => $data['full_address'],
                 'division_name'        => $bd['division']->bn_name,
                 'district_name'        => $bd['district']->bn_name,
-                'upazila_name'         => $bd['upazila']->bn_name,
+                'upazila_name'         => $bd['upazila']?->bn_name,
                 'union_name'           => $bd['union']?->bn_name,
                 'delivery_zone_id'     => $zone['zone']->id,
                 'delivery_location_id' => $zone['location']->id,
                 'delivery_area'        => $zone['zone']->zone_type,
                 'bd_division_id'       => $bd['division']->id,
                 'bd_district_id'       => $bd['district']->id,
-                'bd_upazila_id'        => $bd['upazila']->id,
+                'bd_upazila_id'        => $bd['upazila']?->id,
                 'bd_union_id'          => $bd['union']?->id,
             ],
         ];

@@ -62,8 +62,8 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">উপজেলা <span class="text-red-500">*</span></label>
-                    <select name="bd_upazila_id" id="ca-upazila" required
+                    <label class="block text-sm font-medium text-gray-700 mb-1">উপজেলা (ঐচ্ছিক)</label>
+                    <select name="bd_upazila_id" id="ca-upazila"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#14532d]">
                         <option value="">উপজেলা বেছে নিন</option>
                     </select>

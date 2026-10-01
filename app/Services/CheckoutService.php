@@ -175,9 +175,9 @@ class CheckoutService
     /**
      * Verify the BD address hierarchy (prevents tampered IDs).
      *
-     * @return array{division: BdDivision, district: BdDistrict, upazila: BdUpazila, union: ?BdUnion}
+     * @return array{division: BdDivision, district: BdDistrict, upazila: ?BdUpazila, union: ?BdUnion}
      */
-    public function verifyBdHierarchy(int $divisionId, int $districtId, int $upazilaId, ?int $unionId): array
+    public function verifyBdHierarchy(int $divisionId, int $districtId, ?int $upazilaId, ?int $unionId): array
     {
         $division = BdDivision::where('id', $divisionId)->where('is_active', true)->first();
         if (! $division) {
@@ -192,15 +192,15 @@ class CheckoutService
 
         $upazila = BdUpazila::where('id', $upazilaId)->where('district_id', $district->id)
             ->where('is_active', true)->first();
-        if (! $upazila) {
+        if ($upazilaId !== null && ! $upazila) {
             throw new CheckoutException('উপজেলা পাওয়া যায়নি বা জেলার সাথে মিলছে না।', 'bd_upazila_id');
         }
 
         $union = null;
         if ($unionId) {
-            $union = BdUnion::where('id', $unionId)->where('upazila_id', $upazila->id)
+            $union = BdUnion::where('id', $unionId)->where('upazila_id', $upazila?->id)
                 ->where('is_active', true)->first();
-            if (! $union) {
+            if (! $upazila || ! $union) {
                 throw new CheckoutException('ইউনিয়ন পাওয়া যায়নি বা উপজেলার সাথে মিলছে না।', 'bd_union_id');
             }
         }

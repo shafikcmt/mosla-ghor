@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\BdDistrict;
 use App\Models\BdDivision;
-use App\Models\BdUpazila;
 use App\Models\CustomerAddress;
 use App\Models\DeliveryZone;
 use App\Models\PaymentSetting;
@@ -106,7 +105,6 @@ class CheckoutController extends Controller
             'zonesForJs'     => $this->zonesForJs($activeZones),
             'bdDivisions'    => BdDivision::where('is_active', true)->orderBy('bn_name')->get(['id', 'bn_name']),
             'bdDistricts'    => BdDistrict::where('is_active', true)->orderBy('bn_name')->get(['id', 'division_id', 'bn_name']),
-            'bdUpazilas'     => BdUpazila::where('is_active', true)->orderBy('bn_name')->get(['id', 'district_id', 'bn_name']),
             'prefill'        => $this->addressPrefill(),
         ]);
     }
@@ -138,7 +136,7 @@ class CheckoutController extends Controller
             'full_address'         => ['required', 'string', 'max:500'],
             'bd_division_id'       => ['required', 'integer', 'exists:bd_divisions,id'],
             'bd_district_id'       => ['required', 'integer', 'exists:bd_districts,id'],
-            'bd_upazila_id'        => ['required', 'integer', 'exists:bd_upazilas,id'],
+            'bd_upazila_id'        => ['nullable', 'integer', 'exists:bd_upazilas,id'],
             'bd_union_id'          => ['nullable', 'integer', 'exists:bd_unions,id'],
             'delivery_zone_id'     => ['required', 'integer', 'exists:delivery_zones,id'],
             'delivery_location_id' => ['required', 'integer', 'exists:delivery_locations,id'],
@@ -150,7 +148,6 @@ class CheckoutController extends Controller
             'full_address.required'         => 'পূর্ণ ঠিকানা লিখুন।',
             'bd_division_id.required'       => 'বিভাগ বেছে নিন।',
             'bd_district_id.required'       => 'জেলা বেছে নিন।',
-            'bd_upazila_id.required'        => 'উপজেলা বেছে নিন।',
             'delivery_zone_id.required'     => 'ডেলিভারি জোন বেছে নিন।',
             'delivery_location_id.required' => 'ডেলিভারি এলাকা বেছে নিন।',
         ]);
@@ -159,7 +156,7 @@ class CheckoutController extends Controller
         try {
             $bd   = $this->checkout->verifyBdHierarchy(
                 (int) $data['bd_division_id'], (int) $data['bd_district_id'],
-                (int) $data['bd_upazila_id'], $data['bd_union_id'] ?? null
+                $data['bd_upazila_id'] ?? null, $data['bd_union_id'] ?? null
             );
             $zoneInfo = $this->checkout->resolveCharge(
                 (int) $data['delivery_zone_id'], (int) $data['delivery_location_id'], 0
@@ -175,14 +172,14 @@ class CheckoutController extends Controller
             'full_address'         => $data['full_address'],
             'division_name'        => $bd['division']->bn_name,
             'district_name'        => $bd['district']->bn_name,
-            'upazila_name'         => $bd['upazila']->bn_name,
+            'upazila_name'         => $bd['upazila']?->bn_name,
             'union_name'           => $bd['union']?->bn_name,
             'delivery_zone_id'     => $zoneInfo['zone']->id,
             'delivery_location_id' => $zoneInfo['location']->id,
             'delivery_area'        => $zoneInfo['zone']->zone_type,
             'bd_division_id'       => $bd['division']->id,
             'bd_district_id'       => $bd['district']->id,
-            'bd_upazila_id'        => $bd['upazila']->id,
+            'bd_upazila_id'        => $bd['upazila']?->id,
             'bd_union_id'          => $bd['union']?->id,
         ];
 
