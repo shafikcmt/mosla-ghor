@@ -57,7 +57,7 @@ token, `403` missing ability, `422` validation errors.
 
 | Ability | Endpoints |
 |---|---|
-| `products:read` | `GET /products`, `GET /products/{id}` |
+| `products:read` | `GET /products`, `GET /products/{id}`, `GET /prices` |
 | `catalog:read` | `GET /catalog/highlights` |
 | `orders:read` | `GET /orders/status` |
 | `leads:write` | `POST /leads` |
@@ -80,6 +80,29 @@ Searches active products by Bangla/English name, slug or SKU.
 ### `GET /products/{id}`
 Returns the same fields plus `short_description` and `delivery_time`. Inactive
 products return `404`.
+
+Products also include `retail_price_per_kg` and a `wholesale` block (see `/prices`).
+
+### `GET /prices?q=জিরা&customer_type=wholesale&limit=10`
+Prices for one customer type (`retail` = খুচরা, default; `wholesale` = পাইকারি) plus a
+ready Bangla `reply` — the same text the admin sees on **Admin → Products → প্রাইস বোর্ড**.
+Admins set the prices there (or in the product form, section 05).
+
+```json
+{ "customer_type": "wholesale", "data": [ {
+  "id": 12, "name": "জিরা", "url": "https://…/products/cumin?mode=wholesale", "image": "https://…", "in_stock": true,
+  "retail":    { "price_per_kg": 600, "packs": [ { "label": "250g", "price": 160 } ] },
+  "wholesale": { "price_per_kg": 500, "moq": "10 কেজি",
+                 "unit_prices": [ { "unit": "bag", "unit_label": "ব্যাগ", "kg": 25, "price": 12500 } ],
+                 "unit_conversions": [ "1 ব্যাগ = 25 কেজি" ], "delivery_time": "৩–৫ দিন", "payment_terms": null },
+  "reply": "জিরা — পাইকারি দাম\n• প্রতি কেজি: ৳500\n• প্রতি ব্যাগ (25 কেজি): ৳12500\n…"
+} ] }
+```
+
+`retail` is `null` for wholesale-only products and `wholesale` is `null` when the product is
+not sold wholesale. `wholesale.price_per_kg` is `null` when no পাইকারি price is set (the
+reply then says a quotation will be given). Unit prices are computed from the product's
+unit conversions (e.g. 1 carton = 10 packets, 1 packet = 500 g → 1 carton = 5 kg).
 
 ### `GET /catalog/highlights`
 Content for daily posts: `best_sellers_30d` (by order count, excluding cancelled

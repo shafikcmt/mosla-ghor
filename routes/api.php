@@ -12,6 +12,7 @@ Route::prefix('bot/v1')->name('api.bot.')->middleware('throttle:300,1')->group(f
     Route::get('ping', [BotApiController::class, 'ping'])->middleware(['bot.token', 'throttle:bot-api'])->name('ping');
     Route::get('products', [BotApiController::class, 'products'])->middleware(['bot.token:products:read', 'throttle:bot-api'])->name('products');
     Route::get('products/{id}', [BotApiController::class, 'product'])->whereNumber('id')->middleware(['bot.token:products:read', 'throttle:bot-api'])->name('products.show');
+    Route::get('prices', [BotApiController::class, 'prices'])->middleware(['bot.token:products:read', 'throttle:bot-api'])->name('prices');
     Route::get('catalog/highlights', [BotApiController::class, 'highlights'])->middleware(['bot.token:catalog:read', 'throttle:bot-api'])->name('highlights');
     Route::get('orders/status', [BotApiController::class, 'orderStatus'])->middleware(['bot.token:orders:read', 'throttle:bot-api'])->name('orders.status');
     Route::post('leads', [BotApiController::class, 'storeLead'])->middleware(['bot.token:leads:write', 'throttle:bot-api'])->name('leads.store');

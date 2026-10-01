@@ -60,7 +60,10 @@ class ProductEditor
                     $fields['retail_price_1kg'] = 0;
                 }
                 if ($wholesale) {
-                    $fields += Arr::only($data, ['wholesale_enquiry_enabled', 'min_order_quantity', 'min_order_unit', 'delivery_time', 'payment_terms']);
+                    $fields += Arr::only($data, ['wholesale_enquiry_enabled', 'min_order_quantity', 'min_order_unit', 'delivery_time', 'payment_terms', 'wholesale_price_1kg']);
+                    if (array_key_exists('unit_conversions', $data)) {
+                        $fields['unit_conversions'] = $this->cleanConversions($data['unit_conversions']) ?: null;
+                    }
                     if (array_key_exists('min_order_unit', $fields)) { $fields['min_order_unit'] ??= 'kg'; }
                 }
                 if ($admin && $product->vendor_id && isset($data['approval_status'])) {
@@ -250,6 +253,12 @@ class ProductEditor
             'min_order_unit' => $wholesale ? ['nullable', Rule::in(array_unique([...Product::UNITS, 'piece']))] : 'exclude',
             'delivery_time' => $wholesale ? 'nullable|string|max:255' : 'exclude',
             'payment_terms' => $wholesale ? 'nullable|string|max:255' : 'exclude',
+            'wholesale_price_1kg' => $wholesale ? 'nullable|numeric|min:0|max:99999999.99' : 'exclude',
+            'unit_conversions' => $wholesale ? 'sometimes|nullable|array|max:10' : 'exclude',
+            'unit_conversions.*' => $wholesale ? 'array' : 'exclude',
+            'unit_conversions.*.unit' => $wholesale ? ['nullable', Rule::in(array_keys(Product::UNIT_LABELS))] : 'exclude',
+            'unit_conversions.*.qty' => $wholesale ? 'nullable|numeric|gt:0|max:99999999' : 'exclude',
+            'unit_conversions.*.base' => $wholesale ? ['nullable', Rule::in(array_keys(Product::UNIT_LABELS))] : 'exclude',
             'prices' => $retail ? 'sometimes|array|max:100' : 'exclude',
             'approval_status' => $admin && $product?->vendor_id ? 'sometimes|in:pending,approved,rejected' : 'exclude',
             'default_variant' => ['nullable', 'regex:/^(existing|new):[0-9]+$/'],
@@ -286,6 +295,13 @@ class ProductEditor
             'canonical_url.url' => 'Canonical URL একটি সঠিক http/https লিংক হতে হবে।',
             'canonical_url.max' => 'Canonical URL সর্বোচ্চ ২৫৫ অক্ষর হতে পারবে।',
             'meta_robots.in' => 'Robots-এর একটি সঠিক অপশন বেছে নিন।',
+            'wholesale_price_1kg.numeric' => 'পাইকারি দাম একটি সংখ্যা হতে হবে।',
+            'wholesale_price_1kg.min' => 'পাইকারি দাম ০ বা তার বেশি হতে হবে।',
+            'wholesale_price_1kg.max' => 'পাইকারি দাম অনেক বেশি।',
+            'unit_conversions.*.qty.numeric' => 'ইউনিট কনভার্শনের পরিমাণ একটি সংখ্যা হতে হবে।',
+            'unit_conversions.*.qty.gt' => 'ইউনিট কনভার্শনের পরিমাণ ০-এর বেশি হতে হবে।',
+            'unit_conversions.*.unit.in' => 'ইউনিট কনভার্শনের একক সঠিক নয়।',
+            'unit_conversions.*.base.in' => 'ইউনিট কনভার্শনের একক সঠিক নয়।',
         ];
         if ($retail) {
             $rules += ['prices.*' => 'array', 'prices.*.manual_price' => 'nullable|numeric|min:0.01|max:99999999.99',
@@ -354,6 +370,21 @@ class ProductEditor
             if (! $retail && ! $wholesale) {
                 $v->errors()->add('show_in_retail', 'অন্তত একটি বিক্রয় মাধ্যম বেছে নিন।');
             }
+            if ($wholesale) {
+                $seen = [];
+                foreach ((array) ($input['unit_conversions'] ?? []) as $i => $row) {
+                    $unit = $row['unit'] ?? null; $qty = $row['qty'] ?? null; $base = $row['base'] ?? null;
+                    if (blank($unit) && blank($qty)) { continue; }
+                    if (blank($unit) || blank($qty) || blank($base)) {
+                        $v->errors()->add("unit_conversions.$i", 'ইউনিট কনভার্শনের একক, পরিমাণ ও মূল একক তিনটিই দিন।');
+                    } elseif ($unit === $base) {
+                        $v->errors()->add("unit_conversions.$i", 'একই এককে কনভার্শন করা যাবে না (যেমন: ১ কার্টন = ২০ কেজি)।');
+                    } elseif (in_array($unit, $seen, true)) {
+                        $v->errors()->add("unit_conversions.$i", Product::unitLabel($unit).'-এর কনভার্শন একবারই দিন।');
+                    }
+                    if (! blank($unit)) { $seen[] = $unit; }
+                }
+            }
             foreach ($retail ? ($input['prices'] ?? []) : [] as $id => $row) {
                 if (! $product || ! $product->prices()->whereNull('product_variant_id')->where('sell_type', 'retail')->whereKey($id)->exists()) {
                     $v->errors()->add('prices', 'প্যাকটি এই পণ্যের নয়।');
@@ -394,6 +425,17 @@ class ProductEditor
             }
         });
         return $validator->validate();
+    }
+
+    /** Drop blank conversion rows and normalise the rest to {unit, qty, base}. */
+    private function cleanConversions(?array $rows): array
+    {
+        $out = [];
+        foreach ((array) $rows as $row) {
+            if (! is_array($row) || blank($row['unit'] ?? null) || blank($row['qty'] ?? null) || blank($row['base'] ?? null)) { continue; }
+            $out[] = ['unit' => $row['unit'], 'qty' => (float) $row['qty'], 'base' => $row['base']];
+        }
+        return $out;
     }
 
     private function newSlug(string $name): string

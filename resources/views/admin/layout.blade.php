@@ -73,6 +73,7 @@
             'label' => 'Products', 'icon' => $icons['box'],
             'items' => [
                 ['label' => 'পণ্যসমূহ',  'route' => 'admin.products.index',   'active' => 'admin.products.*'],
+                ['label' => 'প্রাইস বোর্ড', 'route' => 'admin.price-board.index', 'active' => 'admin.price-board.*'],
                 ['label' => 'ক্যাটাগরি', 'route' => 'admin.categories.index', 'active' => 'admin.categories.*'],
                 ['label' => 'কম্বো',     'route' => 'admin.combos.index',     'active' => 'admin.combos.*'],
             ],

@@ -381,6 +381,8 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
 
     Route::resource('categories', AdminCategoryController::class);
 
+    Route::get('price-board', [\App\Http\Controllers\Admin\PriceBoardController::class, 'index'])->name('price-board.index');
+    Route::post('price-board', [\App\Http\Controllers\Admin\PriceBoardController::class, 'update'])->name('price-board.update');
     Route::patch('products/{product}/quick-update', [AdminProductController::class, 'quickUpdate'])->name('products.quick-update');
     Route::post('products/uploads', [\App\Http\Controllers\ProductImageUploadController::class, 'store'])
         ->middleware('throttle:60,1')->name('products.uploads');

@@ -12,6 +12,7 @@ use App\Models\ProductPrice;
 use App\Models\WebsiteSetting;
 use App\Support\MetaCapi;
 use App\Support\Phone;
+use App\Support\PriceReply;
 use App\Support\ProductMedia;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -71,6 +72,41 @@ class BotApiController extends Controller
         }
 
         return response()->json(['data' => $this->productJson($product, true)]);
+    }
+
+    /**
+     * GET prices?q=&customer_type=retail|wholesale&limit= — price data for the customer
+     * type plus a ready Bangla reply (same text as the admin প্রাইস বোর্ড).
+     */
+    public function prices(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'customer_type' => ['nullable', Rule::in(array_keys(PriceReply::TYPES))],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+        $type = $data['customer_type'] ?? 'retail';
+
+        $query = Product::active()->with(['activeRetailPrices.variant', 'category']);
+        if ($q = trim((string) ($data['q'] ?? ''))) {
+            $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $q).'%';
+            $query->where(fn ($w) => $w->where('name_bn', 'like', $like)->orWhere('name_en', 'like', $like)
+                ->orWhere('slug', 'like', $like)->orWhere('sku', 'like', $like));
+        }
+
+        return response()->json([
+            'customer_type' => $type,
+            'data' => $query->limit($data['limit'] ?? 10)->get()->map(fn ($p) => [
+                'id' => $p->id,
+                'name' => $p->display_name,
+                'url' => route('products.show', $type === 'wholesale' ? ['product' => $p->slug, 'mode' => 'wholesale'] : $p->slug),
+                'image' => ProductMedia::url($p->coverImage($type)),
+                'in_stock' => $p->isInStock(),
+                'retail' => PriceReply::retail($p),
+                'wholesale' => PriceReply::wholesale($p),
+                'reply' => PriceReply::text($p, $type),
+            ])->values(),
+        ]);
     }
 
     /** GET catalog/highlights — content ideas for daily posts. */
@@ -200,6 +236,8 @@ class BotApiController extends Controller
             'in_stock' => $p->isInStock(),
             'is_wholesale' => $p->isWholesale(),
             'moq' => $p->moqLabel(),
+            'retail_price_per_kg' => $p->show_in_retail && (float) $p->retail_price_1kg > 0 ? (float) $p->retail_price_1kg : null,
+            'wholesale' => PriceReply::wholesale($p),
             'packs' => $p->activeRetailPrices->map(fn (ProductPrice $pr) => [
                 'price_id' => $pr->id,
                 'label' => $pr->weight_label,
