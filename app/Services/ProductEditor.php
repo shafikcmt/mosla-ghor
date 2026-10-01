@@ -38,6 +38,10 @@ class ProductEditor
                     'meta_title', 'meta_description', 'meta_keywords',
                     'main_image_alt', 'og_image_alt',
                 ]);
+                // Wholesale cover inputs only arrive while the পাইকারি section is enabled.
+                if (array_key_exists('wholesale_main_image_alt', $data)) {
+                    $fields['wholesale_main_image_alt'] = $data['wholesale_main_image_alt'];
+                }
                 // Canonical/robots can deindex or redirect ranking — admin only.
                 if ($admin) {
                     $fields += Arr::only($data, ['canonical_url', 'meta_robots']);
@@ -94,6 +98,17 @@ class ProductEditor
                     if ($fields['main_image'] !== $product->main_image) {
                         $media->retire($product->main_image);
                     }
+                }
+                // Separate পাইকারি cover photo (optional; falls back to the main image).
+                if ($adopted = $adopt('wholesale_main_image_token', 'wholesale_main', 'products/images')) {
+                    $fields['wholesale_main_image'] = $adopted;
+                    $media->retire($product->wholesale_main_image);
+                } elseif ($request->hasFile('wholesale_main_image_file')) {
+                    $fields['wholesale_main_image'] = $media->store($request->file('wholesale_main_image_file'), 'products/images', 'wholesale_main_image_file');
+                    $media->retire($product->wholesale_main_image);
+                } elseif ($request->boolean('remove_wholesale_main_image')) {
+                    $fields['wholesale_main_image'] = null;
+                    $media->retire($product->wholesale_main_image);
                 }
                 if ($adopted = $adopt('og_image_token', 'og', 'products/images')) {
                     $fields['og_image'] = $adopted;
@@ -218,6 +233,8 @@ class ProductEditor
             'retail_price_1kg' => $retail ? 'required|numeric|min:0.01|max:99999999.99' : 'exclude',
             'main_image' => ['nullable', 'string', 'max:255', 'url:http,https'],
             'main_image_file' => $image, 'remove_main_image' => 'sometimes|boolean',
+            'wholesale_main_image_file' => $image, 'remove_wholesale_main_image' => 'sometimes|boolean',
+            'wholesale_main_image_alt' => ['nullable', 'string', 'max:255', 'not_regex:/[<>]/'],
             'gallery_images' => 'sometimes|array|max:20', 'gallery_images.*' => array_merge(['required'], array_diff($image, ['nullable'])),
             'remove_gallery' => 'sometimes|array|max:100', 'remove_gallery.*' => 'string|size:64',
             'video_url' => 'nullable|url:http,https|max:255',
@@ -250,6 +267,7 @@ class ProductEditor
             'gallery_alts.*' => ['nullable', 'string', 'max:255', 'not_regex:/[<>]/'],
             // One-image-per-request uploads (see TempUpload).
             'main_image_token' => 'nullable|string|max:2000',
+            'wholesale_main_image_token' => 'nullable|string|max:2000',
             'og_image_token' => 'nullable|string|max:2000',
             'gallery_tokens' => 'sometimes|nullable|array|max:20',
             'gallery_tokens.*' => 'nullable|string|max:2000',
@@ -289,14 +307,14 @@ class ProductEditor
             $rules[$group.'.*.image_token'] = 'nullable|string|max:2000';
             $rules[$group.'.*.image_alt'] = ['nullable', 'string', 'max:255', 'not_regex:/[<>]/'];
         }
-        $messages += UploadErrors::imageMessages(['main_image_file', 'og_image_file', 'gallery_images.*', 'variants.*.image_file', 'new_variants.*.image_file']);
-        foreach (['main_image_alt' => 'মূল ছবির বিবরণ (alt)', 'og_image_alt' => 'শেয়ার ছবির বিবরণ (alt)', 'gallery_alts.*' => 'গ্যালারির ছবির বিবরণ (alt)',
+        $messages += UploadErrors::imageMessages(['main_image_file', 'wholesale_main_image_file', 'og_image_file', 'gallery_images.*', 'variants.*.image_file', 'new_variants.*.image_file']);
+        foreach (['main_image_alt' => 'মূল ছবির বিবরণ (alt)', 'wholesale_main_image_alt' => 'পাইকারি কভার ছবির বিবরণ (alt)', 'og_image_alt' => 'শেয়ার ছবির বিবরণ (alt)', 'gallery_alts.*' => 'গ্যালারির ছবির বিবরণ (alt)',
             'variants.*.image_alt' => 'ভ্যারিয়েন্ট ছবির বিবরণ (alt)', 'new_variants.*.image_alt' => 'ভ্যারিয়েন্ট ছবির বিবরণ (alt)'] as $key => $label) {
             $messages["$key.max"] = "{$label} সর্বোচ্চ ২৫৫ অক্ষর হতে পারবে।";
             $messages["$key.not_regex"] = "{$label}-এ < বা > চিহ্ন দেওয়া যাবে না।";
         }
         // Human Bangla field names (gallery/variant keys by their actual index).
-        $attributes = ['main_image_file' => 'মূল ছবি', 'og_image_file' => 'শেয়ার ছবি', 'video_file' => 'ভিডিও'];
+        $attributes = ['main_image_file' => 'মূল ছবি', 'wholesale_main_image_file' => 'পাইকারি কভার ছবি', 'og_image_file' => 'শেয়ার ছবি', 'video_file' => 'ভিডিও'];
         foreach (array_keys((array) ($input['gallery_images'] ?? [])) as $i) {
             $attributes["gallery_images.$i"] = UploadErrors::label("gallery_images.$i");
         }
@@ -320,6 +338,7 @@ class ProductEditor
                 }
             };
             $check('main_image_token', $input['main_image_token'] ?? null, 'main', 'মূল ছবি');
+            $check('wholesale_main_image_token', $input['wholesale_main_image_token'] ?? null, 'wholesale_main', 'পাইকারি কভার ছবি');
             $check('og_image_token', $input['og_image_token'] ?? null, 'og', 'শেয়ার ছবি');
             foreach ((array) ($input['gallery_tokens'] ?? []) as $i => $token) {
                 $check("gallery_tokens.$i", $token, 'gallery', 'গ্যালারির ছবি');

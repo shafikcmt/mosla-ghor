@@ -5,7 +5,10 @@
     // Resolve a usable URL for a stored image path (local 'storage/...' or full http URL).
     $imgUrl = fn($p) => \App\Support\ProductMedia::url($p);
 
-    $main    = $imgUrl($product->main_image) ?: asset('images/product-placeholder.svg');
+    // পাইকারি view shows the separate wholesale cover when one is uploaded; gallery is shared.
+    $coverChannel = (($wholesaleView ?? false) || $product->isWholesale()) ? 'wholesale' : 'retail';
+    $main    = $imgUrl($product->coverImage($coverChannel)) ?: asset('images/product-placeholder.svg');
+    $mainAlt = $product->coverImageAlt($coverChannel);
     $gallery = collect($product->gallery_images ?? [])->map($imgUrl)->filter()->values();
     // Gallery with alt text (custom per image, else "name — ছবি N").
     $galleryItems = collect($product->gallery_images ?? [])->values()
@@ -171,7 +174,7 @@
     <div>
         <div class="product-detail-frame rounded-xl overflow-hidden border border-gray-100 bg-gray-50 aspect-square">
             <button type="button" id="pd-image-pane" class="product-image-stage pd-pane" data-product-image-stage aria-label="Open product image viewer">
-            <img id="pd-main-image" src="{{ $main }}" alt="{{ $product->mainImageAlt() }}"
+            <img id="pd-main-image" src="{{ $main }}" alt="{{ $mainAlt }}"
                  class="product-detail-artwork">
             </button>
             @if($youtubeEmbed)
@@ -191,7 +194,7 @@
         <div class="mt-3 flex flex-wrap gap-2">
             <button type="button" data-product-thumbnail="{{ $main }}" aria-label="Show main product image" aria-pressed="true"
                     class="pd-thumb active w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent">
-                <img src="{{ $main }}" alt="{{ $product->mainImageAlt() }}" class="w-full h-full product-artwork" loading="lazy" decoding="async">
+                <img src="{{ $main }}" alt="{{ $mainAlt }}" class="w-full h-full product-artwork" loading="lazy" decoding="async">
             </button>
             @foreach($galleryItems as $g)
             <button type="button" data-product-thumbnail="{{ $g['url'] }}" data-product-alt="{{ $g['alt'] }}" aria-label="Show product image {{ $loop->iteration + 1 }}" aria-pressed="false"
@@ -625,7 +628,7 @@
     <div class="flex gap-4 overflow-x-auto pb-3" style="scroll-snap-type: x mandatory;">
         @foreach($relatedProducts as $rp)
         @php
-            $rpImg = $imgUrl($rp->main_image) ?: asset('images/product-placeholder.svg');
+            $rpImg = $imgUrl($rp->coverImage($relatedWholesale ? 'wholesale' : 'retail')) ?: asset('images/product-placeholder.svg');
             $rpUrl = $relatedWholesale
                 ? route('customer.wholesale.products.show', $rp->slug)
                 : route('products.show', $rp->slug);

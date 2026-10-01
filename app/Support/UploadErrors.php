@@ -31,6 +31,7 @@ class UploadErrors
         }
         return match (true) {
             $key === 'main_image_file' => 'মূল ছবি',
+            $key === 'wholesale_main_image_file' => 'পাইকারি কভার ছবি',
             $key === 'og_image_file' => 'শেয়ার ছবি',
             $key === 'video_file' => 'ভিডিও',
             (bool) preg_match('/^gallery_images\.(\d+)$/', $key, $m) => 'গ্যালারির '.self::bn((int) $m[1] + 1).' নম্বর ছবি',

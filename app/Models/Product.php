@@ -22,6 +22,7 @@ class Product extends Model
         'brand',
         'unit',
         'main_image',
+        'wholesale_main_image',
         'gallery_images',
         'video_url',
         'video_path',
@@ -51,6 +52,7 @@ class Product extends Model
         'canonical_url',
         'meta_robots',
         'main_image_alt',
+        'wholesale_main_image_alt',
         'og_image_alt',
         'gallery_alts',
     ];
@@ -248,6 +250,25 @@ class Product extends Model
         return trim((string) $this->main_image_alt) ?: $this->display_name;
     }
 
+    /**
+     * Cover photo for a showcase channel. পাইকারি uses its own cover when one is
+     * uploaded, otherwise the normal main image. The gallery is shared by both.
+     */
+    public function coverImage(string $channel = 'retail'): ?string
+    {
+        return ($channel === 'wholesale' && filled($this->wholesale_main_image))
+            ? $this->wholesale_main_image
+            : $this->main_image;
+    }
+
+    public function coverImageAlt(string $channel = 'retail'): string
+    {
+        if ($channel === 'wholesale' && filled($this->wholesale_main_image)) {
+            return trim((string) $this->wholesale_main_image_alt) ?: $this->mainImageAlt();
+        }
+        return $this->mainImageAlt();
+    }
+
     public function ogImageAlt(): string
     {
         return trim((string) $this->og_image_alt) ?: $this->mainImageAlt();
@@ -258,6 +279,9 @@ class Product extends Model
     {
         if ($path !== null && $path === $this->main_image) {
             return $this->mainImageAlt();
+        }
+        if ($path !== null && $path === $this->wholesale_main_image) {
+            return $this->coverImageAlt('wholesale');
         }
         if ($path !== null) {
             $custom = trim((string) (($this->gallery_alts ?? [])[hash('sha256', $path)] ?? ''));

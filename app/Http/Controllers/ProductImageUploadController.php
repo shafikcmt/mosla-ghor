@@ -22,7 +22,7 @@ class ProductImageUploadController extends Controller
         }
 
         $label = match ($request->input('kind')) {
-            'og' => 'শেয়ার ছবি', 'gallery' => 'গ্যালারির ছবি', 'variant' => 'ভ্যারিয়েন্টের ছবি', default => 'মূল ছবি',
+            'og' => 'শেয়ার ছবি', 'gallery' => 'গ্যালারির ছবি', 'variant' => 'ভ্যারিয়েন্টের ছবি', 'wholesale_main' => 'পাইকারি কভার ছবি', default => 'মূল ছবি',
         };
         UploadErrors::guard($request, ['file' => $label]);
         $request->validate([

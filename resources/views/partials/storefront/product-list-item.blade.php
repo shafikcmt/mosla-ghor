@@ -18,8 +18,9 @@
 
                 {{-- Thumb --}}
                 <div class="w-28 sm:w-36 flex-shrink-0 relative h-36 bg-gray-50">
-                    @if($product->main_image)
-                        <img src="{{ \App\Support\ProductMedia::url($product->main_image) }}" alt="{{ $product->mainImageAlt() }}" loading="lazy" decoding="async"
+                    @if($listCover = $product->coverImage($listMode))
+                        <img src="{{ \App\Support\ProductMedia::url($listCover) }}" alt="{{ $product->coverImageAlt($listMode) }}" loading="lazy" decoding="async"
+                             @if(filled($product->wholesale_main_image) && $product->main_image) data-cover-retail="{{ \App\Support\ProductMedia::url($product->main_image) }}" data-cover-wholesale="{{ \App\Support\ProductMedia::url($product->wholesale_main_image) }}" data-alt-retail="{{ $product->coverImageAlt('retail') }}" data-alt-wholesale="{{ $product->coverImageAlt('wholesale') }}" @endif
                              class="w-full h-full product-artwork">
                     @else
                         <div class="w-full h-full bg-gradient-to-br from-[#14532d] to-[#1a6b3a] flex items-center justify-center">

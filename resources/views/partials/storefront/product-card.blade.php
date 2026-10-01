@@ -24,7 +24,10 @@
 
                 {{-- Image slideshow / placeholder --}}
                 @php
-                    $cardSlides = collect([$product->main_image])
+                    // First slide = channel cover (separate পাইকারি cover when uploaded);
+                    // gallery is shared. data-cover-* lets the JS mode toggle swap it.
+                    $hasWsCover = filled($product->wholesale_main_image);
+                    $cardSlides = collect([$product->coverImage($listMode)])
                         ->merge($product->gallery_images ?? [])
                         ->filter()->values();
                 @endphp
@@ -33,6 +36,7 @@
                     @if($cardSlides->isNotEmpty())
                         @foreach($cardSlides as $si => $slide)
                         <img src="{{ \App\Support\ProductMedia::url($slide) }}" alt="{{ $product->imageAlt($slide, $si + 1) }}" loading="lazy" decoding="async" @if($si === 0) width="400" height="300" @endif
+                             @if($si === 0 && $hasWsCover && $product->main_image) data-cover-retail="{{ \App\Support\ProductMedia::url($product->main_image) }}" data-cover-wholesale="{{ \App\Support\ProductMedia::url($product->wholesale_main_image) }}" data-alt-retail="{{ $product->coverImageAlt('retail') }}" data-alt-wholesale="{{ $product->coverImageAlt('wholesale') }}" @endif
                              class="card-slide absolute inset-0 w-full h-full product-artwork transition-opacity duration-500"
                              style="{{ $si > 0 ? 'opacity:0;' : '' }}">
                         @endforeach
