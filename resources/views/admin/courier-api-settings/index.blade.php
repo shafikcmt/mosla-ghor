@@ -85,12 +85,7 @@
 <h3 class="font-semibold text-gray-800 text-sm mb-3">কুরিয়ারসমূহ</h3>
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     @foreach($couriers as $courier)
-    @php
-        $currentUrl = $courier->base_url;
-        $isCustom   = $currentUrl && ! in_array($currentUrl, $known, true);
-        $baseSel    = $isCustom ? 'custom' : ($currentUrl ?: ($known[0] ?? ''));
-    @endphp
-    <div x-data="{ open:false, tab:'basic', replaceCreds:false, baseSel:@js($baseSel) }"
+    <div x-data="{ open:@js((string) request('courier', old('courier_id', old('courier_basic_id'))) === (string) $courier->id), tab:@js(request('tab', 'basic') === 'api' || old('courier_id') ? 'api' : 'basic'), replaceCreds:false }"
          class="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col">
 
         {{-- Card header --}}
@@ -125,19 +120,17 @@
             <button @click="open=true; tab='basic'"
                     class="bg-[#14532d] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-[#0d3520]">Manage</button>
             @if($courier->supportsApi())
-            <form method="POST" action="{{ route('admin.courier-api-settings.diagnose', $courier) }}">
-                @csrf <input type="hidden" name="type" value="full">
-                <button class="border border-gray-200 text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-50">🔌 Test</button>
+            <form method="POST" action="{{ route('admin.courier-api-settings.test', $courier) }}">
+                @csrf
+                <button class="border border-gray-200 text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-50">Test Connection</button>
             </form>
-            <button @click="open=true; tab='diag'"
-                    class="border border-gray-200 text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-50">Diagnostics</button>
             @else
             <span class="text-xs text-gray-400">ম্যানুয়াল কুরিয়ার — API নেই।</span>
             @endif
         </div>
 
         {{-- ── Manage slide-over ─────────────────────────────────────── --}}
-        <div x-cloak x-show="open" class="fixed inset-0 z-40" x-transition.opacity>
+        <div x-cloak x-show="open" class="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="{{ $courier->name }} settings" @keydown.escape.window="open=false" x-transition.opacity>
             <div class="absolute inset-0 bg-black/40" @click="open=false"></div>
             <div class="absolute right-0 top-0 h-full w-full max-w-lg bg-white shadow-xl flex flex-col"
                  x-transition:enter="transition ease-out duration-200" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0">
@@ -146,138 +139,85 @@
                         <h3 class="font-semibold text-gray-800">{{ $courier->name }} — Manage</h3>
                         <x-courier.badges :courier="$courier" :only="['status','type','configured']" class="mt-1" />
                     </div>
-                    <button @click="open=false" class="text-gray-400 hover:text-gray-700 text-xl leading-none">&times;</button>
+                    <button @click="open=false" aria-label="Close courier settings" class="text-gray-400 hover:text-gray-700 text-xl leading-none">&times;</button>
                 </div>
 
-                {{-- Tabs --}}
-                <div class="flex gap-1 px-4 pt-3 border-b text-xs font-medium overflow-x-auto">
-                    @php
-                        $tabs = ['basic' => 'Basic'];
-                        if ($courier->supportsApi()) { $tabs['credentials'] = 'Credentials'; $tabs['diag'] = 'Diagnostics'; }
-                        $tabs['notes'] = 'Notes';
-                    @endphp
-                    @foreach($tabs as $key => $label)
-                    <button type="button" @click="tab='{{ $key }}'"
-                            :class="tab==='{{ $key }}' ? 'border-[#14532d] text-[#14532d]' : 'border-transparent text-gray-500'"
-                            class="px-3 py-2 border-b-2 -mb-px whitespace-nowrap">{{ $label }}</button>
+                <div class="flex gap-1 px-4 pt-3 border-b text-sm font-medium" role="tablist" aria-label="Courier settings">
+                    @foreach(['basic' => 'Basic', 'api' => 'API Configuration'] as $key => $label)
+                    <button type="button" role="tab" id="courier-{{ $courier->id }}-{{ $key }}-tab"
+                            aria-controls="courier-{{ $courier->id }}-{{ $key }}" :aria-selected="tab==='{{ $key }}'"
+                            @keydown.right.prevent="tab='api'; $el.nextElementSibling?.focus()" @keydown.left.prevent="tab='basic'; $el.previousElementSibling?.focus()"
+                            @click="tab='{{ $key }}'" :class="tab==='{{ $key }}' ? 'border-[#14532d] text-[#14532d]' : 'border-transparent text-gray-500'"
+                            class="px-3 py-3 border-b-2 whitespace-nowrap">{{ $label }}</button>
                     @endforeach
                 </div>
-
                 <div class="flex-1 overflow-y-auto">
-                    {{-- Settings form: basic / credentials / notes --}}
-                    <form method="POST" action="{{ route('admin.courier-api-settings.update', $courier) }}" autocomplete="off"
-                          x-show="tab==='basic' || tab==='credentials' || tab==='notes'" class="p-5 space-y-4">
-                        @csrf @method('PUT')
-                        <input type="text" name="fake_username" autocomplete="username" tabindex="-1" aria-hidden="true" style="display:none">
-                        <input type="password" name="fake_password" autocomplete="new-password" tabindex="-1" aria-hidden="true" style="display:none">
-
-                        {{-- BASIC --}}
-                        <div x-show="tab==='basic'" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">স্ট্যাটাস</label>
-                                <select name="status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#14532d]">
-                                    <option value="active" {{ $courier->status === 'active' ? 'selected' : '' }}>সক্রিয়</option>
-                                    <option value="inactive" {{ $courier->status === 'inactive' ? 'selected' : '' }}>নিষ্ক্রিয়</option>
-                                </select>
-                            </div>
-                            @if($courier->supportsApi())
-                            <label class="flex items-center gap-2 text-sm text-gray-700">
-                                <input type="checkbox" name="api_enabled" value="1" {{ old('api_enabled', $courier->api_enabled) ? 'checked' : '' }} class="w-4 h-4 accent-[#14532d]">
-                                API সংযোগ সক্রিয় করুন
-                            </label>
-                            @endif
-                            <div class="text-xs text-gray-400 bg-gray-50 rounded-lg p-3">
-                                ভেন্ডর অ্যাক্সেস (vendor allowed) ও বেসিক তথ্য
-                                <a href="{{ route('admin.couriers.index') }}" class="text-indigo-600 hover:underline">কুরিয়ার ম্যানেজমেন্ট</a> পেজ থেকে।
-                            </div>
-                        </div>
-
-                        {{-- CREDENTIALS --}}
-                        @if($courier->supportsApi())
-                        <div x-show="tab==='credentials'" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Base URL</label>
-                                <select name="base_url_select" x-model="baseSel"
-                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#14532d]">
-                                    @foreach($known as $url)
-                                    <option value="{{ $url }}">{{ $url }}</option>
-                                    @endforeach
-                                    <option value="custom">কাস্টম URL…</option>
-                                </select>
-                                <input type="text" name="base_url_custom" x-show="baseSel==='custom'"
-                                       value="{{ $isCustom ? $currentUrl : '' }}" placeholder="https://your-endpoint/api/v1"
-                                       class="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
-                            </div>
-
-                            <div class="flex items-start gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                                <input type="checkbox" name="replace_api_credentials" value="1" x-model="replaceCreds" class="mt-0.5 w-4 h-4 accent-[#14532d]">
-                                <div class="text-sm text-gray-700">
-                                    আমি API Key / Secret পরিবর্তন করতে চাই
-                                    <span class="block text-xs text-gray-400">
-                                        বর্তমান:
-                                        <span class="font-medium {{ $courier->isConfigured() ? 'text-emerald-600' : 'text-red-600' }}">
-                                            {{ $courier->isConfigured() ? 'Configured' : 'Not configured' }}</span>
-                                        @if($courier->api_key) · Key: {{ $courier->maskedKey() }} @endif
-                                    </span>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">API Key <span class="normal-case text-gray-400">(ফাঁকা রাখলে পরিবর্তন হবে না)</span></label>
-                                <input type="text" name="api_key" autocomplete="new-password" :disabled="!replaceCreds" :readonly="!replaceCreds"
-                                       :class="replaceCreds ? '' : 'bg-gray-100'"
-                                       placeholder="{{ $courier->api_key ? 'বর্তমান: ' . $courier->maskedKey() : 'এখনো সেট করা হয়নি' }}"
-                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Secret Key <span class="normal-case text-gray-400">(ফাঁকা রাখলে পরিবর্তন হবে না)</span></label>
-                                <input type="password" name="api_secret" autocomplete="new-password" :disabled="!replaceCreds" :readonly="!replaceCreds"
-                                       :class="replaceCreds ? '' : 'bg-gray-100'"
-                                       placeholder="{{ $courier->api_secret ? 'বর্তমান: ' . $courier->maskedSecret() : 'এখনো সেট করা হয়নি' }}"
-                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
-                            </div>
-                            @if($courier->api_enabled && ! $courier->isConfigured())
-                            <div class="text-xs bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2">
-                                ⚠ API চালু আছে কিন্তু credential নেই। অর্ডার পাঠানোর আগে credential দিন।
-                            </div>
-                            @endif
-                        </div>
+                    <section x-show="tab==='basic'" id="courier-{{ $courier->id }}-basic" role="tabpanel" aria-labelledby="courier-{{ $courier->id }}-basic-tab" class="p-5">
+                        @include('admin.couriers.manage-basic', ['courier' => $courier])
+                    </section>
+                    <section x-show="tab==='api'" id="courier-{{ $courier->id }}-api" role="tabpanel" aria-labelledby="courier-{{ $courier->id }}-api-tab" class="p-5 space-y-4">
+                        @if(! $courier->supportsApi())
+                        <p class="text-sm text-gray-600">{{ $courier->name }} API integration is not implemented. Use manual booking and enter the tracking code on the order. API credentials and connection testing are unavailable.</p>
+                        @else
+                        @if($courier->courier_api_last_checked_at)
+                        <p class="text-sm text-gray-600">Last API result: {{ $courier->courier_api_last_status }} · {{ $courier->courier_api_last_checked_at->format('Y-m-d H:i') }}</p>
+                        @else
+                        <p class="text-sm text-gray-500">Connection not tested for the current configuration.</p>
                         @endif
-
-                        {{-- NOTES --}}
-                        <div x-show="tab==='notes'" class="space-y-4">
+                        <form method="POST" action="{{ route('admin.courier-api-settings.update', $courier) }}" autocomplete="off" class="space-y-4">
+                            @csrf @method('PUT')
+                            <input type="hidden" name="courier_id" value="{{ $courier->id }}">
+                            @if((string) old('courier_id') === (string) $courier->id && $errors->any())
+                            <div class="text-sm text-red-700" role="alert">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>
+                            @endif
+                            <label class="flex items-center gap-2 text-sm text-gray-700">
+                                <input type="checkbox" name="api_enabled" value="1" {{ $courier->api_enabled ? 'checked' : '' }} class="w-4 h-4 accent-[#14532d]">
+                                Integration enabled
+                            </label>
                             <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">নোট</label>
-                                <textarea name="notes" rows="4" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">{{ old('notes', $courier->notes) }}</textarea>
+                                <label for="courier-{{ $courier->id }}-url" class="block text-sm font-medium text-gray-700 mb-1">API endpoint</label>
+                                <select id="courier-{{ $courier->id }}-url" name="base_url_select" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                    @foreach($known as $url)
+                                    <option value="{{ $url }}" {{ $courier->base_url === $url ? 'selected' : '' }}>{{ $url }}</option>
+                                    @endforeach
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">Select the endpoint supplied by your courier account.</p>
+                                @if($courier->base_url && ! in_array($courier->base_url, $known, true))
+                                <p class="text-sm text-red-700">The saved endpoint is unsupported. Select an endpoint above and save before testing.</p>
+                                @endif
                             </div>
-                        </div>
-
-                        <div class="pt-2 border-t flex gap-2" x-show="tab!=='diag'">
-                            <button type="submit" class="bg-[#14532d] text-white text-sm px-5 py-2 rounded-lg hover:bg-[#0d3520]">সংরক্ষণ করুন</button>
-                            <button type="button" @click="open=false" class="text-sm text-gray-500 px-5 py-2 border border-gray-300 rounded-lg">বন্ধ করুন</button>
-                        </div>
-                    </form>
-
-                    {{-- DIAGNOSTICS (separate forms, not nested) --}}
-                    @if($courier->supportsApi())
-                    <div x-show="tab==='diag'" class="p-5 space-y-4">
-                        <p class="text-xs text-gray-500">DNS / SSL / API ব্যালেন্স আলাদাভাবে অথবা একসাথে যাচাই করুন। ফলাফল উপরে দেখানো হবে।</p>
-                        <div class="grid grid-cols-2 gap-2">
-                            @foreach(['dns' => '🌐 DNS Test', 'ssl' => '🔒 SSL / cURL', 'balance' => '💰 API Balance', 'full' => '🔌 Full Test'] as $type => $label)
-                            <form method="POST" action="{{ route('admin.courier-api-settings.diagnose', $courier) }}">
-                                @csrf <input type="hidden" name="type" value="{{ $type }}">
-                                <button class="w-full {{ $type === 'full' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700' }} text-xs font-semibold px-3 py-2 rounded-lg transition-colors">{{ $label }}</button>
-                            </form>
+                            <label class="flex items-center gap-2 text-sm text-gray-700">
+                                <input type="checkbox" name="replace_api_credentials" value="1" x-model="replaceCreds" class="w-4 h-4 accent-[#14532d]">
+                                Replace API credentials
+                            </label>
+                            @foreach(['api_key' => 'API Key', 'api_secret' => 'Secret Key'] as $field => $label)
+                            <div>
+                                <label for="courier-{{ $courier->id }}-{{ $field }}" class="block text-sm font-medium text-gray-700 mb-1">{{ $label }}</label>
+                                <input id="courier-{{ $courier->id }}-{{ $field }}" type="password" name="{{ $field }}" autocomplete="new-password"
+                                       :disabled="!replaceCreds" placeholder="{{ filled($courier->{$field}) ? '••••••••' : 'Not configured' }}"
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            </div>
                             @endforeach
-                        </div>
-                        <details class="text-xs text-gray-500">
-                            <summary class="cursor-pointer text-indigo-600 hover:underline">টার্মিনাল কমান্ড (ম্যানুয়াল চেক)</summary>
-                            <pre class="mt-2 bg-gray-900 text-gray-100 rounded-lg p-3 overflow-x-auto leading-relaxed text-[11px]">php -r "echo gethostbyname('portal.steadfast.com.bd').PHP_EOL;"
-curl -Iv https://portal.steadfast.com.bd/api/v1/get_balance
-curl -Iv https://portal.packzy.com/api/v1/get_balance</pre>
-                            <p class="mt-1 text-gray-400">Local-এ resolve না হলে কিন্তু live-এ হলে → local DNS issue। Live-এ DNS ঠিক কিন্তু SSL mismatch → Steadfast support থেকে সঠিক base URL confirm করুন।</p>
+                            <p class="text-xs text-gray-500">Blank inputs keep existing credentials. Save settings before testing. Saving never books a shipment.</p>
+                            <button class="bg-[#14532d] text-white text-sm px-5 py-2 rounded-lg hover:bg-[#0d3520]">Save Settings</button>
+                        </form>
+                        <form method="POST" action="{{ route('admin.courier-api-settings.test', $courier) }}">
+                            @csrf
+                            <button class="border border-gray-300 text-gray-700 text-sm px-5 py-2 rounded-lg hover:bg-gray-50">Test Connection</button>
+                        </form>
+                        <details class="text-sm text-gray-600">
+                            <summary class="cursor-pointer py-2">Advanced diagnostics</summary>
+                            <div class="grid grid-cols-2 gap-2 mt-2">
+                                @foreach(['dns' => 'DNS Test', 'ssl' => 'SSL Test', 'full' => 'Full Test'] as $type => $label)
+                                <form method="POST" action="{{ route('admin.courier-api-settings.diagnose', $courier) }}">
+                                    @csrf <input type="hidden" name="type" value="{{ $type }}">
+                                    <button class="w-full border border-gray-300 rounded-lg px-3 py-2">{{ $label }}</button>
+                                </form>
+                                @endforeach
+                            </div>
                         </details>
-                    </div>
-                    @endif
+                        @endif
+                    </section>
                 </div>
             </div>
         </div>

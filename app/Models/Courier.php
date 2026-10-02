@@ -15,6 +15,8 @@ class Courier extends Model
     ];
 
     protected $casts = [
+        'api_key'        => 'encrypted',
+        'api_secret'     => 'encrypted',
         'api_enabled'    => 'boolean',
         'is_default'     => 'boolean',
         'vendor_allowed' => 'boolean',
@@ -159,15 +161,6 @@ class Courier extends Model
 
     protected function mask(?string $value): string
     {
-        if (empty($value)) {
-            return '';
-        }
-
-        $len = strlen($value);
-        if ($len <= 4) {
-            return str_repeat('•', $len);
-        }
-
-        return str_repeat('•', max(4, $len - 4)) . substr($value, -4);
+        return filled($value) ? '••••••••' : '';
     }
 }

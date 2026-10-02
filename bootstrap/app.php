@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [\App\Http\Middleware\MaintenanceMode::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->dontFlash(['api_key', 'api_secret']);
         // Whole request bigger than PHP's post_max_size (thrown before sessions/controllers run).
         $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, $request) {
             $limit = \App\Support\ServerLimits::human(\App\Support\ServerLimits::postMax());
@@ -48,7 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json(['message' => 'Session expired. Please try again.'], 419);
             }
             return redirect()->back()
-                ->withInput($request->except('password', 'password_confirmation'))
+                ->withInput($request->except('password', 'password_confirmation', 'api_key', 'api_secret'))
                 ->with('error', 'Session expired. Please try again. (পেজটি refresh করে আবার চেষ্টা করুন।)');
         });
     })->create();

@@ -70,13 +70,12 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
         try {
             $response = $this->client($courier)->post($endpoint, $payload);
 
-            // NOTE: never log api_key/api_secret — only the invoice + sanitized response.
+            // Never log credentials or provider response bodies.
             Log::info('Steadfast create_order', [
                 'courier'  => $courier->name,
                 'invoice'  => $payload['invoice'] ?? null,
                 'endpoint' => $endpoint,
                 'status'   => $response->status(),
-                'body'     => $this->sanitize($response->body()),
             ]);
 
             if ($response->successful()) {
@@ -135,7 +134,6 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
                 'courier'  => $courier->name,
                 'endpoint' => $endpoint,
                 'status'   => $response->status(),
-                'body'     => $this->sanitize($response->body()),
             ]);
 
             if ($response->successful()
@@ -151,7 +149,7 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
                     'message'     => $message,
                     'level'       => 'success',
                     'status_code' => $response->status(),
-                    'data'        => $response->json(),
+                    'data'        => null,
                 ];
             }
 
@@ -228,13 +226,13 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
 
             return $this->diag(true, 'SSL / সংযোগ ঠিক আছে (HTTP ' . $response->status() . ')।', 'success');
         } catch (ConnectionException $e) {
-            $raw = $e->getMessage();
+            $raw = $this->redact($courier, $e->getMessage());
             $message = $this->classifyConnectionError($raw);
             $this->recordResult($courier, false, $message, $raw);
 
             return $this->diag(false, $message, 'error', $raw);
         } catch (\Throwable $e) {
-            return $this->diag(false, 'SSL/সংযোগ যাচাই ব্যর্থ হয়েছে।', 'error', $e->getMessage());
+            return $this->diag(false, 'SSL/সংযোগ যাচাই ব্যর্থ হয়েছে।', 'error', $this->redact($courier, $e->getMessage()));
         }
     }
 
@@ -274,6 +272,7 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
     private function client(Courier $courier)
     {
         return Http::withHeaders($this->headers($courier))
+            ->withoutRedirecting()
             ->connectTimeout(self::CONNECT_TIMEOUT)
             ->timeout(self::TIMEOUT)
             ->acceptJson();
@@ -311,7 +310,7 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
 
         $url = rtrim($url, '/');
 
-        if (! filter_var($url, FILTER_VALIDATE_URL)) {
+        if (! in_array($url, self::KNOWN_BASE_URLS, true)) {
             return null;
         }
 
@@ -336,13 +335,13 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
      */
     private function handleConnectionError(Courier $courier, \Throwable $e, string $baseUrl, string $endpoint, string $errorKey = 'message'): array
     {
-        $raw = $e->getMessage();
+        $raw = $this->redact($courier, $e->getMessage());
 
         Log::error('Steadfast connection error', [
             'courier'   => $courier->name,
             'base_url'  => $baseUrl,
             'endpoint'  => $endpoint,
-            'curl_error'=> $raw, // never contains the secret — headers are not in the message
+            'curl_error'=> $raw, // Credential values have been redacted.
             'timestamp' => now()->toDateTimeString(),
         ]);
 
@@ -395,7 +394,7 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
             'courier'   => $courier->name,
             'base_url'  => $baseUrl,
             'endpoint'  => $endpoint,
-            'error'     => $e->getMessage(),
+            'error'     => $this->redact($courier, $e->getMessage()),
             'timestamp' => now()->toDateTimeString(),
         ]);
 
@@ -404,7 +403,7 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
             'Steadfast API কল করার সময় একটি সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন বা লগ দেখুন।',
             'error',
             errorKey: $errorKey,
-            technical: $e->getMessage()
+            technical: $this->redact($courier, $e->getMessage())
         );
     }
 
@@ -422,7 +421,7 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
             'message'     => $message,
             'level'       => $level,
             'status_code' => $statusCode,
-            'data'        => $data,
+            'data'        => null,
         ];
 
         if ($errorKey === 'error') {
@@ -439,38 +438,16 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
     {
         $prefix = $status ? "Steadfast API ত্রুটি ($status): " : 'Steadfast API ত্রুটি: ';
 
-        if (is_array($data) && ! empty($data['message']) && is_string($data['message'])) {
-            $msg = $data['message'];
-
-            // Laravel-style validation errors → flatten.
-            if (! empty($data['errors']) && is_array($data['errors'])) {
-                $flat = [];
-                foreach ($data['errors'] as $messages) {
-                    $flat[] = is_array($messages) ? implode(', ', $messages) : (string) $messages;
-                }
-                if ($flat) {
-                    $msg .= ' (' . implode('; ', $flat) . ')';
-                }
-            }
-
-            return $prefix . $msg;
-        }
-
-        $body = trim($this->sanitize($rawBody ?? ''));
-
-        return $prefix . ($body !== '' ? mb_substr($body, 0, 300) : 'অজানা ত্রুটি।');
+        return $prefix . 'The provider rejected the request. Check the saved configuration and try again.';
     }
 
-    /**
-     * Defensive: strip anything that looks like a credential from logged/echoed text.
-     */
-    private function sanitize(?string $text): string
+    private function redact(Courier $courier, ?string $text): string
     {
-        if (empty($text)) {
-            return '';
-        }
-
-        return preg_replace('/("?(?:api[_-]?key|secret[_-]?key)"?\s*[:=]\s*")([^"]+)(")/i', '$1***$3', $text) ?? $text;
+        return str_replace(
+            array_filter([$courier->api_key, $courier->api_secret], fn ($value) => filled($value)),
+            '••••••••',
+            (string) $text
+        );
     }
 
     /**
@@ -487,7 +464,7 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
                 'courier_api_last_error'      => $success ? null : mb_substr((string) ($technical ?? $message), 0, 1000),
             ])->save();
         } catch (\Throwable $e) {
-            Log::warning('Could not record courier API result', ['error' => $e->getMessage()]);
+            Log::warning('Could not record courier API result', ['courier_id' => $courier->id]);
         }
     }
 }
