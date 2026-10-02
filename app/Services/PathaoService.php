@@ -9,10 +9,8 @@ namespace App\Services;
  * (inherits ManualCourierService). When the real Pathao API is implemented:
  *   1. Override supportsApi() to return true.
  *   2. Implement createParcel()/testConnection() against Pathao's API.
- *   3. Add 'pathao' to Courier::API_SUPPORTED_SLUGS.
+ *   3. Implement CourierConfigurationInterface with trusted configuration metadata.
  * No admin/vendor flow changes are needed — CourierService resolves this driver
  * via CourierDriverFactory by slug.
  */
-class PathaoService extends ManualCourierService
-{
-}
+class PathaoService extends ManualCourierService {}

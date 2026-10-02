@@ -12,28 +12,31 @@ use Illuminate\Http\Request;
 
 class CourierApiSettingController extends Controller
 {
-    public function index()
+    public function index(CourierDriverFactory $drivers)
     {
         $couriers = Courier::orderBy('name')->get();
         $settings = CourierSetting::current();
+        $configurations = $couriers->mapWithKeys(fn (Courier $courier) => [$courier->id => $drivers->configuration($courier)]);
+        $diagnostics = $couriers->mapWithKeys(fn (Courier $courier) => [$courier->id => $drivers->for($courier) instanceof CourierDiagnosticsInterface]);
 
-        return view('admin.courier-api-settings.index', compact('couriers', 'settings'));
+        return view('admin.courier-api-settings.index', compact('couriers', 'settings', 'configurations', 'diagnostics'));
     }
 
     public function update(UpdateCourierApiSettingsRequest $request, Courier $courier)
     {
-        $data = $request->safe()->only(['api_key', 'api_secret', 'base_url']);
-        if ($request->filled('base_url_select')) {
+        $configuration = $request->configuration();
+        $data = $request->safe()->only(array_keys($configuration->fields));
+        if (isset($configuration->fields['base_url']) && $request->filled('base_url_select')) {
             $data['base_url'] = $request->input('base_url_select');
         }
-        foreach (['api_key', 'api_secret'] as $field) {
-            if (! $request->boolean('replace_api_credentials') || ! $request->filled($field)) {
+        foreach ($configuration->fields as $field => $schema) {
+            if ($schema['secret'] && (! $request->boolean('replace_api_credentials') || ! $request->filled($field))) {
                 unset($data[$field]);
             }
         }
         $data['api_enabled'] = $request->boolean('api_enabled');
         $courier->fill($data);
-        if ($courier->isDirty(['api_key', 'api_secret', 'base_url'])) {
+        if ($courier->isDirty(array_keys($configuration->fields))) {
             $courier->courier_api_last_checked_at = null;
             $courier->courier_api_last_status = null;
             $courier->courier_api_last_error = null;
@@ -42,7 +45,7 @@ class CourierApiSettingController extends Controller
         $courier->save();
 
         return redirect()->route('admin.courier-api-settings.index', ['courier' => $courier->id, 'tab' => 'api'])
-            ->with('success', $courier->name . ' API settings saved.');
+            ->with('success', $courier->name.' API settings saved.');
     }
 
     /**
@@ -50,9 +53,9 @@ class CourierApiSettingController extends Controller
      */
     public function test(Courier $courier, CourierDriverFactory $drivers)
     {
-        if (! $courier->supportsApi()) {
+        if (! $drivers->configuration($courier)?->canTestConnection) {
             return redirect()->route('admin.courier-api-settings.index', ['courier' => $courier->id, 'tab' => 'api'])
-                ->with('error', $courier->name . ' এর জন্য API টেস্ট সাপোর্ট নেই (ম্যানুয়াল কুরিয়ার)।');
+                ->with('error', $courier->name.' এর জন্য API টেস্ট সাপোর্ট নেই (ম্যানুয়াল কুরিয়ার)।');
         }
 
         $result = $drivers->for($courier)->testConnection($courier);
@@ -64,7 +67,7 @@ class CourierApiSettingController extends Controller
         }
 
         return redirect()->route('admin.courier-api-settings.index', ['courier' => $courier->id, 'tab' => 'api'])
-            ->with($flashKey, $courier->name . ' টেস্ট: ' . $result['message']);
+            ->with($flashKey, $courier->name.' টেস্ট: '.$result['message']);
     }
 
     /**
@@ -76,7 +79,7 @@ class CourierApiSettingController extends Controller
 
         if (! $courier->supportsApi() || ! $driver instanceof CourierDiagnosticsInterface) {
             return redirect()->route('admin.courier-api-settings.index', ['courier' => $courier->id, 'tab' => 'api'])
-                ->with('error', $courier->name . ' এর জন্য API ডায়াগনস্টিক সাপোর্ট নেই (ম্যানুয়াল কুরিয়ার)।');
+                ->with('error', $courier->name.' এর জন্য API ডায়াগনস্টিক সাপোর্ট নেই (ম্যানুয়াল কুরিয়ার)।');
         }
 
         $type = $request->input('type', 'full');
@@ -85,20 +88,20 @@ class CourierApiSettingController extends Controller
         }
 
         $result = match ($type) {
-            'dns'     => $driver->testDns($courier),
-            'ssl'     => $driver->testSsl($courier),
+            'dns' => $driver->testDns($courier),
+            'ssl' => $driver->testSsl($courier),
             'balance' => $driver->testConnection($courier),
-            default   => $driver->fullTest($courier),
+            default => $driver->fullTest($courier),
         };
 
-        $labels  = ['dns' => 'DNS', 'ssl' => 'SSL', 'balance' => 'Balance', 'full' => 'Full'];
+        $labels = ['dns' => 'DNS', 'ssl' => 'SSL', 'balance' => 'Balance', 'full' => 'Full'];
         $flashKey = $result['success'] ? 'success' : ($result['level'] ?? 'error');
         if (! in_array($flashKey, ['success', 'warning', 'error'], true)) {
             $flashKey = 'error';
         }
 
         return redirect()->route('admin.courier-api-settings.index', ['courier' => $courier->id, 'tab' => 'api'])
-            ->with($flashKey, $courier->name . ' — ' . ($labels[$type] ?? 'Test') . ' টেস্ট: ' . $result['message']);
+            ->with($flashKey, $courier->name.' — '.($labels[$type] ?? 'Test').' টেস্ট: '.$result['message']);
     }
 
     /**
@@ -110,21 +113,21 @@ class CourierApiSettingController extends Controller
             'vendor_courier_mode' => 'required|in:admin_only,vendor_can_request,vendor_can_parcel',
         ], [
             'vendor_courier_mode.required' => 'কুরিয়ার মোড নির্বাচন করুন।',
-            'vendor_courier_mode.in'       => 'কুরিয়ার মোড সঠিক নয়।',
+            'vendor_courier_mode.in' => 'কুরিয়ার মোড সঠিক নয়।',
         ]);
 
         $mode = $data['vendor_courier_mode'];
 
         $settings = CourierSetting::current();
         $settings->update([
-            'vendor_courier_mode'             => $mode,
+            'vendor_courier_mode' => $mode,
             // Keep the legacy column consistent so nothing reading it breaks.
-            'courier_selection_mode'          => CourierSetting::MODE_TO_LEGACY[$mode] ?? 'admin_only',
-            'vendor_can_select_courier'       => $request->boolean('vendor_can_select_courier'),
-            'vendor_can_update_tracking'      => $request->boolean('vendor_can_update_tracking'),
-            'vendor_can_mark_handover'        => $request->boolean('vendor_can_mark_handover'),
+            'courier_selection_mode' => CourierSetting::MODE_TO_LEGACY[$mode] ?? 'admin_only',
+            'vendor_can_select_courier' => $request->boolean('vendor_can_select_courier'),
+            'vendor_can_update_tracking' => $request->boolean('vendor_can_update_tracking'),
+            'vendor_can_mark_handover' => $request->boolean('vendor_can_mark_handover'),
             'vendor_can_setup_pickup_address' => $request->boolean('vendor_can_setup_pickup_address'),
-            'vendor_can_create_parcel'        => $request->boolean('vendor_can_create_parcel'),
+            'vendor_can_create_parcel' => $request->boolean('vendor_can_create_parcel'),
         ]);
 
         return redirect()->route('admin.courier-api-settings.index')

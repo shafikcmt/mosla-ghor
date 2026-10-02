@@ -2,7 +2,6 @@
 @section('title', 'কুরিয়ার API সেটিং')
 
 @php
-    $known = \App\Services\SteadfastService::KNOWN_BASE_URLS;
     $mode  = $settings->mode();
 @endphp
 
@@ -85,6 +84,7 @@
 <h3 class="font-semibold text-gray-800 text-sm mb-3">কুরিয়ারসমূহ</h3>
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     @foreach($couriers as $courier)
+    @php($configuration = $configurations[$courier->id])
     <div x-data="{ open:@js((string) request('courier', old('courier_id', old('courier_basic_id'))) === (string) $courier->id), tab:@js(request('tab', 'basic') === 'api' || old('courier_id') ? 'api' : 'basic'), replaceCreds:false }"
          class="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col">
 
@@ -94,8 +94,8 @@
                 <h4 class="font-semibold text-gray-800">{{ $courier->name }}</h4>
                 <x-courier.badges :courier="$courier" :only="['status','type','configured']" />
             </div>
-            @if($courier->supportsApi())
-            <p class="text-xs text-gray-400 mt-2 font-mono truncate">{{ $courier->base_url ?: ($known[0] ?? '—') }}</p>
+            @if($configuration && isset($configuration->fields['base_url']))
+            <p class="text-xs text-gray-400 mt-2 font-mono truncate">{{ $courier->base_url ?: ($configuration->fields['base_url']['default'] ?? '—') }}</p>
             @endif
         </div>
 
@@ -119,12 +119,12 @@
         <div class="px-5 py-3 mt-auto flex items-center gap-2">
             <button @click="open=true; tab='basic'"
                     class="bg-[#14532d] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-[#0d3520]">Manage</button>
-            @if($courier->supportsApi())
+            @if($configuration?->canTestConnection)
             <form method="POST" action="{{ route('admin.courier-api-settings.test', $courier) }}">
                 @csrf
                 <button class="border border-gray-200 text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-gray-50">Test Connection</button>
             </form>
-            @else
+            @elseif(! $configuration)
             <span class="text-xs text-gray-400">ম্যানুয়াল কুরিয়ার — API নেই।</span>
             @endif
         </div>
@@ -157,7 +157,7 @@
                     </section>
                     <section x-show="tab==='api'" id="courier-{{ $courier->id }}-api" role="tabpanel" aria-labelledby="courier-{{ $courier->id }}-api-tab" class="p-5 space-y-4">
                         @if(! $courier->supportsApi())
-                        <p class="text-sm text-gray-600">{{ $courier->name }} API integration is not implemented. Use manual booking and enter the tracking code on the order. API credentials and connection testing are unavailable.</p>
+                        <p class="text-sm text-gray-600">API integration is not available for this provider. Use manual booking and enter the tracking code on the order.</p>
                         @else
                         @if($courier->courier_api_last_checked_at)
                         <p class="text-sm text-gray-600">Last API result: {{ $courier->courier_api_last_status }} · {{ $courier->courier_api_last_checked_at->format('Y-m-d H:i') }}</p>
@@ -174,37 +174,40 @@
                                 <input type="checkbox" name="api_enabled" value="1" {{ $courier->api_enabled ? 'checked' : '' }} class="w-4 h-4 accent-[#14532d]">
                                 Integration enabled
                             </label>
-                            <div>
-                                <label for="courier-{{ $courier->id }}-url" class="block text-sm font-medium text-gray-700 mb-1">API endpoint</label>
-                                <select id="courier-{{ $courier->id }}-url" name="base_url_select" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                                    @foreach($known as $url)
-                                    <option value="{{ $url }}" {{ $courier->base_url === $url ? 'selected' : '' }}>{{ $url }}</option>
-                                    @endforeach
-                                </select>
-                                <p class="text-xs text-gray-500 mt-1">Select the endpoint supplied by your courier account.</p>
-                                @if($courier->base_url && ! in_array($courier->base_url, $known, true))
-                                <p class="text-sm text-red-700">The saved endpoint is unsupported. Select an endpoint above and save before testing.</p>
-                                @endif
-                            </div>
                             <label class="flex items-center gap-2 text-sm text-gray-700">
                                 <input type="checkbox" name="replace_api_credentials" value="1" x-model="replaceCreds" class="w-4 h-4 accent-[#14532d]">
                                 Replace API credentials
                             </label>
-                            @foreach(['api_key' => 'API Key', 'api_secret' => 'Secret Key'] as $field => $label)
+                            @foreach($configuration->fields as $field => $schema)
                             <div>
-                                <label for="courier-{{ $courier->id }}-{{ $field }}" class="block text-sm font-medium text-gray-700 mb-1">{{ $label }}</label>
+                                <label for="courier-{{ $courier->id }}-{{ $field }}" class="block text-sm font-medium text-gray-700 mb-1">{{ $schema['label'] }}</label>
+                                @if($schema['secret'])
                                 <input id="courier-{{ $courier->id }}-{{ $field }}" type="password" name="{{ $field }}" autocomplete="new-password"
                                        :disabled="!replaceCreds" placeholder="{{ filled($courier->{$field}) ? '••••••••' : 'Not configured' }}"
                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                @else
+                                <select id="courier-{{ $courier->id }}-{{ $field }}" name="{{ $field === 'base_url' ? 'base_url_select' : $field }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                    @foreach($schema['options'] as $value => $label)
+                                    <option value="{{ $value }}" @selected(($courier->{$field} ?: ($schema['default'] ?? null)) === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                @if($courier->{$field} && ! array_key_exists($courier->{$field}, $schema['options']))
+                                <p class="text-sm text-red-700">The saved endpoint is unsupported. Select an endpoint above and save before testing.</p>
+                                @endif
+                                @endif
+                                @if(isset($schema['help']))<p class="text-xs text-gray-500 mt-1">{{ $schema['help'] }}</p>@endif
                             </div>
                             @endforeach
                             <p class="text-xs text-gray-500">Blank inputs keep existing credentials. Save settings before testing. Saving never books a shipment.</p>
                             <button class="bg-[#14532d] text-white text-sm px-5 py-2 rounded-lg hover:bg-[#0d3520]">Save Settings</button>
                         </form>
+                        @if($configuration->canTestConnection)
                         <form method="POST" action="{{ route('admin.courier-api-settings.test', $courier) }}">
                             @csrf
                             <button class="border border-gray-300 text-gray-700 text-sm px-5 py-2 rounded-lg hover:bg-gray-50">Test Connection</button>
                         </form>
+                        @endif
+                        @if($diagnostics[$courier->id])
                         <details class="text-sm text-gray-600">
                             <summary class="cursor-pointer py-2">Advanced diagnostics</summary>
                             <div class="grid grid-cols-2 gap-2 mt-2">
@@ -216,6 +219,7 @@
                                 @endforeach
                             </div>
                         </details>
+                        @endif
                         @endif
                     </section>
                 </div>

@@ -3,9 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Models\Courier;
-use App\Services\SteadfastService;
+use App\Services\CourierDriverFactory;
+use App\Services\CourierProviderConfiguration;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class UpdateCourierApiSettingsRequest extends FormRequest
@@ -20,11 +20,12 @@ class UpdateCourierApiSettingsRequest extends FormRequest
         return [
             'api_enabled' => ['nullable', 'boolean'],
             'replace_api_credentials' => ['nullable', 'boolean'],
-            'api_key' => ['nullable', 'string', 'max:255'],
-            'api_secret' => ['nullable', 'string', 'max:255'],
-            'base_url' => ['nullable', Rule::in(SteadfastService::KNOWN_BASE_URLS)],
-            'base_url_select' => ['nullable', Rule::in(SteadfastService::KNOWN_BASE_URLS)],
-        ];
+        ] + ($this->configuration()?->rules() ?? []);
+    }
+
+    public function configuration(): ?CourierProviderConfiguration
+    {
+        return app(CourierDriverFactory::class)->configuration($this->route('courier'));
     }
 
     public function after(): array
@@ -32,17 +33,21 @@ class UpdateCourierApiSettingsRequest extends FormRequest
         return [function (Validator $validator) {
             /** @var Courier $courier */
             $courier = $this->route('courier');
-            if (! $courier->supportsApi()) {
+            $configuration = $this->configuration();
+            if ($configuration === null) {
                 $validator->errors()->add('api_enabled', 'This courier has no API integration. Use manual booking.');
 
                 return;
             }
 
             if ($this->boolean('api_enabled')) {
-                foreach (['api_key', 'api_secret'] as $field) {
-                    $replacement = $this->boolean('replace_api_credentials') && $this->filled($field);
+                foreach ($configuration->fields as $field => $schema) {
+                    if (! ($schema['required_when_enabled'] ?? false)) {
+                        continue;
+                    }
+                    $replacement = (! $schema['secret'] || $this->boolean('replace_api_credentials')) && $this->filled($field);
                     if (! $replacement && blank($courier->{$field})) {
-                        $validator->errors()->add($field, 'Configure both API Key and Secret Key before enabling the integration.');
+                        $validator->errors()->add($field, 'Configure '.$schema['label'].' before enabling the integration.');
                     }
                 }
             }

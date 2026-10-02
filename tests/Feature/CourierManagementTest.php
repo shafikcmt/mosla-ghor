@@ -2,12 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Contracts\CourierConfigurationInterface;
 use App\Models\Courier;
 use App\Models\Order;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Models\VendorOrder;
+use App\Services\CourierDriverFactory;
+use App\Services\CourierProviderConfiguration;
 use App\Services\CourierService;
+use App\Services\ManualCourierService;
 use App\Services\SteadfastService;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -167,7 +171,7 @@ class CourierManagementTest extends TestCase
     {
         $courier = $this->courier(['name' => 'Pathao', 'slug' => 'pathao']);
         $this->get(route('admin.courier-api-settings.index', ['courier' => $courier->id]))
-            ->assertOk()->assertSee('API integration is not implemented')
+            ->assertOk()->assertSee('API integration is not available for this provider')
             ->assertDontSee('name="api_key"', false)->assertDontSee('>Test Connection</button>', false);
         $this->saveApi($courier, ['api_enabled' => '1'])->assertSessionHasErrors('api_enabled');
         $this->post(route('admin.courier-api-settings.test', $courier))->assertSessionHas('error');
@@ -430,6 +434,96 @@ class CourierManagementTest extends TestCase
         $this->assertStringNotContainsString('valid-fixture-secret', Artisan::output());
     }
 
+    public function test_registered_provider_schema_controls_form_validation_and_secret_storage(): void
+    {
+        config(['couriers.drivers.fixture' => FixtureConfiguredCourier::class]);
+        $courier = $this->courier(['slug' => 'fixture', 'name' => 'Fixture Provider', 'api_key' => 'existing-token', 'api_secret' => 'untouched-secret']);
+        $this->assertTrue($courier->supportsApi());
+        $this->assertTrue($courier->isConfigured());
+        $this->get(route('admin.courier-api-settings.index'))
+            ->assertOk()->assertSee('Account Token')->assertSee('Sandbox endpoint')
+            ->assertDontSee('name="api_secret"', false)->assertDontSee('existing-token')->assertDontSee('untouched-secret')
+            ->assertDontSee('portal.steadfast.com.bd')->assertDontSee('>Test Connection</button>', false)
+            ->assertDontSee('Advanced diagnostics');
+        $this->saveApi($courier, [
+            'api_enabled' => '1', 'replace_api_credentials' => '1', 'api_key' => '', 'base_url_select' => 'https://sandbox.example.com/api',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('existing-token', $courier->fresh()->api_key);
+        $this->saveApi($courier, [
+            'api_enabled' => '1', 'replace_api_credentials' => '1', 'api_key' => 'new-token',
+            'api_secret' => 'ignored-submission', 'base_url_select' => 'https://sandbox.example.com/api',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('new-token', $courier->fresh()->api_key);
+        $this->assertSame('untouched-secret', $courier->fresh()->api_secret);
+        $this->assertNotSame('new-token', DB::table('couriers')->find($courier->id)->api_key);
+        $this->assertArrayNotHasKey('api_key', $courier->fresh()->toArray());
+        $this->saveApi($courier, [
+            'replace_api_credentials' => '1', 'api_key' => str_repeat('x', 41), 'base_url_select' => 'https://sandbox.example.com/api',
+        ])->assertSessionHasErrors('api_key');
+        $this->assertArrayNotHasKey('api_key', session('_old_input', []));
+        $this->saveApi($courier, ['base_url_select' => 'https://portal.steadfast.com.bd/api/v1'])->assertSessionHasErrors('base_url_select');
+        $this->assertSame('https://sandbox.example.com/api', $courier->fresh()->base_url);
+        $this->post(route('admin.courier-api-settings.test', $courier))->assertSessionHas('error');
+        Http::assertNothingSent();
+    }
+
+    public function test_provider_required_fields_determine_readiness_without_steadfast_requirements(): void
+    {
+        config(['couriers.drivers.fixture' => FixtureConfiguredCourier::class]);
+        $courier = $this->courier(['slug' => 'fixture']);
+        $this->assertFalse($courier->isConfigured());
+        $this->saveApi($courier, ['api_enabled' => '1', 'base_url_select' => 'https://sandbox.example.com/api'])
+            ->assertSessionHasErrors('api_key');
+        $this->saveApi($courier, [
+            'api_enabled' => '1', 'replace_api_credentials' => '1', 'api_key' => 'only-required-token',
+            'base_url_select' => 'https://sandbox.example.com/api',
+        ])->assertSessionHasNoErrors();
+        $this->assertTrue($courier->fresh()->apiUsable());
+        $this->assertNull($courier->fresh()->api_secret);
+    }
+
+    public function test_unknown_provider_remains_manual_even_with_stored_credentials_and_api_enabled(): void
+    {
+        $courier = $this->courier(['slug' => 'unregistered', 'api_enabled' => true, 'api_key' => 'existing-token', 'api_secret' => 'existing-secret']);
+        $this->assertFalse($courier->supportsApi());
+        $this->assertFalse($courier->apiUsable());
+        $this->assertInstanceOf(ManualCourierService::class, app(CourierDriverFactory::class)->for($courier));
+        $this->get(route('admin.courier-api-settings.index'))->assertOk()
+            ->assertSee('API integration is not available for this provider')->assertDontSee('name="api_key"', false);
+        $this->saveApi($courier, ['api_key' => 'replacement'])->assertSessionHasErrors('api_enabled');
+        $this->assertSame('existing-token', $courier->fresh()->api_key);
+        $result = app(CourierService::class)->send($this->order($courier), 'UNKNOWN-MANUAL');
+        $this->assertTrue($result['manual']);
+        Http::assertNothingSent();
+    }
+
+    public function test_configuration_metadata_cannot_map_secrets_to_plaintext_or_accept_freeform_endpoints(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        new CourierProviderConfiguration('Unsafe', [
+            'base_url' => ['label' => 'Token', 'type' => 'password', 'secret' => true, 'rules' => ['nullable']],
+        ]);
+    }
+
+    public function test_manual_placeholders_stay_manual_in_registry(): void
+    {
+        foreach (['pathao', 'sundarban'] as $slug) {
+            $courier = $this->courier(['slug' => $slug]);
+            $this->assertFalse($courier->supportsApi());
+            $this->assertNull(app(CourierDriverFactory::class)->configuration($courier));
+        }
+    }
+
+    public function test_api_driver_without_configuration_contract_cannot_enable_api(): void
+    {
+        config(['couriers.drivers.unconfigured' => FixtureUnconfiguredCourier::class]);
+        $courier = $this->courier(['slug' => 'unconfigured', 'api_enabled' => true, 'api_key' => 'token']);
+        $this->assertFalse($courier->supportsApi());
+        $this->assertFalse($courier->apiUsable());
+        $this->saveApi($courier, ['api_enabled' => '1'])->assertSessionHasErrors('api_enabled');
+        Http::assertNothingSent();
+    }
+
     private function order(Courier $courier): Order
     {
         return Order::create([
@@ -439,5 +533,37 @@ class CourierManagementTest extends TestCase
             'payment_method' => 'cash_on_delivery', 'selected_courier_id' => $courier->id,
             'order_status' => 'pending',
         ]);
+    }
+}
+
+/** No real provider API: proves the shared form consumes registered metadata. */
+class FixtureConfiguredCourier extends ManualCourierService implements CourierConfigurationInterface
+{
+    public function supportsApi(): bool
+    {
+        return true;
+    }
+
+    public function configuration(): CourierProviderConfiguration
+    {
+        return new CourierProviderConfiguration('Fixture Provider', [
+            'base_url' => [
+                'label' => 'Sandbox endpoint', 'type' => 'select', 'secret' => false,
+                'options' => ['https://sandbox.example.com/api' => 'Sandbox'],
+                'default' => 'https://sandbox.example.com/api', 'rules' => ['nullable', 'string'],
+            ],
+            'api_key' => [
+                'label' => 'Account Token', 'type' => 'password', 'secret' => true,
+                'required_when_enabled' => true, 'rules' => ['nullable', 'string', 'max:40'],
+            ],
+        ], canTestConnection: false);
+    }
+}
+
+class FixtureUnconfiguredCourier extends ManualCourierService
+{
+    public function supportsApi(): bool
+    {
+        return true;
     }
 }

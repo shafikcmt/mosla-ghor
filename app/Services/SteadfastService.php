@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Contracts\CourierDiagnosticsInterface;
 use App\Contracts\CourierDriverInterface;
+use App\Contracts\CourierConfigurationInterface;
 use App\Models\Courier;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -27,7 +28,7 @@ use Illuminate\Support\Facades\Log;
  * "Could not resolve host", the server has no working DNS / outbound HTTPS.
  * Ask the hosting provider to enable outbound connections and fix DNS.
  */
-class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInterface
+class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInterface, CourierConfigurationInterface
 {
     private const DEFAULT_BASE_URL = 'https://portal.steadfast.com.bd/api/v1';
     private const TIMEOUT = 20;
@@ -42,6 +43,26 @@ class SteadfastService implements CourierDriverInterface, CourierDiagnosticsInte
     public function supportsApi(): bool
     {
         return true;
+    }
+
+    public function configuration(): CourierProviderConfiguration
+    {
+        return new CourierProviderConfiguration('Steadfast', [
+            'base_url' => [
+                'label' => 'API endpoint', 'type' => 'select', 'secret' => false,
+                'options' => array_combine(self::KNOWN_BASE_URLS, self::KNOWN_BASE_URLS),
+                'default' => self::DEFAULT_BASE_URL, 'rules' => ['nullable', 'string'],
+                'help' => 'Select the endpoint supplied by your courier account.',
+            ],
+            'api_key' => [
+                'label' => 'API Key', 'type' => 'password', 'secret' => true,
+                'required_when_enabled' => true, 'rules' => ['nullable', 'string', 'max:255'],
+            ],
+            'api_secret' => [
+                'label' => 'Secret Key', 'type' => 'password', 'secret' => true,
+                'required_when_enabled' => true, 'rules' => ['nullable', 'string', 'max:255'],
+            ],
+        ]);
     }
 
     /**

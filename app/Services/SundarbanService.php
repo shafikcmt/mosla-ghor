@@ -8,9 +8,7 @@ namespace App\Services;
  * No API integration yet; behaves as a manual courier. To add a real API later:
  *   1. Override supportsApi() to return true.
  *   2. Implement createParcel()/testConnection().
- *   3. Add 'sundarban' to Courier::API_SUPPORTED_SLUGS.
+ *   3. Implement CourierConfigurationInterface with trusted configuration metadata.
  * Admin/vendor flow is untouched — resolution happens in CourierDriverFactory.
  */
-class SundarbanService extends ManualCourierService
-{
-}
+class SundarbanService extends ManualCourierService {}
