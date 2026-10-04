@@ -242,6 +242,8 @@ Route::get('/invoice/{token}/reorder',  [InvoiceController::class, 'reorder'])->
 Route::post('/invoice/{token}/reorder', [InvoiceController::class, 'reorderStore'])->name('invoice.reorder.store');
 Route::get('/invoice/{token}/pay',      [InvoiceController::class, 'pay'])->name('invoice.pay');
 Route::post('/invoice/{token}/pay',     [InvoiceController::class, 'payStore'])->name('invoice.pay.store');
+Route::get('/invoice/{token}/account',  [InvoiceController::class, 'account'])->name('invoice.account');
+Route::post('/invoice/{token}/account', [InvoiceController::class, 'accountStore'])->middleware('throttle:10,1')->name('invoice.account.store');
 
 // ── Public token-addressed wholesale quote invoice (no login required) ───────
 Route::get('/wholesale-invoice/{token}',     [WholesaleQuoteInvoiceController::class, 'show'])->name('wholesale.invoice.show');
@@ -447,6 +449,7 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::post('orders/manual', [\App\Http\Controllers\Admin\ManualOrderController::class, 'store'])->name('orders.manual.store');
     Route::get('orders/manual/lookup', [\App\Http\Controllers\Admin\ManualOrderController::class, 'lookup'])->name('orders.manual.lookup');
     Route::post('orders/{order}/invoice-link', [\App\Http\Controllers\Admin\ManualOrderController::class, 'prepareInvoice'])->name('orders.invoice-link');
+    Route::get('orders/{order}/send', [\App\Http\Controllers\Admin\ManualOrderController::class, 'send'])->name('orders.send');
     Route::post('orders/{order}/whatsapp', [\App\Http\Controllers\Admin\ManualOrderController::class, 'whatsapp'])->name('orders.whatsapp');
     Route::post('orders/{order}/invoice-toggle', [\App\Http\Controllers\Admin\ManualOrderController::class, 'invoiceToggle'])->name('orders.invoice-toggle');
     Route::get('orders/trash', [AdminOrderController::class, 'trash'])->name('orders.trash');

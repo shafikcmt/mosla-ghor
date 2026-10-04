@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\DeliverySetting;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\User;
+use App\Support\Phone;
 use App\Models\WebsiteSetting;
 use App\Services\StockService;
 use Illuminate\Http\Request;
@@ -22,7 +24,7 @@ use Illuminate\Validation\Rule;
 class ManualOrderController extends Controller
 {
     /** Default WhatsApp invoice message for admin-sent invoices. */
-    public const DEFAULT_TEMPLATE = "🧾 *{shop_name} — ইনভয়েস*\n━━━━━━━━━━━━━━━\nআসসালামু আলাইকুম {customer_name},\nআপনার অর্ডার কনফার্ম হয়েছে ✅\n\n📦 অর্ডার: *#{order_number}*\n{items}\n━━━━━━━━━━━━━━━\nসাবটোটাল: ৳{subtotal}\nডেলিভারি চার্জ: ৳{delivery_charge}\n{discount_line}💰 *মোট: ৳{total}*\n✅ পরিশোধিত: ৳{paid}\n🔴 *বাকি (ডেলিভারিতে দিবেন): ৳{due}*\n\n📍 ঠিকানা: {address}\n━━━━━━━━━━━━━━━\n🧾 ইনভয়েস দেখুন / পেমেন্ট করুন:\n{invoice_link}\n\n📄 PDF ইনভয়েস:\n{invoice_pdf_link}\n━━━━━━━━━━━━━━━\nযেকোনো প্রয়োজনে: {shop_phone}\nধন্যবাদ 🙏";
+    public const DEFAULT_TEMPLATE = "🧾 *{shop_name} — ইনভয়েস*\n━━━━━━━━━━━━━━━\nআসসালামু আলাইকুম {customer_name},\nআপনার অর্ডার কনফার্ম হয়েছে ✅\n\n📦 অর্ডার: *#{order_number}*\n{items}\n━━━━━━━━━━━━━━━\nসাবটোটাল: ৳{subtotal}\nডেলিভারি চার্জ: ৳{delivery_charge}\n{discount_line}💰 *মোট: ৳{total}*\n✅ পরিশোধিত: ৳{paid}\n🔴 *বাকি (ডেলিভারিতে দিবেন): ৳{due}*\n\n📍 ঠিকানা: {address}\n━━━━━━━━━━━━━━━\n{account_block}🧾 ইনভয়েস দেখুন / পেমেন্ট করুন:\n{invoice_link}\n\n📄 PDF ইনভয়েস:\n{invoice_pdf_link}\n━━━━━━━━━━━━━━━\nযেকোনো প্রয়োজনে: {shop_phone}\nধন্যবাদ 🙏";
 
     public function __construct(private StockService $stock)
     {
@@ -72,8 +74,9 @@ class ManualOrderController extends Controller
     {
         $phone = preg_replace('/\D/', '', (string) $request->query('phone', ''));
         if (strlen($phone) < 10) {
-            return response()->json(['found' => false]);
+            return response()->json(['found' => false, 'registered' => false]);
         }
+        $account = User::where('role', 'customer')->where('phone', Phone::normalize($phone))->first();
         $last = Order::where('mobile_number', 'like', '%' . substr($phone, -10))
             ->latest()
             ->first(['customer_name', 'full_address', 'district', 'area', 'alternative_number']);
@@ -81,9 +84,11 @@ class ManualOrderController extends Controller
         $count = $last ? Order::where('mobile_number', 'like', '%' . substr($phone, -10))->count() : 0;
 
         return response()->json([
+            'registered' => (bool) $account,
+            'account_name' => $account?->name,
             'found'   => (bool) $last,
             'orders'  => $count,
-            'name'    => $last?->customer_name,
+            'name'    => $last?->customer_name ?: $account?->name,
             'address' => $last?->full_address,
             'district'=> $last?->district,
             'area'    => $last?->area,
@@ -93,11 +98,15 @@ class ManualOrderController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'order_channel'      => ['required', Rule::in(array_keys(Order::CHANNELS))],
-            'customer_name'      => 'required|string|max:100',
-            'mobile_number'      => 'required|string|max:20',
+            'order_channel'      => ['nullable', Rule::in(array_keys(Order::CHANNELS))],
+            'customer_name'      => 'nullable|string|max:100',
+            'mobile_number'      => ['required', 'string', 'max:20', function ($attr, $value, $fail) {
+                if (! Phone::isValidBd($value)) {
+                    $fail('সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)।');
+                }
+            }],
             'alternative_number' => 'nullable|string|max:20',
-            'full_address'       => 'required|string|max:1000',
+            'full_address'       => 'nullable|string|max:1000',
             'district'           => 'nullable|string|max:80',
             'area'               => 'nullable|string|max:80',
             'order_note'         => 'nullable|string|max:1000',
@@ -109,14 +118,12 @@ class ManualOrderController extends Controller
             'delivery_charge'    => 'nullable|numeric|min:0',
             'discount_amount'    => 'nullable|numeric|min:0',
             'paid_amount'        => 'nullable|numeric|min:0',
-            'payment_method'     => 'required|string|max:30',
+            'payment_method'     => 'nullable|string|max:30',
             'transaction_id'     => 'nullable|string|max:100',
-            'order_status'       => ['required', Rule::in(['pending', 'confirmed', 'processing'])],
+            'order_status'       => ['nullable', Rule::in(['pending', 'confirmed', 'processing'])],
             'deduct_stock'       => 'nullable|boolean',
         ], [
-            'customer_name.required' => 'কাস্টমারের নাম দিন।',
             'mobile_number.required' => 'মোবাইল নম্বর দিন।',
-            'full_address.required'  => 'ঠিকানা দিন।',
             'items.required'         => 'অন্তত একটি পণ্য যোগ করুন।',
         ]);
 
@@ -193,16 +200,16 @@ class ManualOrderController extends Controller
             $order = DB::transaction(function () use ($data, $lines, $subtotal, $delivery, $discount, $grandTotal, $paid, $due, $weight, $orderNumber, $deductStock) {
                 $order = Order::create([
                     'order_number'       => $orderNumber,
-                    'customer_name'      => $data['customer_name'],
-                    'mobile_number'      => $data['mobile_number'],
+                    'customer_name'      => ($data['customer_name'] ?? null) ?: 'কাস্টমার',
+                    'mobile_number'      => Phone::normalize($data['mobile_number']),
                     'alternative_number' => $data['alternative_number'] ?? null,
-                    'full_address'       => $data['full_address'],
+                    'full_address'       => $data['full_address'] ?? '',
                     'district'           => $data['district'] ?? '',
                     'area'               => $data['area'] ?? '',
                     'order_note'         => $data['order_note'] ?? null,
                     'order_type'         => 'retail',
                     'order_source'       => 'admin_manual_order',
-                    'order_channel'      => $data['order_channel'],
+                    'order_channel'      => $data['order_channel'] ?? 'phone',
                     'subtotal'           => $subtotal,
                     'packaging_cost'     => 0,
                     'delivery_charge'    => $delivery,
@@ -210,13 +217,13 @@ class ManualOrderController extends Controller
                     'discount_amount'    => $discount,
                     'grand_total'        => $grandTotal,
                     'weight_gram'        => $weight ?: null,
-                    'payment_method'     => $data['payment_method'],
+                    'payment_method'     => ($data['payment_method'] ?? null) ?: 'cash_on_delivery',
                     'transaction_id'     => $data['transaction_id'] ?? null,
                     'paid_amount'        => $paid,
                     'partial_paid_amount'=> $paid,
                     'due_amount'         => $due,
                     'payment_status'     => $due <= 0 ? 'verified' : 'pending',
-                    'order_status'       => $data['order_status'],
+                    'order_status'       => ($data['order_status'] ?? null) ?: 'confirmed',
                 ]);
 
                 foreach ($lines as $line) {
@@ -236,9 +243,20 @@ class ManualOrderController extends Controller
             return back()->withInput()->with('error', $e->getMessage() . ' (স্টক না কেটে অর্ডার নিতে "স্টক কাটুন" অপশন বন্ধ করুন।)');
         }
 
-        return redirect()->route('admin.orders.show', $order)
-            ->with('success', 'অর্ডার তৈরি হয়েছে — #' . $order->order_number . '। এখন WhatsApp এ ইনভয়েস পাঠান।')
-            ->with('open_whatsapp', true);
+        return redirect()->route('admin.orders.send', $order);
+    }
+
+    /** "Order saved" screen with one big WhatsApp button. */
+    public function send(Order $order)
+    {
+        $order->ensureTokens();
+        $order->load('items');
+
+        return view('admin.orders.manual-send', [
+            'order'      => $order,
+            'message'    => self::renderMessage($order),
+            'registered' => (bool) $order->customerAccount(),
+        ]);
     }
 
     /** Mint the public invoice link for an order that doesn't have one yet. */
@@ -307,6 +325,18 @@ class ManualOrderController extends Controller
 
         $discount = (float) $order->discount_amount + (float) $order->payment_discount;
 
+        // Registered → login link; otherwise a link to add address + create an account.
+        if ($order->customerAccount()) {
+            $accountBlock = "👤 আপনার অ্যাকাউন্টে অর্ডার ট্র্যাক করুন:\n" . route('customer.login', ['redirect' => route('customer.orders.show', $order->id, false)]) . "\n\n";
+        } elseif ($order->accountUrl()) {
+            $accountBlock = (trim((string) $order->full_address) === ''
+                    ? "⚠️ *ডেলিভারির জন্য আপনার ঠিকানা দিন* (অ্যাকাউন্টও খুলে যাবে):\n"
+                    : "📝 আপনার তথ্য দিয়ে অ্যাকাউন্ট খুলুন — অর্ডার ট্র্যাক ও পরে সহজে অর্ডার করতে:\n")
+                . $order->accountUrl() . "\n\n";
+        } else {
+            $accountBlock = '';
+        }
+
         return strtr(self::template(), [
             '{shop_name}'        => WebsiteSetting::get('site_name', 'মসলা ঘর'),
             '{shop_phone}'       => WebsiteSetting::get('phone', ''),
@@ -319,7 +349,8 @@ class ManualOrderController extends Controller
             '{total}'            => $money($order->grand_total),
             '{paid}'             => $money($order->effectivePaid()),
             '{due}'              => $money($order->effectiveDue()),
-            '{address}'          => $order->full_address ?: '—',
+            '{address}'          => $order->full_address ?: '(লিংকে দিন)',
+            '{account_block}'    => $accountBlock,
             '{invoice_link}'     => $order->invoiceUrl() ?? '',
             '{invoice_pdf_link}' => $order->invoicePdfUrl() ?? '',
             '{payment_link}'     => $order->paymentUrl() ?? '',

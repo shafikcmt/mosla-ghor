@@ -80,6 +80,19 @@
     </div>
 </div>
 
+{{-- Account / address prompt for customers without an account --}}
+@if(! $vendor && ! $order->customerAccount() && ! auth()->check())
+<a href="{{ route('invoice.account', $order->invoice_token) }}"
+   class="no-print mt-5 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 hover:bg-amber-100">
+    <span class="text-2xl">{{ trim((string) $order->full_address) === '' ? '📍' : '📝' }}</span>
+    <span class="flex-1">
+        <span class="block font-semibold text-gray-800 text-sm">{{ trim((string) $order->full_address) === '' ? 'ডেলিভারির জন্য আপনার ঠিকানা দিন' : 'আপনার তথ্য দিয়ে অ্যাকাউন্ট খুলুন' }}</span>
+        <span class="block text-xs text-gray-500">অর্ডার ট্র্যাক ও পরে সহজে অর্ডার করতে</span>
+    </span>
+    <span class="text-amber-700">→</span>
+</a>
+@endif
+
 {{-- Actions --}}
 <div class="no-print mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
     <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white py-2.5 rounded-lg text-sm font-medium">প্রিন্ট</button>

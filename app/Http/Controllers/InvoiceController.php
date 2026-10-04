@@ -7,8 +7,13 @@ use App\Models\WebsiteSetting;
 use App\Notifications\OrderPlacedNotification;
 use App\Notifications\PaymentUpdatedNotification;
 use App\Support\Notify;
+use App\Models\Customer;
+use App\Models\User;
+use App\Support\Phone;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
@@ -203,5 +208,119 @@ class InvoiceController extends Controller
             'siteName' => $this->siteName(),
             'already'  => false,
         ]);
+    }
+
+    // ── Customer account from the invoice link ───────────────────────────────
+    // Orders taken over phone/WhatsApp often have a phone number only. The
+    // invoice message links here: a customer WITHOUT an account adds their
+    // address/info and sets a password (account created, order attached);
+    // one who already has an account is sent to login instead.
+
+    public function account(string $token)
+    {
+        $order = $this->resolve($token);
+
+        if ($redirect = $this->accountRedirect($order)) {
+            return $redirect;
+        }
+
+        $order->load('items');
+
+        return view('invoice.account', [
+            'order'    => $order,
+            'phone'    => Phone::normalize($order->mobile_number),
+            'siteName' => $this->siteName(),
+        ]);
+    }
+
+    public function accountStore(Request $request, string $token)
+    {
+        $order = $this->resolve($token);
+
+        if ($redirect = $this->accountRedirect($order)) {
+            return $redirect;
+        }
+
+        $phone = Phone::normalize($order->mobile_number);
+        abort_unless($phone, 404);
+
+        $data = $request->validate([
+            'name'               => 'required|string|max:100',
+            'full_address'       => 'required|string|max:1000',
+            'district'           => 'nullable|string|max:80',
+            'area'               => 'nullable|string|max:80',
+            'alternative_number' => 'nullable|string|max:20',
+            'email'              => 'nullable|email|max:150|unique:users,email',
+            'password'           => 'required|string|min:6|confirmed',
+        ], [
+            'name.required'         => 'আপনার নাম লিখুন।',
+            'full_address.required' => 'ডেলিভারির ঠিকানা লিখুন।',
+            'email.unique'          => 'এই ইমেইল দিয়ে আগেই একটি অ্যাকাউন্ট আছে।',
+            'password.required'     => 'পাসওয়ার্ড দিন।',
+            'password.min'          => 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষর হতে হবে।',
+            'password.confirmed'    => 'পাসওয়ার্ড মিলছে না।',
+        ]);
+
+        $user = DB::transaction(function () use ($data, $phone, $order) {
+            $user = User::create([
+                'name'            => $data['name'],
+                'email'           => $data['email'] ?? null,
+                'phone'           => $phone,
+                'password'        => Hash::make($data['password']),
+                'password_set_at' => now(),
+                'role'            => 'customer',
+                'is_admin'        => false,
+            ]);
+
+            $customer = Customer::firstOrNew(['mobile_number' => $phone]);
+            $customer->fill([
+                'name'               => $data['name'],
+                'email'              => $customer->email ?: ($data['email'] ?? null),
+                'alternative_number' => $data['alternative_number'] ?? $customer->alternative_number,
+                'last_full_address'  => $data['full_address'],
+                'last_district_name' => $data['district'] ?? $customer->last_district_name,
+                'is_active'          => true,
+            ])->save();
+
+            $order->update([
+                'customer_id'           => $customer->id,
+                'customer_name'         => $data['name'],
+                'mobile_number'         => $phone,
+                'full_address'          => $data['full_address'],
+                'district'              => $data['district'] ?? ($order->district ?? ''),
+                'area'                  => $data['area'] ?? ($order->area ?? ''),
+                'alternative_number'    => $data['alternative_number'] ?? $order->alternative_number,
+                'customer_confirmed_at' => now(),
+            ]);
+
+            return $user;
+        });
+
+        Auth::login($user, true);
+        $request->session()->regenerate();
+
+        Notify::admins(new OrderPlacedNotification($order->fresh(), 'admin'));
+
+        return redirect()->route('customer.orders.show', $order->id)
+            ->with('success', 'ধন্যবাদ! তথ্য সেভ হয়েছে ও আপনার অ্যাকাউন্ট তৈরি হয়েছে।');
+    }
+
+    /** Logged-in owner → their order; existing account → login; else null (show the form). */
+    private function accountRedirect(Order $order)
+    {
+        $phone = Phone::normalize($order->mobile_number);
+        $orderUrl = route('customer.orders.show', $order->id, false); // relative: login only honours local paths
+
+        $current = Auth::user();
+        if ($current && $current->role === 'customer' && $phone && $current->phone === $phone) {
+            return redirect($orderUrl);
+        }
+
+        if ($order->customerAccount()) {
+            return redirect()->route('customer.login', ['redirect' => $orderUrl])
+                ->with('success', 'এই নম্বরে আপনার অ্যাকাউন্ট আছে — লগইন করে অর্ডার দেখুন।');
+        }
+
+        return null;
     }
 }

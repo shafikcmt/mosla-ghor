@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Admin\ManualOrderController;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductPrice;
@@ -66,7 +67,11 @@ class ManualOrderAndStockOnlyTest extends TestCase
         ]));
 
         $order = Order::where('order_source', 'admin_manual_order')->firstOrFail();
-        $res->assertRedirect(route('admin.orders.show', $order));
+        $res->assertRedirect(route('admin.orders.send', $order));
+
+        // Send screen: one-click WhatsApp, new customer gets the account link.
+        $this->actingAs($admin)->get(route('admin.orders.send', $order))
+            ->assertOk()->assertSee('WhatsApp এ ইনভয়েস পাঠান')->assertSee($order->accountUrl());
 
         $this->assertSame('whatsapp', $order->order_channel);
         $this->assertEquals(660 + 150, (float) $order->subtotal);
@@ -183,5 +188,84 @@ class ManualOrderAndStockOnlyTest extends TestCase
         ])->assertRedirect();
 
         $this->assertTrue($vendor->fresh()->isStockOnly());
+    }
+
+    public function test_phone_only_order_and_customer_completes_info_via_link(): void
+    {
+        $p = Product::create(['name_bn' => 'আদা', 'slug' => 'ada', 'retail_price_1kg' => 200, 'unit' => 'pcs', 'stock_qty' => 10]);
+        $admin = $this->admin();
+
+        // Only phone + products — no name, no address.
+        $this->actingAs($admin)->post(route('admin.orders.manual.store'), [
+            'mobile_number' => '+880 1911-222333',
+            'items'         => [['product_id' => $p->id, 'quantity' => 2, 'unit_price' => 200]],
+            'delivery_charge' => 60,
+        ])->assertRedirect();
+
+        $order = Order::firstOrFail();
+        $this->assertSame('01911222333', $order->mobile_number);
+        $this->assertSame('', $order->full_address);
+        $this->assertSame('confirmed', $order->order_status);
+
+        $message = ManualOrderController::renderMessage($order);
+        $this->assertStringContainsString('ডেলিভারির জন্য আপনার ঠিকানা দিন', $message);
+        $this->assertStringContainsString($order->accountUrl(), $message);
+
+        // Customer opens the link (logged out) and fills the form.
+        auth()->logout();
+        $this->get($order->accountUrl())->assertOk()->assertSee('01911222333');
+        $this->post(route('invoice.account.store', $order->invoice_token), [
+            'name' => 'করিম', 'full_address' => 'উত্তরা সেক্টর ৭', 'district' => 'ঢাকা',
+            'password' => 'secret12', 'password_confirmation' => 'secret12',
+        ])->assertRedirect(route('customer.orders.show', $order->id));
+
+        $user = User::where('phone', '01911222333')->firstOrFail();
+        $this->assertSame('customer', $user->role);
+        $this->assertAuthenticatedAs($user);
+        $order->refresh();
+        $this->assertSame('উত্তরা সেক্টর ৭', $order->full_address);
+        $this->assertSame('করিম', $order->customer_name);
+        $this->assertNotNull($order->customer_id);
+        $this->assertNotNull($order->customer_confirmed_at);
+
+        // Customer can now see the order in their account.
+        $this->get(route('customer.orders.show', $order->id))->assertOk();
+    }
+
+    public function test_registered_customer_gets_login_link_not_signup(): void
+    {
+        User::create(['name' => 'Old', 'email' => 'old@example.com', 'phone' => '01722333444', 'password' => Hash::make('x123456'), 'role' => 'customer']);
+        $p = Product::create(['name_bn' => 'রসুন', 'slug' => 'roshun', 'retail_price_1kg' => 200, 'unit' => 'pcs', 'stock_qty' => 10]);
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->getJson(route('admin.orders.manual.lookup', ['phone' => '01722333444']))
+            ->assertJson(['registered' => true]);
+
+        $this->actingAs($admin)->post(route('admin.orders.manual.store'), [
+            'mobile_number' => '01722333444',
+            'items'         => [['product_id' => $p->id, 'quantity' => 1, 'unit_price' => 200]],
+        ]);
+        $order = Order::firstOrFail();
+
+        $message = ManualOrderController::renderMessage($order);
+        $this->assertStringNotContainsString($order->accountUrl(), $message);
+        $this->assertStringContainsString('/login?redirect=', $message);
+
+        auth()->logout();
+        $this->get($order->accountUrl())->assertRedirect();
+        $this->post(route('invoice.account.store', $order->invoice_token), [
+            'name' => 'Hacker', 'full_address' => 'x', 'password' => 'secret12', 'password_confirmation' => 'secret12',
+        ])->assertRedirect();
+        $this->assertSame(1, User::where('phone', '01722333444')->count());
+        $this->assertTrue(Hash::check('x123456', User::where('phone', '01722333444')->first()->password));
+    }
+
+    public function test_invalid_phone_is_rejected(): void
+    {
+        $p = Product::create(['name_bn' => 'x', 'slug' => 'x1', 'retail_price_1kg' => 1, 'unit' => 'pcs', 'stock_qty' => 5]);
+        $this->actingAs($this->admin())->post(route('admin.orders.manual.store'), [
+            'mobile_number' => '12345',
+            'items'         => [['product_id' => $p->id, 'quantity' => 1, 'unit_price' => 1]],
+        ])->assertSessionHasErrors('mobile_number');
     }
 }

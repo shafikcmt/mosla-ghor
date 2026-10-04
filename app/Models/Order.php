@@ -203,6 +203,20 @@ class Order extends Model
         return max(0, round((float) $this->grand_total - $this->effectiveDue(), 2));
     }
 
+    /** Customer login account (role=customer) behind this order's phone, if any. */
+    public function customerAccount(): ?User
+    {
+        $phone = \App\Support\Phone::normalize($this->mobile_number);
+
+        return $phone ? User::where('role', 'customer')->where('phone', $phone)->first() : null;
+    }
+
+    /** Public page where an unregistered customer adds their info + creates an account. */
+    public function accountUrl(): ?string
+    {
+        return $this->invoice_token ? url('/invoice/' . $this->invoice_token . '/account') : null;
+    }
+
     /** Generate the secure public tokens once (idempotent). */
     public function ensureTokens(): void
     {
