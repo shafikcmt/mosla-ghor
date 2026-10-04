@@ -58,6 +58,76 @@
     </a>
 </div>
 
+{{-- ── WhatsApp invoice ─────────────────────────────────────────── --}}
+<div class="no-print bg-white rounded-xl border border-green-200 mb-5 overflow-hidden"
+     x-data="{ open: {{ session('open_whatsapp') || $order->isAdminCreated() ? 'true' : 'false' }}, copied: '' }">
+    <button type="button" @click="open = !open" class="w-full flex items-center justify-between gap-3 px-5 py-3 bg-green-50 text-left">
+        <span class="flex items-center gap-2">
+            <span class="w-8 h-8 rounded-full bg-[#25D366] text-white flex items-center justify-center text-sm">✆</span>
+            <span>
+                <span class="block text-sm font-bold text-gray-800">WhatsApp এ ইনভয়েস পাঠান</span>
+                <span class="block text-xs text-gray-500">
+                    @if($order->whatsapp_sent_at)
+                        শেষ পাঠানো: {{ $order->whatsapp_sent_at->format('d M, h:i A') }}
+                    @else
+                        এখনো পাঠানো হয়নি
+                    @endif
+                    @if($order->order_channel) · উৎস: {{ \App\Models\Order::CHANNELS[$order->order_channel] ?? $order->order_channel }} @endif
+                </span>
+            </span>
+        </span>
+        <span class="text-gray-400 text-sm" x-text="open ? '▲' : '▼'"></span>
+    </button>
+
+    <div x-show="open" x-cloak class="p-5">
+        @if(! $waMessage)
+            <p class="text-sm text-gray-600 mb-3">এই অর্ডারের জন্য এখনো অনলাইন ইনভয়েস লিংক নেই। লিংক তৈরি করলে কাস্টমার মোবাইলে ইনভয়েস দেখতে, PDF নামাতে ও পেমেন্ট করতে পারবেন।</p>
+            <form method="POST" action="{{ route('admin.orders.invoice-link', $order) }}">
+                @csrf
+                <button class="bg-[#14532d] hover:bg-[#0d3520] text-white text-sm font-semibold px-4 py-2 rounded-lg">🧾 ইনভয়েস লিংক তৈরি করুন</button>
+            </form>
+        @else
+            <form method="POST" action="{{ route('admin.orders.whatsapp', $order) }}" target="_blank" class="space-y-3">
+                @csrf
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">কাস্টমারের WhatsApp নম্বর</label>
+                        <input type="tel" name="phone" value="{{ old('phone', $order->mobile_number) }}" required
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div class="sm:col-span-2 flex flex-wrap items-end gap-2">
+                        <a href="{{ $order->invoiceUrl() }}" target="_blank" class="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">👁 ইনভয়েস দেখুন</a>
+                        <a href="{{ $order->invoicePdfUrl() }}" target="_blank" class="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">📄 PDF</a>
+                        <button type="button" @click="navigator.clipboard.writeText(@js($order->invoiceUrl())).then(() => { copied = 'link'; setTimeout(() => copied = '', 1500) })"
+                                class="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                                x-text="copied === 'link' ? '✓ কপি হয়েছে' : '🔗 লিংক কপি'"></button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">মেসেজ (পাঠানোর আগে চাইলে এডিট করুন)</label>
+                    <textarea name="message" x-ref="waMsg" rows="12" required
+                              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-green-500">{{ old('message', $waMessage) }}</textarea>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="submit" class="bg-[#25D366] hover:bg-[#1da851] text-white text-sm font-bold px-5 py-2.5 rounded-lg">
+                        ✆ WhatsApp এ পাঠান
+                    </button>
+                    <button type="button" @click="navigator.clipboard.writeText($refs.waMsg.value).then(() => { copied = 'msg'; setTimeout(() => copied = '', 1500) })"
+                            class="text-sm px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                            x-text="copied === 'msg' ? '✓ কপি হয়েছে' : '📋 মেসেজ কপি'"></button>
+                    <span class="text-[11px] text-gray-400">WhatsApp Web / অ্যাপ খুলবে, মেসেজ বসানো থাকবে — শুধু Send চাপুন।</span>
+                </div>
+            </form>
+            <form method="POST" action="{{ route('admin.orders.invoice-toggle', $order) }}" class="mt-3">
+                @csrf
+                <button class="text-[11px] {{ $order->invoice_disabled_at ? 'text-green-700' : 'text-red-500' }} hover:underline">
+                    {{ $order->invoice_disabled_at ? 'ইনভয়েস লিংক বন্ধ আছে — চালু করুন' : 'ইনভয়েস লিংক বন্ধ করুন' }}
+                </button>
+            </form>
+        @endif
+    </div>
+</div>
+
 <div class="print-shadow bg-white rounded shadow divide-y divide-gray-100">
 
     {{-- Header --}}
@@ -99,6 +169,12 @@
             <div>
                 <span class="text-gray-500">বিকল্প মোবাইল:</span>
                 <span class="ml-2 text-gray-800">{{ $order->alternative_number }}</span>
+            </div>
+            @endif
+            @if($order->isAdminCreated())
+            <div>
+                <span class="text-gray-500">অর্ডার এসেছে:</span>
+                <span class="ml-2 text-gray-800 font-medium">{{ \App\Models\Order::CHANNELS[$order->order_channel] ?? 'অ্যাডমিন এন্ট্রি' }}</span>
             </div>
             @endif
             <div>
@@ -168,13 +244,7 @@
                 @foreach($order->items as $item)
                 <tr>
                     <td class="py-2.5 text-gray-800">{{ $item->product_name }}</td>
-                    <td class="py-2.5 text-right text-gray-600">
-                        @if($item->quantity_gram >= 1000)
-                            {{ $item->quantity_gram / 1000 }} কেজি
-                        @else
-                            {{ $item->quantity_gram }} গ্রাম
-                        @endif
-                    </td>
+                    <td class="py-2.5 text-right text-gray-600">{{ $item->quantityLabel() }}</td>
                     <td class="py-2.5 text-right text-gray-700">{{ number_format($item->unit_price, 2) }}</td>
                     <td class="py-2.5 text-right font-semibold text-gray-800">{{ number_format($item->line_total, 2) }}</td>
                 </tr>
@@ -200,9 +270,22 @@
                 <span>COD চার্জ</span><span>৳ {{ number_format($order->cod_charge, 2) }}</span>
             </div>
             @endif
+            @if($order->discount_amount > 0)
+            <div class="flex justify-between text-gray-600">
+                <span>ছাড়</span><span class="text-red-600">− ৳ {{ number_format($order->discount_amount, 2) }}</span>
+            </div>
+            @endif
             <div class="flex justify-between font-bold text-gray-800 border-t border-gray-200 pt-2 text-base">
                 <span>সর্বমোট</span><span>৳ {{ number_format($order->grand_total, 2) }}</span>
             </div>
+            @if($order->tracksDue())
+            <div class="flex justify-between text-green-700">
+                <span>পরিশোধিত</span><span>৳ {{ number_format($order->effectivePaid(), 2) }}</span>
+            </div>
+            <div class="flex justify-between font-semibold {{ $order->effectiveDue() > 0 ? 'text-red-600' : 'text-gray-500' }}">
+                <span>বাকি (COD)</span><span>৳ {{ number_format($order->effectiveDue(), 2) }}</span>
+            </div>
+            @endif
             @if($order->courier_cost !== null)
             <div class="flex justify-between text-gray-500 text-xs border-t border-dashed border-gray-200 pt-2 mt-1">
                 <span>কুরিয়ার খরচ (admin)</span><span>৳ {{ number_format($order->courier_cost, 2) }}</span>

@@ -71,6 +71,7 @@ class VendorController extends Controller
             'commission_type'  => 'nullable|in:percentage,fixed',
             'commission_value' => 'nullable|numeric|min:0',
             'admin_note'       => 'nullable|string|max:1000',
+            'panel_mode'       => 'nullable|in:full,stock_only',
             'password_mode'    => 'required|in:manual,auto',
             'password'         => 'required_if:password_mode,manual|nullable|string|min:8|confirmed',
         ], [
@@ -142,6 +143,7 @@ class VendorController extends Controller
             'commission_type'  => ($data['commission_type'] ?? null) ?: null,
             'commission_value' => ($data['commission_value'] ?? null) ?: null,
             'admin_note'       => $data['admin_note'] ?? null,
+            'panel_mode'       => $data['panel_mode'] ?? 'full',
             'status'           => $status,
             'is_active'        => ! in_array($status, ['suspended', 'rejected'], true),
             'approved_at'      => $status === 'approved' ? now() : null,
@@ -193,6 +195,7 @@ class VendorController extends Controller
             'commission_value'     => 'nullable|numeric|min:0',
             'product_auto_approve' => 'boolean',
             'admin_note'           => 'nullable|string|max:1000',
+            'panel_mode'           => 'nullable|in:full,stock_only',
         ], [
             'phone.unique' => 'এই ফোন নম্বর অন্য ভেন্ডরে ব্যবহৃত হচ্ছে।',
             'email.unique' => 'এই ইমেইল অন্য ভেন্ডরে ব্যবহৃত হচ্ছে।',
@@ -231,6 +234,7 @@ class VendorController extends Controller
             'commission_value'     => $data['commission_value'] ?: null,
             'product_auto_approve' => $request->boolean('product_auto_approve'),
             'admin_note'           => $data['admin_note'] ?: null,
+            'panel_mode'           => $data['panel_mode'] ?? $vendor->panel_mode ?? 'full',
             'approved_at'          => $status === 'approved'  ? ($vendor->approved_at ?? now()) : $vendor->approved_at,
             'suspended_at'         => $status === 'suspended' ? now() : $vendor->suspended_at,
         ]);

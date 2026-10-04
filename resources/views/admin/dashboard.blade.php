@@ -4,7 +4,10 @@
 
 @section('content')
 
-<h1 class="text-xl font-bold text-gray-800 mb-6">ড্যাশবোর্ড</h1>
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <h1 class="text-xl font-bold text-gray-800">ড্যাশবোর্ড</h1>
+    <a href="{{ route('admin.orders.create') }}" class="bg-[#14532d] hover:bg-[#0d3520] text-white text-sm font-semibold px-4 py-2 rounded-lg">📞 নতুন অর্ডার (ফোন / WhatsApp)</a>
+</div>
 
 {{-- ── Paykari enquiry widgets ──────────────────────────────────────── --}}
 @isset($enquiryStats)

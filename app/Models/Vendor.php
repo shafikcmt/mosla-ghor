@@ -13,7 +13,7 @@ class Vendor extends Model
         'address', 'district', 'city', 'trade_license', 'nid',
         'logo', 'banner', 'business_type', 'kyc_document',
         'payment_info', 'commission_type', 'commission_value',
-        'product_auto_approve', 'status', 'is_active', 'admin_note',
+        'product_auto_approve', 'panel_mode', 'status', 'is_active', 'admin_note',
         'approved_at', 'approved_by', 'suspended_at',
     ];
 
@@ -24,6 +24,12 @@ class Vendor extends Model
         'is_active'            => 'boolean',
         'approved_at'          => 'datetime',
         'suspended_at'         => 'datetime',
+    ];
+
+    /** Panel modes the admin can assign (see isStockOnly()). */
+    public const PANEL_MODES = [
+        'full'       => 'সম্পূর্ণ প্যানেল',
+        'stock_only' => 'শুধু স্টক ম্যানেজমেন্ট',
     ];
 
     /** Business types offered in the admin create/edit forms. */
@@ -98,6 +104,12 @@ class Vendor extends Model
     public function isApproved(): bool
     {
         return $this->status === 'approved' && $this->is_active;
+    }
+
+    /** Admin restricted this vendor to the stock-management screens only. */
+    public function isStockOnly(): bool
+    {
+        return $this->panel_mode === 'stock_only';
     }
 
     public function isPending(): bool

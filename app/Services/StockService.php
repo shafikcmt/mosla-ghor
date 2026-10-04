@@ -131,6 +131,79 @@ class StockService
     }
 
     /**
+     * Stock to move per product for an admin-created (phone/WhatsApp) order,
+     * in the product's own stock unit. Weighed lines (quantity_gram set) are
+     * converted for kg/gram products; legacy whole-kg products move by
+     * ceil(total kg), the same rule the public checkout uses.
+     *
+     * @return array<int, float> product_id => quantity
+     */
+    public function adminOrderDeltas(Order $order): array
+    {
+        $order->loadMissing('items');
+
+        $totals   = [];
+        $products = [];
+        foreach ($order->items as $item) {
+            if (! $item->product_id) {
+                continue;
+            }
+            $product = $products[$item->product_id] ??= Product::find($item->product_id);
+            if (! $product) {
+                continue;
+            }
+            $unit = $product->stockUnit();
+            if ($item->quantity_gram > 0 && in_array($unit, ['kg', 'gram'], true)) {
+                $qty = $unit === 'kg' ? $item->quantity_gram / 1000 : (float) $item->quantity_gram;
+            } else {
+                $qty = $this->itemQuantity($item);
+            }
+            $totals[$product->id] = ($totals[$product->id] ?? 0) + $qty;
+        }
+
+        $out = [];
+        foreach ($totals as $productId => $qty) {
+            $move = $products[$productId]->isUnitManaged() ? $qty : ceil(round($qty, 3));
+            if ($move > 0) {
+                $out[$productId] = round((float) $move, 3);
+            }
+        }
+
+        return $out;
+    }
+
+    /** Deduct stock for an admin-created order (throws when a line is short). */
+    public function deductForAdminOrder(Order $order, ?int $by = null): void
+    {
+        foreach ($this->adminOrderDeltas($order) as $productId => $qty) {
+            $this->record(Product::findOrFail($productId), 'order', -$qty, [
+                'reference_type' => 'order',
+                'reference_id'   => $order->id,
+                'note'           => 'অর্ডার #' . $order->order_number,
+                'created_by'     => $by,
+            ]);
+        }
+    }
+
+    /** Put back what {@see deductForAdminOrder()} took (cancel / return). */
+    public function restoreForAdminOrder(Order $order, string $type = 'cancel', ?int $by = null): void
+    {
+        foreach ($this->adminOrderDeltas($order) as $productId => $qty) {
+            $product = Product::find($productId);
+            if (! $product) {
+                continue;
+            }
+            $this->record($product, $type, $qty, [
+                'reference_type' => 'order',
+                'reference_id'   => $order->id,
+                'note'           => ($type === 'return' ? 'ফেরত' : 'বাতিল') . ' #' . $order->order_number,
+                'created_by'     => $by,
+                'allow_negative' => true,
+            ]);
+        }
+    }
+
+    /**
      * Append a ledger row WITHOUT changing stock — used by the public checkout,
      * which deducts inline and only needs the movement recorded for history.
      */

@@ -90,10 +90,13 @@ class InvoiceController extends Controller
                 'order_number'         => $orderNumber,
                 'customer_name'        => $order->customer_name,
                 'mobile_number'        => $order->mobile_number,
-                'full_address'         => $order->full_address,
+                'full_address'         => $order->full_address ?? '',
+                'district'             => $order->district ?? '',
+                'area'                 => $order->area ?? '',
                 'order_note'           => 'পুনঃঅর্ডার — মূল #' . $order->order_number,
                 'order_type'           => $order->order_type ?: 'retail',
-                'order_source'         => 'vendor_created_order',
+                // Vendor POS reorders go back to the vendor; everything else to admin.
+                'order_source'         => $order->created_by_vendor_id ? 'vendor_created_order' : 'admin_manual_order',
                 'created_by_vendor_id' => $order->created_by_vendor_id,
                 'vendor_customer_id'   => $order->vendor_customer_id,
                 'subtotal'             => 0,
@@ -150,7 +153,7 @@ class InvoiceController extends Controller
     {
         $order = $this->resolve($token);
 
-        if ($order->due_amount <= 0) {
+        if ($order->effectiveDue() <= 0) {
             return view('invoice.pay-done', [
                 'order'    => $order,
                 'siteName' => $this->siteName(),

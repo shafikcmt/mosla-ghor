@@ -12,6 +12,15 @@ class Order extends Model
 {
     use SoftDeletes;
 
+    /** Channels an admin can tag a manually entered order with. */
+    public const CHANNELS = [
+        'phone'     => '📞 ফোন কল',
+        'whatsapp'  => '💬 WhatsApp',
+        'messenger' => '💙 Messenger / Facebook',
+        'walk_in'   => '🏪 সরাসরি দোকানে',
+        'other'     => 'অন্যান্য',
+    ];
+
     protected $fillable = [
         'order_number', 'customer_name', 'mobile_number', 'alternative_number',
         'full_address', 'district', 'area', 'delivery_area',
@@ -38,7 +47,7 @@ class Order extends Model
         // Wholesale
         'enquiry_id',
         // Vendor POS / local-business workflow
-        'order_source', 'created_by_vendor_id', 'vendor_customer_id',
+        'order_source', 'order_channel', 'created_by_vendor_id', 'vendor_customer_id',
         'discount_amount', 'partial_paid_amount', 'due_amount',
         'invoice_token', 'payment_link_token', 'reorder_token',
         'whatsapp_sent_at', 'customer_confirmed_at', 'invoice_disabled_at',
@@ -166,6 +175,32 @@ class Order extends Model
     {
         return $this->order_source === 'vendor_created_order'
             || ! empty($this->created_by_vendor_id);
+    }
+
+    /** Order the admin entered for a phone / WhatsApp / Messenger customer. */
+    public function isAdminCreated(): bool
+    {
+        return $this->order_source === 'admin_manual_order';
+    }
+
+    /** POS and admin-entered orders keep paid/due amounts; website orders don't. */
+    public function tracksDue(): bool
+    {
+        return $this->isVendorCreated() || $this->isAdminCreated();
+    }
+
+    /** Outstanding amount; website orders fall back to the payment status. */
+    public function effectiveDue(): float
+    {
+        if ($this->tracksDue()) {
+            return max(0, (float) $this->due_amount);
+        }
+        return in_array($this->payment_status, ['verified', 'paid'], true) ? 0.0 : (float) $this->grand_total;
+    }
+
+    public function effectivePaid(): float
+    {
+        return max(0, round((float) $this->grand_total - $this->effectiveDue(), 2));
     }
 
     /** Generate the secure public tokens once (idempotent). */

@@ -11,6 +11,7 @@
         'paid'      => 'পেইড',
         'delivered' => 'ডেলিভারড',
         'cancelled' => 'বাতিল',
+        'manual'    => '📞 ফোন/WhatsApp',
     ];
     // ids of orders that must not be permanently deleted (shown as a bulk warning)
     $protectedIds = $orders->getCollection()->filter->isDeleteProtected()->pluck('id')->values();
@@ -31,7 +32,10 @@
 
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
         <h1 class="text-xl font-bold text-gray-800">অর্ডার তালিকা</h1>
-        <span class="text-sm text-gray-500">মোট: {{ $orders->total() }} টি অর্ডার</span>
+        <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-500">মোট: {{ $orders->total() }} টি অর্ডার</span>
+            <a href="{{ route('admin.orders.create') }}" class="bg-[#14532d] hover:bg-[#0d3520] text-white text-sm font-semibold px-4 py-2 rounded-lg">+ নতুন অর্ডার (ফোন/WhatsApp)</a>
+        </div>
     </div>
 
     {{-- Filter tabs + search --}}
@@ -105,7 +109,9 @@
                         <input type="checkbox" value="{{ $order->id }}" x-model.number="selected"
                                class="rounded border-gray-300">
                     </td>
-                    <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $order->order_number }}</td>
+                    <td class="px-4 py-3 font-mono text-xs text-gray-700">{{ $order->order_number }}
+                        @if($order->isAdminCreated())<div class="font-sans text-[10px] text-green-700 mt-0.5">{{ \App\Models\Order::CHANNELS[$order->order_channel] ?? 'ম্যানুয়াল' }}@if($order->whatsapp_sent_at) · ✓ WA@endif</div>@endif
+                    </td>
                     <td class="px-4 py-3 text-gray-800">{{ $order->customer_name }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ $order->mobile_number }}</td>
                     <td class="px-4 py-3">

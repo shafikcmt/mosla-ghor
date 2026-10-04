@@ -139,11 +139,7 @@
                 <tr class="border-b border-gray-100 last:border-0">
                     <td class="py-2 font-serif-bn text-gray-900 font-semibold">{{ $item->product_name }}</td>
                     <td class="py-2 text-center text-gray-600">
-                        @if($item->quantity_gram >= 1000)
-                            {{ $item->quantity_gram / 1000 }} কেজি
-                        @else
-                            {{ $item->quantity_gram }} গ্রাম
-                        @endif
+                        {{ $item->quantityLabel() }}
                     </td>
                     <td class="py-2 text-right text-gray-700">৳ {{ number_format($item->unit_price, 0) }}</td>
                     <td class="py-2 text-right font-bold text-gray-900">৳ {{ number_format($item->line_total, 0) }}</td>
@@ -170,9 +166,22 @@
                 <span>COD চার্জ</span><span>৳ {{ number_format($order->cod_charge, 0) }}</span>
             </div>
             @endif
+            @if($order->discount_amount > 0)
+            <div class="flex justify-between text-gray-600">
+                <span>ছাড়</span><span>− ৳ {{ number_format($order->discount_amount, 0) }}</span>
+            </div>
+            @endif
             <div class="flex justify-between font-bold text-gray-900 border-t border-gray-800 pt-2 text-base">
                 <span>সর্বমোট</span><span>৳ {{ number_format($order->grand_total, 0) }}</span>
             </div>
+            @if($order->tracksDue())
+            <div class="flex justify-between text-gray-600">
+                <span>পরিশোধিত</span><span>৳ {{ number_format($order->effectivePaid(), 0) }}</span>
+            </div>
+            <div class="flex justify-between font-bold text-gray-900">
+                <span>বাকি (COD)</span><span>৳ {{ number_format($order->effectiveDue(), 0) }}</span>
+            </div>
+            @endif
         </div>
     </div>
 

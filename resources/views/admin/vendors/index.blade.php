@@ -74,7 +74,9 @@
                         </div>
                         @endif
                         <div>
-                            <p class="font-medium text-gray-800">{{ $vendor->shop_name }}</p>
+                            <p class="font-medium text-gray-800">{{ $vendor->shop_name }}
+                                @if($vendor->isStockOnly())<span class="ml-1 align-middle text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">শুধু স্টক</span>@endif
+                            </p>
                             <p class="text-xs text-gray-400">{{ $vendor->owner_name }}{{ $vendor->business_type ? ' · ' . $vendor->business_type : '' }}</p>
                         </div>
                     </div>

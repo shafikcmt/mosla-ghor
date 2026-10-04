@@ -95,6 +95,26 @@
             ],
         ],
     ];
+
+    // Admin set this vendor to "stock only": show nothing but the stock screens.
+    $stockOnly = (bool) $vendor?->isStockOnly();
+    if ($stockOnly) {
+        $menuGroups = [
+            [
+                'label' => 'স্টক', 'icon' => $icons['box'],
+                'items' => [
+                    ['label' => 'স্টক খাতা',    'route' => 'vendor.stock.index',   'active' => 'vendor.stock.index'],
+                    ['label' => 'স্টক হিস্ট্রি', 'route' => 'vendor.stock.history', 'active' => 'vendor.stock.history'],
+                ],
+            ],
+            [
+                'label' => 'অ্যাকাউন্ট', 'icon' => $icons['user'],
+                'items' => [
+                    ['label' => 'শপ প্রোফাইল', 'route' => 'vendor.profile.index', 'active' => 'vendor.profile.*'],
+                ],
+            ],
+        ];
+    }
 @endphp
 
 <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden lg:hidden" onclick="closeSidebar()"></div>
@@ -136,7 +156,8 @@
     {{-- Nav (only this scrolls) --}}
     <nav class="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
 
-        {{-- Dashboard (single) --}}
+        {{-- Dashboard (single) — hidden for stock-only vendors --}}
+        @unless($stockOnly)
         <a href="{{ route('vendor.dashboard') }}"
            class="nav-link {{ $active('vendor.dashboard') ? 'active' : '' }}">
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -144,6 +165,7 @@
             </svg>
             ড্যাশবোর্ড
         </a>
+        @endunless
 
         {{-- Accordion groups --}}
         @foreach($menuGroups as $group)

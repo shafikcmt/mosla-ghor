@@ -34,6 +34,19 @@ class VendorMiddleware
         $vendor = $user->vendor;
         view()->share('authVendor', $vendor);
 
+        // Stock-only vendors (set by admin) may only reach the stock screens.
+        if ($vendor?->isStockOnly() && $vendor->isApproved() && ! $request->routeIs(...self::STOCK_ONLY_ROUTES)) {
+            return redirect()->route('vendor.stock.index');
+        }
+
         return $next($request);
     }
+
+    /** Routes a stock-only vendor can still open. */
+    public const STOCK_ONLY_ROUTES = [
+        'vendor.stock.*',
+        'vendor.notifications.*',
+        'vendor.profile.index',
+        'vendor.profile.update',
+    ];
 }

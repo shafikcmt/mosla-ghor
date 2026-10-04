@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\WebsiteSetting;
 use App\Services\CourierService;
+use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,7 @@ class OrderController extends Controller
             ->when($status === 'paid',      fn ($q) => $q->where('payment_status', 'verified'))
             ->when($status === 'delivered', fn ($q) => $q->where('order_status', 'delivered'))
             ->when($status === 'cancelled', fn ($q) => $q->where('order_status', 'cancelled'))
+            ->when($status === 'manual',    fn ($q) => $q->where('order_source', 'admin_manual_order'))
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('order_number', 'like', "%{$search}%")
@@ -60,7 +62,10 @@ class OrderController extends Controller
             'failed_delivery'   => 'ডেলিভারি ব্যর্থ',
         ];
 
-        return view('admin.orders.show', compact('order', 'couriers', 'zones', 'courierStatuses'));
+        // WhatsApp invoice: ready once the public invoice link exists.
+        $waMessage = $order->invoice_token ? ManualOrderController::renderMessage($order) : null;
+
+        return view('admin.orders.show', compact('order', 'couriers', 'zones', 'courierStatuses', 'waMessage'));
     }
 
     public function invoice(Order $order)
@@ -239,7 +244,7 @@ class OrderController extends Controller
 
         // Auto-restore stock when an order is returned
         if ($order->stock_deducted_at && ! $order->stock_restored_at) {
-            $this->deductedStockRestore($order);
+            $this->deductedStockRestore($order, 'return');
         }
 
         return redirect()->route('admin.orders.show', $order)
@@ -264,9 +269,17 @@ class OrderController extends Controller
             ->with('success', 'স্টক সফলভাবে পুনরুদ্ধার হয়েছে।');
     }
 
-    private function deductedStockRestore(Order $order): void
+    private function deductedStockRestore(Order $order, string $type = 'cancel'): void
     {
         $order->loadMissing('items');
+
+        // Phone/WhatsApp orders created in admin deducted through the ledger.
+        if ($order->isAdminCreated()) {
+            app(StockService::class)->restoreForAdminOrder($order, $type, Auth::id());
+            $order->update(['stock_restored_at' => now()]);
+
+            return;
+        }
 
         $neededByProduct = [];
         foreach ($order->items as $item) {

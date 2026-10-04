@@ -276,6 +276,8 @@ Route::prefix('vendor')->name('vendor.')->middleware('vendor')->group(function (
     Route::get('stock',          [VendorStockController::class, 'index'])->name('stock.index');
     Route::get('stock/history',  [VendorStockController::class, 'history'])->name('stock.history');
     Route::post('stock/adjust',  [VendorStockController::class, 'adjust'])->name('stock.adjust');
+    Route::post('stock/threshold', [VendorStockController::class, 'threshold'])->name('stock.threshold');
+    Route::post('stock/quick-add', [VendorStockController::class, 'quickAdd'])->name('stock.quick-add');
 
     // ── Local customers ────────────────────────────────────────────────────
     Route::resource('customers', VendorCustomerController::class)
@@ -440,6 +442,13 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
     // Trash / soft-delete management — declared before {order} so "trash" isn't
     // captured as an order id by route-model binding.
+    // Phone / WhatsApp orders entered by admin (+ WhatsApp invoice)
+    Route::get('orders/create', [\App\Http\Controllers\Admin\ManualOrderController::class, 'create'])->name('orders.create');
+    Route::post('orders/manual', [\App\Http\Controllers\Admin\ManualOrderController::class, 'store'])->name('orders.manual.store');
+    Route::get('orders/manual/lookup', [\App\Http\Controllers\Admin\ManualOrderController::class, 'lookup'])->name('orders.manual.lookup');
+    Route::post('orders/{order}/invoice-link', [\App\Http\Controllers\Admin\ManualOrderController::class, 'prepareInvoice'])->name('orders.invoice-link');
+    Route::post('orders/{order}/whatsapp', [\App\Http\Controllers\Admin\ManualOrderController::class, 'whatsapp'])->name('orders.whatsapp');
+    Route::post('orders/{order}/invoice-toggle', [\App\Http\Controllers\Admin\ManualOrderController::class, 'invoiceToggle'])->name('orders.invoice-toggle');
     Route::get('orders/trash', [AdminOrderController::class, 'trash'])->name('orders.trash');
     Route::delete('orders/bulk-destroy', [AdminOrderController::class, 'bulkDestroy'])->name('orders.bulkDestroy');
     Route::post('orders/{id}/restore', [AdminOrderController::class, 'restore'])->name('orders.restore');

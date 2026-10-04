@@ -5,7 +5,7 @@
 <div class="card bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
     <h1 class="text-lg font-bold text-gray-800 mb-1">পেমেন্ট তথ্য দিন</h1>
     <p class="text-sm text-gray-500 mb-4">ইনভয়েস #{{ $order->order_number }} — বাকি
-        <span class="font-bold text-red-600">৳{{ number_format($order->due_amount, 2) }}</span></p>
+        <span class="font-bold text-red-600">৳{{ number_format($order->effectiveDue(), 2) }}</span></p>
 
     @if($errors->any())
         <div class="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
@@ -37,7 +37,7 @@
         </div>
         <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">পরিমাণ (৳)</label>
-            <input type="number" name="amount" step="0.01" min="0" value="{{ old('amount', $order->due_amount) }}"
+            <input type="number" name="amount" step="0.01" min="0" value="{{ old('amount', $order->effectiveDue()) }}"
                    class="w-full border rounded-lg px-3 py-2 text-sm">
         </div>
         <div class="flex items-center gap-3 pt-1">

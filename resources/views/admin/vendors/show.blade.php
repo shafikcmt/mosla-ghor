@@ -95,6 +95,7 @@
             <div><dt class="text-gray-500 text-xs">NID</dt><dd>{{ $vendor->nid ?: '—' }}</dd></div>
             <div><dt class="text-gray-500 text-xs">কমিশন</dt><dd>{{ $vendor->commission_type ?? 'ডিফল্ট' }} — {{ $vendor->commission_value ?? '—' }}</dd></div>
             <div><dt class="text-gray-500 text-xs">পণ্য অটো অনুমোদন</dt><dd>{{ $vendor->product_auto_approve ? 'হ্যাঁ' : 'না' }}</dd></div>
+            <div><dt class="text-gray-500 text-xs">প্যানেল মোড</dt><dd>{{ \App\Models\Vendor::PANEL_MODES[$vendor->panel_mode ?? 'full'] ?? 'সম্পূর্ণ প্যানেল' }}</dd></div>
             <div class="col-span-2"><dt class="text-gray-500 text-xs">অ্যাডমিন নোট</dt><dd class="text-gray-600">{{ $vendor->admin_note ?: '—' }}</dd></div>
         </dl>
     </div>

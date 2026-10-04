@@ -13,13 +13,23 @@
 </div>
 
 <form method="GET" class="flex flex-wrap gap-2 mb-4">
+    <select name="product_id" class="border rounded-lg px-3 py-2 text-sm bg-white max-w-[220px]">
+        <option value="">সব পণ্য</option>
+        @foreach($products as $p)
+            <option value="{{ $p->id }}" {{ (string) request('product_id') === (string) $p->id ? 'selected' : '' }}>{{ $p->name_bn ?: $p->name_en }}</option>
+        @endforeach
+    </select>
     <select name="type" class="border rounded-lg px-3 py-2 text-sm bg-white">
         <option value="">সব ধরন</option>
         @foreach(\App\Models\VendorStockMovement::TYPES as $k => $v)
             <option value="{{ $k }}" {{ request('type') === $k ? 'selected' : '' }}>{{ $v }}</option>
         @endforeach
     </select>
+    <input type="date" name="date" value="{{ request('date') }}" class="border rounded-lg px-3 py-2 text-sm bg-white">
     <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm">ফিল্টার</button>
+    @if(request()->hasAny(['product_id', 'type', 'date']))
+        <a href="{{ route('vendor.stock.history') }}" class="px-3 py-2 text-sm text-gray-500 hover:text-gray-800">রিসেট</a>
+    @endif
 </form>
 
 <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -42,7 +52,7 @@
                         <td class="px-4 py-3 text-gray-800">{{ $m->product?->name_bn ?: ($m->product?->name_en ?? '—') }}</td>
                         <td class="px-4 py-3">
                             <span class="inline-block px-2 py-0.5 rounded text-xs font-medium
-                                {{ in_array($m->type, ['add','return']) ? 'bg-green-100 text-green-700' : (in_array($m->type, ['reduce','order','cancel']) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600') }}">
+                                {{ $m->type === 'adjustment' ? 'bg-gray-100 text-gray-600' : ($m->quantity >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') }}">
                                 {{ $m->typeLabel() }}
                             </span>
                         </td>
