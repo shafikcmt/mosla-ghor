@@ -75,6 +75,9 @@
                                 <div class="text-gray-400 text-[10px]">থেকে শুরু</div>
                             </div>
                         @endif
+                        @if($wholesaleOnly)
+                            @include('partials.storefront.wholesale-quick-actions', ['compact' => true])
+                        @else
                         <div class="flex gap-2">
                             <a href="{{ $detailUrl }}"
                                class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
@@ -94,6 +97,7 @@
                                 @endif
                             @endunless
                         </div>
+                        @endif
                     </div>
                 </div>
             </article>

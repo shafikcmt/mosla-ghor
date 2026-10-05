@@ -53,6 +53,11 @@
     $authPhone    = $authCustomer->mobile_number ?? '';
     $authAddress  = $authCustomer->last_full_address ?? '';
 
+    // WhatsApp / Call buttons for wholesale buyers (site contact number from settings).
+    $pdWaDigits = preg_replace('/\D+/', '', \App\Models\WebsiteSetting::get('whatsapp_number'));
+    $pdWa       = $pdWaDigits === '' ? '' : (str_starts_with($pdWaDigits, '0') ? '88'.$pdWaDigits : $pdWaDigits);
+    $pdWaLink   = $pdWa ? 'https://wa.me/'.$pdWa.'?text='.rawurlencode('আসসালামু আলাইকুম, আমি "'.($product->name_bn ?: $product->name_en).'" পাইকারি কিনতে চাই। দাম জানাবেন?'."\n".url()->current()) : '';
+
     // SEO: custom per-product values when set, otherwise the auto fallbacks (see Product::seo*()).
     $customTitle = trim((string) $product->meta_title);
     $metaDesc    = $product->seoDescription();
@@ -379,14 +384,16 @@
                         class="btn-gold text-[#0f3d22] font-bold text-sm px-5 py-2.5 rounded-xl whitespace-nowrap">
                     পাইকারি দাম জানুন
                 </button>
-                <button type="button" onclick="pdToggleEnquiry(true)"
-                        class="bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
-                    দাম জিজ্ঞাসা করুন
-                </button>
-                <button type="button" onclick="pdToggleEnquiry(true)"
-                        class="border border-[#14532d] text-[#14532d] hover:bg-green-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
-                    বিক্রেতার সাথে কথা বলুন
-                </button>
+                @if($pdWa)
+                <a href="{{ $pdWaLink }}" target="_blank" rel="noopener"
+                   class="inline-flex items-center gap-1.5 border border-[#25D366] text-[#128C7E] hover:bg-[#25D366] hover:text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                    WhatsApp করুন
+                </a>
+                <a href="tel:+{{ $pdWa }}"
+                   class="inline-flex items-center gap-1.5 bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                    📞 কল করুন
+                </a>
+                @endif
                 <button type="button" id="pd-add-bag"
                         data-id="{{ $product->id }}" data-slug="{{ $product->slug }}"
                         data-name="{{ $product->display_name }}" data-image="{{ $main }}"
@@ -470,11 +477,15 @@
 
                     {{-- Delivery location (required; autofilled if available) --}}
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">ডেলিভারি ঠিকানা / এলাকা <span class="text-red-500">*</span></label>
-                        <input type="text" name="delivery_location" value="{{ old('delivery_location', $authAddress) }}" required placeholder="যেমন: ঢাকা, চট্টগ্রাম"
+                        <label class="block text-xs text-gray-500 mb-1">ডেলিভারি এলাকা <span class="text-gray-300">(ঐচ্ছিক)</span></label>
+                        <input type="text" name="delivery_location" value="{{ old('delivery_location', $authAddress) }}" placeholder="যেমন: ঢাকা, চট্টগ্রাম"
                                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
                     </div>
 
+                    {{-- Extra details stay folded so the form is quick: qty + name + phone is enough. --}}
+                    <details class="rounded-lg border border-gray-100 bg-white px-3 py-2" @if(old('customer_email') || old('business_type') || old('message')) open @endif>
+                        <summary class="cursor-pointer text-xs font-semibold text-[#14532d]">আরও তথ্য দিন (ঐচ্ছিক) — ইমেইল, ব্যবসার ধরন, বার্তা</summary>
+                        <div class="space-y-3 mt-3">
                     {{-- Email (optional) — enquiry tracking link + quote updates by email --}}
                     <div>
                         <label class="block text-xs text-gray-500 mb-1">ইমেইল <span class="text-gray-300">(ঐচ্ছিক)</span></label>
@@ -503,6 +514,8 @@
                                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d]">
                         </div>
                     </div>
+                        </div>
+                    </details>
 
                     <button type="submit"
                             class="w-full bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm py-3 rounded-xl transition-colors">
@@ -662,7 +675,13 @@
                 class="flex-1 btn-gold text-[#0f3d22] font-bold text-sm py-2.5 rounded-xl disabled:opacity-40">এখনই কিনুন</button>
     @elseif($showWholesale)
         <button type="button" onclick="pdToggleEnquiry(true)"
-                class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl">পাইকারি দাম জানুন</button>
+                class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl">দাম জানুন</button>
+        @if($pdWa)
+        <a href="{{ $pdWaLink }}" target="_blank" rel="noopener"
+           class="flex-1 text-center border border-[#25D366] text-[#128C7E] font-semibold text-sm py-2.5 rounded-xl">WhatsApp</a>
+        <a href="tel:+{{ $pdWa }}"
+           class="flex-1 text-center bg-[#c9a227] text-[#0f3d22] font-semibold text-sm py-2.5 rounded-xl">কল করুন</a>
+        @endif
     @endif
 </div>
 <div class="lg:hidden h-16"></div>{{-- spacer so sticky bar never covers content --}}
