@@ -377,6 +377,15 @@
         {{-- ── (d) WHOLESALE / PAYKARI enquiry block (price never shown) ──── --}}
         @if($showWholesale)
         <div id="enquiry" class="mt-6 rounded-xl border border-orange-100 bg-orange-50/40 p-4">
+            {{-- Product data for the quick enquiry popup (WhatsApp / call / quick quote). --}}
+            <div id="pd-qe-data" hidden
+                 data-action="{{ route('products.enquiry.store', $product->slug) }}"
+                 data-slug="{{ $product->slug }}"
+                 data-name="{{ $product->name_bn ?: $product->name_en }}"
+                 data-image="{{ $main }}"
+                 data-moq="{{ $product->min_order_quantity ? rtrim(rtrim(number_format((float) $product->min_order_quantity, 2, '.', ''), '0'), '.') : '' }}"
+                 data-unit="{{ $product->min_order_unit ?: 'kg' }}"
+                 data-retail-url="{{ $product->show_in_retail ? route('products.show', $product->slug) : '' }}"></div>
             <h2 class="text-sm font-bold text-orange-800 mb-1">পাইকারি / Wholesale</h2>
             <p class="text-sm text-gray-700">বড় পরিমাণে কিনতে চাইলে পাইকারি দাম জানতে পারবেন।</p>
             <p class="text-xs text-gray-500 mt-1">পাইকারি দামের জন্য quantity অনুযায়ী আমাদের team quote দিবে।</p>
@@ -411,14 +420,15 @@
                     পাইকারি দাম জানুন
                 </button>
                 @if($pdWa)
-                <a href="{{ $pdWaLink }}" target="_blank" rel="noopener"
-                   class="inline-flex items-center gap-1.5 border border-[#25D366] text-[#128C7E] hover:bg-[#25D366] hover:text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                {{-- Wholesale WhatsApp / call go through the quick step (qty ≥ MOQ + contact) first. --}}
+                <button type="button" onclick="pdQuickEnquiry('whatsapp')"
+                        class="inline-flex items-center gap-1.5 border border-[#25D366] text-[#128C7E] hover:bg-[#25D366] hover:text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
                     WhatsApp করুন
-                </a>
-                <a href="tel:+{{ $pdWa }}"
-                   class="inline-flex items-center gap-1.5 bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                </button>
+                <button type="button" onclick="pdQuickEnquiry('call')"
+                        class="inline-flex items-center gap-1.5 bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
                     📞 কল করুন
-                </a>
+                </button>
                 @endif
                 <button type="button" id="pd-add-bag"
                         data-id="{{ $product->id }}" data-slug="{{ $product->slug }}"
@@ -739,10 +749,10 @@
         <button type="button" onclick="pdToggleEnquiry(true)"
                 class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl">দাম জানুন</button>
         @if($pdWa)
-        <a href="{{ $pdWaLink }}" target="_blank" rel="noopener"
-           class="flex-1 text-center border border-[#25D366] text-[#128C7E] font-semibold text-sm py-2.5 rounded-xl">WhatsApp</a>
-        <a href="tel:+{{ $pdWa }}"
-           class="flex-1 text-center bg-[#c9a227] text-[#0f3d22] font-semibold text-sm py-2.5 rounded-xl">কল করুন</a>
+        <button type="button" onclick="pdQuickEnquiry('whatsapp')"
+                class="flex-1 text-center border border-[#25D366] text-[#128C7E] font-semibold text-sm py-2.5 rounded-xl">WhatsApp</button>
+        <button type="button" onclick="pdQuickEnquiry('call')"
+                class="flex-1 text-center bg-[#c9a227] text-[#0f3d22] font-semibold text-sm py-2.5 rounded-xl">কল করুন</button>
         @endif
     @endif
 </div>
@@ -898,6 +908,14 @@
             }));
         } catch (e) {}
         window.location.href = '/';
+    }
+
+    // ── Wholesale WhatsApp / call: quick step first (carries the chosen variant) ──
+    function pdQuickEnquiry(mode) {
+        const holder = document.getElementById('pd-qe-data');
+        if (!holder || !window.msQuickEnquiry) return;
+        holder.dataset.variant = pdSelectedVariantId || '';
+        msQuickEnquiry(holder, mode);
     }
 
     // ── Wholesale enquiry form toggle (in-page, no popup) ─────────────────

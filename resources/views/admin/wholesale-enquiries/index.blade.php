@@ -44,7 +44,7 @@
                     <p class="text-gray-400 text-xs">{{ $enquiry->customer?->email }}</p>
                 </td>
                 <td class="px-4 py-3 font-medium text-gray-800">{{ $enquiry->productLabel() }}</td>
-                <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">{{ rtrim(rtrim(number_format((float)$enquiry->quantity_kg,2),'0'),'.') }} {{ $enquiry->quantity_unit ?: 'kg' }}</td>
+                <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">{{ rtrim(rtrim(number_format((float)$enquiry->quantity_kg,2),'0'),'.') }} {{ $enquiry->quantity_unit ?: 'kg' }}@if($enquiry->contact_channel && $enquiry->contact_channel !== 'form')<span class="ml-1 inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded {{ $enquiry->contact_channel === 'whatsapp' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800' }}">{{ \App\Models\WholesaleEnquiry::CHANNELS[$enquiry->contact_channel] ?? $enquiry->contact_channel }}</span>@endif</td>
                 <td class="px-4 py-3 hidden lg:table-cell">
                     @if($enquiry->latestQuote)
                     <span class="text-xs text-gray-600">{{ $enquiry->latestQuote->statusLabel() }}</span>

@@ -25,7 +25,7 @@
 
             <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <div><dt class="text-gray-400 text-xs uppercase tracking-wider">পণ্য</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->productLabel() }}</dd></div>
-                <div><dt class="text-gray-400 text-xs uppercase tracking-wider">পরিমাণ</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ rtrim(rtrim(number_format((float)$enquiry->quantity_kg,2),'0'),'.') }} {{ $enquiry->quantity_unit ?: 'kg' }}</dd></div>
+                <div><dt class="text-gray-400 text-xs uppercase tracking-wider">পরিমাণ</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ rtrim(rtrim(number_format((float)$enquiry->quantity_kg,2),'0'),'.') }} {{ $enquiry->quantity_unit ?: 'kg' }}@if($enquiry->contact_channel && $enquiry->contact_channel !== 'form')<span class="ml-1 inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded {{ $enquiry->contact_channel === 'whatsapp' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-800' }}">{{ \App\Models\WholesaleEnquiry::CHANNELS[$enquiry->contact_channel] ?? $enquiry->contact_channel }}</span>@endif</dd></div>
                 <div><dt class="text-gray-400 text-xs uppercase tracking-wider">ডেলিভারি লোকেশন</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->delivery_location }}</dd></div>
                 <div><dt class="text-gray-400 text-xs uppercase tracking-wider">ব্যবসার ধরন</dt><dd class="font-semibold text-gray-800 mt-0.5">{{ $enquiry->businessTypeLabel() }}</dd></div>
                 @if($enquiry->message)
