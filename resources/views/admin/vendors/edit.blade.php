@@ -72,6 +72,17 @@
 
     <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
         <h3 class="font-semibold text-gray-700 text-sm mb-4">স্ট্যাটাস ও কমিশন</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="md:col-span-3">
+                <label class="block text-xs font-medium text-gray-600 mb-1">প্যানেলের ধরন</label>
+                <select name="panel_mode" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                    @foreach(\App\Models\Vendor::PANEL_MODES as $val => $label)
+                    <option value="{{ $val }}" {{ old('panel_mode', $vendor->panel_mode ?? 'full') === $val ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <p class="text-[11px] text-gray-400 mt-1">“শুধু স্টক ও হিসাব” বেছে নিলে ভেন্ডর শুধু দোকানের খাতা (আইটেম, পার্টি, বিক্রি/ক্রয়, বাকি, রিপোর্ট) দেখবে — ওয়েবসাইটে পণ্য বিক্রির কিছু দেখাবে না।</p>
+            </div>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">স্ট্যাটাস <span class="text-red-500">*</span></label>

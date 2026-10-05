@@ -53,6 +53,7 @@ class AuthController extends Controller
             'password'    => 'required|string|min:8|confirmed',
             'address'     => 'nullable|string|max:500',
             'business_type' => 'nullable|string|max:100',
+            'panel_mode'  => 'nullable|in:full,inventory',
             'logo'        => 'bail|nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
             'kyc_document' => 'bail|nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
         ], [
@@ -123,6 +124,7 @@ class AuthController extends Controller
             'email'        => $email,
             'address'      => $data['address'] ?? null,
             'business_type' => $data['business_type'] ?? null,
+            'panel_mode'    => $data['panel_mode'] ?? 'full',
             'logo'         => $logoPath,
             'kyc_document' => $kycPath,
             'status'       => $autoApprove ? 'approved' : 'pending',

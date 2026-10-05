@@ -65,6 +65,7 @@
                 ['label' => 'নতুন বিক্রয় (POS)', 'route' => 'vendor.pos.create',    'active' => 'vendor.pos.create', 'show' => $canOrder],
                 ['label' => 'বিক্রয় তালিকা',     'route' => 'vendor.pos.index',     'active' => ['vendor.pos.index', 'vendor.pos.show'], 'show' => $canOrder],
                 ['label' => 'কাস্টমার',          'route' => 'vendor.customers.index', 'active' => 'vendor.customers.*', 'show' => $canCustomer],
+                ['label' => '📒 দোকানের খাতা',     'route' => 'vendor.khata.home',      'active' => 'vendor.khata.*'],
             ],
         ],
         [

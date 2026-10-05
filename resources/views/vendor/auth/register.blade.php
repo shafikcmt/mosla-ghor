@@ -34,6 +34,26 @@
         <form method="POST" action="{{ route('vendor.register.post') }}" enctype="multipart/form-data" class="space-y-4">
             @csrf
 
+            <div class="mb-4">
+                <p class="block text-sm font-medium text-gray-700 mb-2">আপনি কী করতে চান?</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="panel_mode" value="inventory" class="peer sr-only" {{ old('panel_mode') === 'inventory' ? 'checked' : '' }}>
+                        <span class="block rounded-xl border border-gray-200 p-3 text-sm peer-checked:border-green-600 peer-checked:bg-green-50">
+                            <b class="block text-gray-800">📒 শুধু দোকানের হিসাব ও স্টক</b>
+                            <span class="text-xs text-gray-500">আইটেম, পার্টি, বিক্রি/ক্রয় ভাউচার, বাকি ও রিপোর্ট</span>
+                        </span>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="panel_mode" value="full" class="peer sr-only" {{ old('panel_mode', 'full') === 'full' ? 'checked' : '' }}>
+                        <span class="block rounded-xl border border-gray-200 p-3 text-sm peer-checked:border-green-600 peer-checked:bg-green-50">
+                            <b class="block text-gray-800">🛒 ওয়েবসাইটে পণ্য বিক্রি</b>
+                            <span class="text-xs text-gray-500">মার্কেটপ্লেসে পণ্য, অর্ডার ও পাইকারি enquiry</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">দোকানের নাম <span class="text-red-500">*</span></label>
