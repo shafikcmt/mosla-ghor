@@ -91,12 +91,9 @@
                         @endif
                     </div>
                     <div class="flex-1 min-h-3"></div>
-                    {{-- Listing stays simple: enquiry/contact actions live on the details page. --}}
+                    {{-- One-tap wholesale actions (IndiaMart style); title/image open the details page. --}}
                     <div class="mt-4">
-                        <a href="{{ $detailUrl }}"
-                           class="block w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
-                            বিস্তারিত দেখুন
-                        </a>
+                        @include('partials.storefront.wholesale-quick-actions')
                     </div>
                     @else
                     <div id="card-price-wrap-{{ $product->id }}" class="mt-3 flex items-baseline gap-1.5"
@@ -158,12 +155,9 @@
                         @endif
                     </div>
 
-                    {{-- Wholesale mode button (hidden in retail mode): Details only --}}
+                    {{-- Wholesale mode buttons (hidden in retail mode) --}}
                     <div id="card-wholesale-btns-{{ $product->id }}" style="display:none;" class="mt-4">
-                        <a href="{{ route('products.show', ['product' => $product->slug, 'mode' => 'wholesale']) }}"
-                           class="block w-full bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
-                            বিস্তারিত দেখুন
-                        </a>
+                        @include('partials.storefront.wholesale-quick-actions')
                     </div>
                     @endif
                 </div>

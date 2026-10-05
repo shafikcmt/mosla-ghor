@@ -1589,6 +1589,9 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 @php($msHideFloat = true)
 @include('partials.mini-cart')
 
+{{-- Quick wholesale enquiry popup (opened by the cards' "দাম জানুন" button) --}}
+@include('partials.storefront.quick-enquiry-modal')
+
 {{-- App-like mobile/tablet bottom navigation (combo-bar z-50 sits above it when active) --}}
 @include('partials.bottom-nav')
 

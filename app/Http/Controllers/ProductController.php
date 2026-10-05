@@ -177,7 +177,8 @@ class ProductController extends Controller
         $validated = $request->validate([
             'customer_name'      => ['required', 'string', 'max:100'],
             'customer_phone'     => ['required', 'string', 'max:20', 'regex:/^[0-9+\-\s]{6,20}$/'],
-            'delivery_location'  => ['required', 'string', 'max:255'],
+            // Optional: the quick enquiry popup asks only name + phone + quantity.
+            'delivery_location'  => ['nullable', 'string', 'max:255'],
             'quantity_kg'        => ['required', 'numeric', 'min:0.01'],
             'quantity_unit'      => ['nullable', 'in:kg,gram,bag,carton,piece,packet,ton'],
             'business_type'      => ['nullable', 'in:shop,restaurant,dealer,retailer,other'],
@@ -198,10 +199,15 @@ class ProductController extends Controller
         if ($product->min_order_quantity && (float) $validated['quantity_kg'] < (float) $product->min_order_quantity) {
             $unit = $product->min_order_unit ?: 'kg';
             $qty  = rtrim(rtrim(number_format((float) $product->min_order_quantity, 2, '.', ''), '0'), '.');
+            $error = "এই পণ্যের জন্য সর্বনিম্ন অর্ডার পরিমাণ {$qty} {$unit}।";
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $error, 'errors' => ['quantity_kg' => [$error]]], 422);
+            }
 
             return back()
                 ->withInput()
-                ->withErrors(['quantity_kg' => "এই পণ্যের জন্য সর্বনিম্ন অর্ডার পরিমাণ {$qty} {$unit}।"]);
+                ->withErrors(['quantity_kg' => $error]);
         }
 
         // Link to the customer record when logged in. For guests, auto-create a
@@ -228,7 +234,7 @@ class ProductController extends Controller
             'vendor_id'          => $product->vendor_id,
             'quantity_kg'        => $validated['quantity_kg'],
             'quantity_unit'      => $validated['quantity_unit'] ?? ($product->min_order_unit ?: 'kg'),
-            'delivery_location'  => $validated['delivery_location'],
+            'delivery_location'  => $validated['delivery_location'] ?? '',
             'business_type'      => $validated['business_type'] ?? 'other',
             'message'            => $validated['message'] ?? null,
             'customer_name'      => $validated['customer_name'],
@@ -268,6 +274,11 @@ class ProductController extends Controller
             $msg .= ($account && $account['isNew'] && ! empty($validated['customer_email']))
                 ? ' আপনার email-এ password সেট করার লিংক পাঠানো হয়েছে — enquiry track করতে পারবেন।'
                 : ' একই ফোন নম্বরে password সেট করে পরে enquiry status দেখতে পারবেন।';
+        }
+
+        // Quick enquiry popup (fetch) → JSON; the page stays where the buyer was.
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'message' => $msg, 'enquiry_id' => $enquiry->id], 201);
         }
 
         // Return to whichever page the enquiry was sent from (wholesale stays on its URL).

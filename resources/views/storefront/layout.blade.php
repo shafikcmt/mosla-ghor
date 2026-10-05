@@ -88,6 +88,7 @@
      Float button suppressed — the mobile bottom nav already exposes the bag. --}}
 @php($msHideFloat = true)
 @include('partials.mini-cart')
+@include('partials.storefront.quick-enquiry-modal')
 
 {{-- App-like mobile/tablet bottom navigation --}}
 @include('partials.bottom-nav')
