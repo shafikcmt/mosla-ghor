@@ -28,7 +28,6 @@ class GuestAccountCreatedNotification extends Notification
             ->greeting('স্বাগতম!')
             ->line('আপনার পাইকারি enquiry গ্রহণ করা হয়েছে। enquiry track করতে ও পরবর্তীতে সহজে login করতে নিচের বাটনে ক্লিক করে একটি password সেট করুন।')
             ->action('Password সেট করুন', $this->setPasswordUrl)
-            ->line('এই লিংকটি ৭ দিনের জন্য বৈধ।')
-            ->line('MoslaMart Team');
+            ->line('এই লিংকটি ৭ দিনের জন্য বৈধ।');
     }
 }

@@ -19,6 +19,23 @@ class WholesaleCommissionController extends Controller
         return view('admin.commission-settings.index', compact('settings', 'vendors'));
     }
 
+    /** Wholesale quote payment policy: COD for the first N orders, then advance. */
+    public function updatePolicy(Request $request)
+    {
+        $data = $request->validate([
+            'wholesale_cod_order_limit'     => ['required', 'integer', 'min:0', 'max:100'],
+            'wholesale_default_advance'     => ['required', 'numeric', 'min:0', 'max:100'],
+            'wholesale_delivery_later_text' => ['required', 'string', 'max:300'],
+            'wholesale_cod_policy_text'     => ['required', 'string', 'max:300'],
+        ]);
+
+        foreach ($data as $key => $value) {
+            \App\Models\WebsiteSetting::updateOrCreate(['key' => $key], ['value' => (string) $value]);
+        }
+
+        return back()->with('success', 'পাইকারি পেমেন্ট নীতি আপডেট হয়েছে।');
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

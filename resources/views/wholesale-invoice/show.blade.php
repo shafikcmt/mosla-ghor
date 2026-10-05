@@ -62,11 +62,11 @@
     <div class="px-6 pb-5">
         <div class="ml-auto max-w-xs space-y-1 text-sm">
             <div class="flex justify-between"><span class="text-gray-500">সাবটোটাল</span><span>৳{{ number_format($quote->subtotal, 2) }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">ডেলিভারি চার্জ</span><span>৳{{ number_format($quote->delivery_charge, 2) }}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">ডেলিভারি চার্জ</span><span>{{ $quote->deliveryChargeLabel() }}</span></div>
             @if($quote->advanceAmount() > 0)
             <div class="flex justify-between"><span class="text-gray-500">অগ্রিম@if($quote->advance_percentage) ({{ rtrim(rtrim(number_format($quote->advance_percentage, 2), '0'), '.') }}%)@endif</span><span class="text-amber-700">৳{{ number_format($quote->advanceAmount(), 2) }}</span></div>
             @endif
-            <div class="flex justify-between font-bold text-base border-t pt-1"><span>সর্বমোট</span><span class="text-[#0f3d22]">৳{{ number_format($quote->grandTotal(), 2) }}</span></div>
+            <div class="flex justify-between font-bold text-base border-t pt-1"><span>{{ $quote->deliveryLater() ? 'সর্বমোট (ডেলিভারি চার্জ ছাড়া)' : 'সর্বমোট' }}</span><span class="text-[#0f3d22]">৳{{ number_format($quote->grandTotal(), 2) }}</span></div>
         </div>
     </div>
 
@@ -87,6 +87,9 @@
                 @endforeach
             </div>
         </div>
+        @endif
+        @if(! empty($quote->terms))
+        <div class="sm:col-span-2">@include('partials.wholesale-quote-terms', ['termsClass' => ''])</div>
         @endif
         @if($quote->note)
         <div class="sm:col-span-2 bg-gray-50 rounded-xl p-3 text-gray-700">

@@ -72,7 +72,8 @@ class WholesaleQuoteController extends Controller
                 'order_status'    => 'pending',
                 'customer_id'     => $customer->id,
                 'enquiry_id'      => $enquiry->id,
-                'order_note'      => 'পাইকারি Enquiry #' . $enquiry->id . ' থেকে তৈরি।',
+                'order_note'      => 'পাইকারি Enquiry #' . $enquiry->id . ' থেকে তৈরি।'
+                    . ($quote->deliveryLater() ? ' ডেলিভারি চার্জ এখনো যোগ হয়নি — কনফার্মের সময় যোগ করুন।' : ''),
             ]);
 
             $order->items()->create([

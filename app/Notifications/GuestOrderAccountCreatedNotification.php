@@ -40,8 +40,7 @@ class GuestOrderAccountCreatedNotification extends Notification
             ->line("মোট: ৳{$total}")
             ->line('অর্ডার track করতে ও পরবর্তীতে সহজে login করতে নিচের বাটনে ক্লিক করে একটি password সেট করুন।')
             ->action('Password সেট করুন', $this->setPasswordUrl)
-            ->line('এই লিংকটি ৭ দিনের জন্য বৈধ। সম্পূর্ণ PDF ইনভয়েস সংযুক্ত করা হলো।')
-            ->line('MoslaMart Team');
+            ->line('এই লিংকটি ৭ দিনের জন্য বৈধ। সম্পূর্ণ PDF ইনভয়েস সংযুক্ত করা হলো।');
 
         // Attach the real PDF invoice — never let a PDF-build failure block the email.
         try {

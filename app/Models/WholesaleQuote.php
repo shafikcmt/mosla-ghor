@@ -12,9 +12,9 @@ class WholesaleQuote extends Model
     protected $fillable = [
         'enquiry_id', 'vendor_id', 'customer_id',
         'unit_price', 'quantity', 'quantity_unit', 'subtotal',
-        'delivery_charge', 'advance_required', 'advance_percentage',
+        'delivery_charge', 'delivery_charge_mode', 'advance_required', 'advance_percentage',
         'delivery_time', 'payment_options',
-        'note', 'valid_until', 'validity_days', 'status',
+        'note', 'terms', 'valid_until', 'validity_days', 'status',
         'admin_note', 'order_id', 'invoice_token',
     ];
 
@@ -27,6 +27,7 @@ class WholesaleQuote extends Model
         'advance_percentage'  => 'decimal:2',
         'validity_days'       => 'integer',
         'payment_options'     => 'array',
+        'terms'               => 'array',
         'valid_until'         => 'date',
     ];
 
@@ -45,14 +46,30 @@ class WholesaleQuote extends Model
             'unit_price'         => ['required', 'numeric', 'min:0'],
             'quantity'           => ['required', 'numeric', 'min:0.5'],
             'quantity_unit'      => ['required', 'string', 'in:kg,gram,ton,piece,bag,carton,packet'],
-            'delivery_charge'    => ['required', 'numeric', 'min:0'],
+            'delivery_charge_mode' => ['nullable', 'in:fixed,later,free'],
+            'delivery_charge'    => ['required_if:delivery_charge_mode,fixed', 'nullable', 'numeric', 'min:0'],
             'advance_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'delivery_time'      => ['nullable', 'string', 'max:100'],
             'validity_days'      => ['nullable', 'integer', 'min:1', 'max:365'],
             'payment_options'    => ['nullable', 'array'],
             'payment_options.*'  => ['in:online,manual,cod,partial'],
             'note'               => ['nullable', 'string', 'max:1000'],
+            'add_cod_policy'     => ['nullable', 'boolean'],
+        ], [
+            'delivery_charge.required_if' => 'ডেলিভারি চার্জ দিন, অথবা "পরে জানানো হবে" বেছে নিন।',
         ]);
+
+        // "later" / "free" carry no amount; "later" adds the standard wording for the customer.
+        $mode = $validated['delivery_charge_mode'] ?? 'fixed';
+        $validated['delivery_charge'] = $mode === 'fixed' ? (float) $validated['delivery_charge'] : 0;
+
+        $terms = [];
+        if ($mode === 'later') {
+            $terms[] = \App\Support\WholesalePolicy::deliveryLaterText();
+        }
+        if ($request->boolean('add_cod_policy')) {
+            $terms[] = \App\Support\WholesalePolicy::codPolicyText();
+        }
 
         $subtotal     = round($validated['unit_price'] * $validated['quantity'], 2);
         $total        = $subtotal + (float) $validated['delivery_charge'];
@@ -69,11 +86,13 @@ class WholesaleQuote extends Model
             'quantity_unit'      => $validated['quantity_unit'],
             'subtotal'           => $subtotal,
             'delivery_charge'    => $validated['delivery_charge'],
+            'delivery_charge_mode' => $mode,
             'advance_percentage' => $advancePct ?: null,
             'advance_required'   => $advanceAmt,
             'delivery_time'      => $validated['delivery_time'] ?? null,
             'payment_options'    => $validated['payment_options'] ?? [],
             'note'               => $validated['note'] ?? null,
+            'terms'              => $terms ?: null,
             'validity_days'      => $validityDays,
             'valid_until'        => now()->addDays($validityDays)->toDateString(),
             'status'             => 'sent_to_customer',
@@ -108,6 +127,28 @@ class WholesaleQuote extends Model
     public function grandTotal(): float
     {
         return (float) $this->subtotal + (float) $this->delivery_charge;
+    }
+
+    /** Delivery charge still to be confirmed (not in the total yet). */
+    public function deliveryLater(): bool
+    {
+        return $this->delivery_charge_mode === 'later';
+    }
+
+    /** How the delivery charge reads to people: amount, "প্রযোজ্য …" or "ফ্রি". */
+    public function deliveryChargeLabel(int $decimals = 2): string
+    {
+        return match ($this->delivery_charge_mode) {
+            'later' => 'প্রযোজ্য (পরে জানানো হবে)',
+            'free'  => 'ফ্রি',
+            default => '৳'.number_format((float) $this->delivery_charge, $decimals),
+        };
+    }
+
+    /** "মোট" label — flags that delivery is not included yet. */
+    public function totalLabel(): string
+    {
+        return $this->deliveryLater() ? 'মোট (ডেলিভারি চার্জ ছাড়া)' : 'মোট';
     }
 
     public static function statuses(): array

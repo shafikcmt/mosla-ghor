@@ -581,6 +581,7 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::prefix('commission')->name('commission.')->group(function () {
         Route::get('settings',                    [AdminWholesaleCommissionController::class, 'index'])->name('settings.index');
         Route::post('settings',                    [AdminWholesaleCommissionController::class, 'store'])->name('settings.store');
+        Route::post('policy',                     [AdminWholesaleCommissionController::class, 'updatePolicy'])->name('policy.update');
         Route::put('settings/{setting}',           [AdminWholesaleCommissionController::class, 'update'])->name('settings.update');
         Route::delete('settings/{setting}',        [AdminWholesaleCommissionController::class, 'destroy'])->name('settings.destroy');
         Route::get('ledger',                      [AdminWholesaleCommissionController::class, 'ledger'])->name('ledger.index');
