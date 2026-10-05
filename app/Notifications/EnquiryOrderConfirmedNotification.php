@@ -35,8 +35,7 @@ class EnquiryOrderConfirmedNotification extends Notification
             ->subject("Enquiry order confirm — #{$number}")
             ->greeting('Enquiry order confirm হয়েছে')
             ->line("Order #{$number} তৈরি হয়েছে (Enquiry #{$enquiryId})।")
-            ->action('Enquiry দেখুন', route('admin.wholesale.enquiry.show', $enquiryId))
-            ->line('MoslaMart Admin');
+            ->action('Enquiry দেখুন', route('admin.wholesale.enquiry.show', $enquiryId));
     }
 
     public function toArray(object $notifiable): array

@@ -31,12 +31,25 @@ class EnquiryReceivedNotification extends Notification
         $id      = $this->enquiry->id;
         $product = $this->enquiry->productLabel();
 
+        $e   = $this->enquiry;
+        $qty = rtrim(rtrim(number_format((float) $e->quantity_kg, 2, '.', ''), '0'), '.').' '.($e->quantity_unit ?: 'kg');
+
         return (new MailMessage)
-            ->subject("নতুন Enquiry — #{$id}")
-            ->greeting('নতুন Enquiry এসেছে')
-            ->line("Enquiry #{$id} — {$product}")
-            ->action('Enquiry দেখুন', route('admin.wholesale.enquiry.show', $id))
-            ->line('MoslaMart Admin');
+            ->subject("নতুন পাইকারি Enquiry #{$id} — {$product} ({$qty})")
+            ->greeting('নতুন পাইকারি Enquiry এসেছে 🛒')
+            ->line("Enquiry #{$id} — দ্রুত কোটেশন দিলে অর্ডার পাওয়ার সম্ভাবনা বাড়ে।")
+            ->line(\App\Support\MailDetails::table([
+                'পণ্য'          => $product,
+                'পরিমাণ'        => $qty,
+                'ক্রেতা'         => $e->customer_name,
+                'মোবাইল'        => $e->customer_phone,
+                'ইমেইল'         => $e->customer_email,
+                'ব্যবসার ধরন'    => $e->business_type && $e->business_type !== 'other' ? $e->businessTypeLabel() : null,
+                'এলাকা'         => $e->delivery_location,
+                'যোগাযোগ'       => \App\Models\WholesaleEnquiry::CHANNELS[$e->contact_channel ?? 'form'] ?? null,
+                'বার্তা'          => $e->message,
+            ]))
+            ->action('Enquiry দেখুন ও কোটেশন দিন', route('admin.wholesale.enquiry.show', $id));
     }
 
     public function toArray(object $notifiable): array

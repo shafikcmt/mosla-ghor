@@ -120,16 +120,15 @@ return [
     | Markdown Mail Settings
     |--------------------------------------------------------------------------
     |
-    | The global default theme stays 'default' so unrelated transactional emails
-    | are NOT restyled. MoslaMart-branded emails opt in per-message with
-    | ->theme('moslamart') (see GuestAccountCreatedNotification,
-    | QuoteSubmittedNotification, GuestOrderAccountCreatedNotification). The
-    | published path below makes the custom theme CSS discoverable.
+    | Every email uses the MoslaMart-branded theme (green header, gold accent,
+    | Bangla footer) — resources/views/vendor/mail/html/themes/moslamart.css.
+    | Notification copy (greeting, sign-off, link help) is Bangla via
+    | resources/views/vendor/notifications/email.blade.php.
     |
     */
 
     'markdown' => [
-        'theme' => 'default',
+        'theme' => 'moslamart',
 
         'paths' => [
             resource_path('views/vendor/mail'),

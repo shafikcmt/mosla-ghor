@@ -54,10 +54,11 @@ class QuoteSubmittedNotification extends Notification
             $mail = (new MailMessage)
                 ->theme('moslamart')
                 ->subject("আপনার enquiry-তে নতুন কোটেশন — #{$enquiryId}")
-                ->greeting('নতুন কোটেশন এসেছে')
-                ->line("Enquiry #{$enquiryId} — আপনার চাহিদা অনুযায়ী একটি কোটেশন পাঠানো হয়েছে। সম্পূর্ণ ইনভয়েস PDF সংযুক্ত করা হলো।")
-                ->action('কোটেশন দেখুন', $this->quote->invoiceUrl())
-                ->line('MoslaMart Team');
+                ->greeting('আপনার কোটেশন প্রস্তুত ✅')
+                ->line("Enquiry #{$enquiryId} — আপনার চাহিদা অনুযায়ী কোটেশন নিচে দেওয়া হলো। সম্পূর্ণ ইনভয়েস PDF সংযুক্ত।")
+                ->line(\App\Support\MailDetails::table($this->quoteRows()))
+                ->lines(array_map(fn ($t) => '• '.$t, (array) $this->quote->terms))
+                ->action('কোটেশন দেখুন ও অর্ডার কনফার্ম করুন', $this->quote->invoiceUrl());
 
             // Attach the real PDF invoice (same builder as the /pdf route). Never
             // let a PDF-build failure block the whole email.
@@ -79,8 +80,25 @@ class QuoteSubmittedNotification extends Notification
             ->subject("নতুন কোটেশন — Enquiry #{$enquiryId}")
             ->greeting('নতুন কোটেশন জমা হয়েছে')
             ->line("Enquiry #{$enquiryId} — একটি নতুন কোটেশন জমা হয়েছে।")
-            ->action('কোটেশন দেখুন', route('admin.wholesale.quote.show', $this->quote->id))
-            ->line('MoslaMart Admin');
+            ->line(\App\Support\MailDetails::table($this->quoteRows()))
+            ->action('কোটেশন দেখুন', route('admin.wholesale.quote.show', $this->quote->id));
+    }
+
+    /** Key figures shown in both quote emails. */
+    private function quoteRows(): array
+    {
+        $q = $this->quote;
+
+        return [
+            'পণ্য'          => $q->enquiry?->productLabel(),
+            'পরিমাণ'        => rtrim(rtrim(number_format((float) $q->quantity, 2, '.', ''), '0'), '.').' '.$q->quantity_unit,
+            'ইউনিট মূল্য'     => '৳'.number_format((float) $q->unit_price, 2).' / '.$q->quantity_unit,
+            'ডেলিভারি চার্জ'  => $q->deliveryChargeLabel(),
+            $q->totalLabel() => '৳'.number_format($q->grandTotal(), 2),
+            'অগ্রিম'         => $q->advanceAmount() > 0 ? '৳'.number_format($q->advanceAmount(), 2) : null,
+            'ডেলিভারি সময়'   => $q->delivery_time,
+            'বৈধতা'          => $q->valid_until ? \Carbon\Carbon::parse($q->valid_until)->format('d M Y') : null,
+        ];
     }
 
     public function toArray(object $notifiable): array

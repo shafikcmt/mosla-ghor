@@ -165,7 +165,7 @@
             </tr>
             <tr>
                 <td>ডেলিভারি চার্জ</td>
-                <td class="amt">৳{{ number_format($quote->delivery_charge, 2) }}</td>
+                <td class="amt">{{ $quote->deliveryChargeLabel() }}</td>
             </tr>
             @if($quote->advanceAmount() > 0)
             <tr class="sep">
@@ -174,7 +174,7 @@
             </tr>
             @endif
             <tr class="grand">
-                <td class="glbl">সর্বমোট</td>
+                <td class="glbl">{{ $quote->deliveryLater() ? 'সর্বমোট (ডেলিভারি চার্জ ছাড়া)' : 'সর্বমোট' }}</td>
                 <td class="gamt">৳{{ number_format($quote->grandTotal(), 2) }}</td>
             </tr>
         </table>
@@ -203,6 +203,13 @@
     </td>
     @endif
 </tr></table>
+@endif
+
+@if(! empty($quote->terms))
+<div class="notebox">
+    <div class="lbl">শর্তাবলী</div>
+    @foreach((array) $quote->terms as $term)<div class="val">• {{ $term }}</div>@endforeach
+</div>
 @endif
 
 @if($quote->note)

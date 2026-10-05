@@ -3,6 +3,16 @@
     is sent straight to the customer.
     Required vars: $enquiry, $action (form action URL), $backUrl
 --}}
+@php
+    // Payment rule: first N wholesale orders COD, then advance (Admin → Commission settings).
+    $wpPrev     = \App\Support\WholesalePolicy::previousOrders($enquiry->customer_id);
+    $wpLimit    = \App\Support\WholesalePolicy::codOrderLimit();
+    $wpCodOk    = $wpPrev < $wpLimit;
+    $wpPayDef   = $wpCodOk ? ['cod'] : ['partial', 'manual'];
+    $wpPay      = old('payment_options', $wpPayDef);
+    $wpAdvance  = old('advance_percentage', $wpCodOk ? '' : rtrim(rtrim(number_format(\App\Support\WholesalePolicy::defaultAdvance(), 2, '.', ''), '0'), '.'));
+    $wpMode     = old('delivery_charge_mode', 'later');
+@endphp
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
     {{-- Quote form --}}
@@ -62,17 +72,32 @@
                     </table>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">ডেলিভারি চার্জ (৳)</label>
-                        <input type="number" name="delivery_charge" value="{{ old('delivery_charge', 0) }}" step="0.01" min="0"
-                               class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
-                               placeholder="0.00">
+                {{-- Delivery charge: amount now, "applicable — told later", or free --}}
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">ডেলিভারি চার্জ</label>
+                    <div class="grid grid-cols-3 gap-2" id="dc-modes">
+                        @foreach(['later' => 'পরে জানানো হবে', 'fixed' => 'নির্দিষ্ট চার্জ', 'free' => 'ফ্রি ডেলিভারি'] as $val => $lbl)
+                        <label class="dc-mode cursor-pointer border rounded-xl px-3 py-2.5 text-sm text-center font-semibold transition-colors">
+                            <input type="radio" name="delivery_charge_mode" value="{{ $val }}" class="sr-only" {{ $wpMode === $val ? 'checked' : '' }}>
+                            {{ $lbl }}
+                        </label>
+                        @endforeach
                     </div>
+                    <div id="dc-amount" class="mt-2">
+                        <input type="number" name="delivery_charge" value="{{ old('delivery_charge') }}" step="0.01" min="0"
+                               class="w-full sm:w-1/2 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                               placeholder="চার্জ (৳), যেমন: 150">
+                    </div>
+                    <p id="dc-later-note" class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                        Customer দেখবে: “{{ \App\Support\WholesalePolicy::deliveryLaterText() }}”
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">অগ্রিম (%) — ঐচ্ছিক</label>
-                        <input type="number" name="advance_percentage" value="{{ old('advance_percentage') }}" step="0.01" min="0" max="100"
+                        <input type="number" name="advance_percentage" value="{{ $wpAdvance }}" step="0.01" min="0" max="100"
                                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
                                placeholder="যেমন: 30">
                     </div>
@@ -93,17 +118,33 @@
 
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">পেমেন্ট শর্ত</label>
+                    {{-- Buyer history → suggested terms (pre-selected below, still editable) --}}
+                    <div class="mb-2.5 text-xs rounded-lg px-3 py-2 border {{ $wpCodOk ? 'bg-green-50 border-green-200 text-green-800' : 'bg-amber-50 border-amber-200 text-amber-800' }}">
+                        @if($wpCodOk)
+                            ✓ এই ক্রেতার আগের পাইকারি অর্ডার: {{ $wpPrev }}টি — প্রথম {{ $wpLimit }}টির মধ্যে, তাই <b>COD</b> দেওয়া যাবে।
+                        @else
+                            ⚠ এই ক্রেতার আগের পাইকারি অর্ডার: {{ $wpPrev }}টি — COD সীমা ({{ $wpLimit }}টি) শেষ, তাই <b>অগ্রিম পেমেন্ট</b> প্রয়োজন।
+                        @endif
+                    </div>
                     <div class="flex flex-wrap gap-3">
                         @foreach(['online' => 'অনলাইন পেমেন্ট', 'cod' => 'COD (ক্যাশ অন ডেলিভারি)', 'partial' => 'আংশিক অগ্রিম', 'manual' => 'ম্যানুয়াল ট্রান্সফার'] as $val => $lbl)
                         <label class="flex items-center gap-2 text-sm cursor-pointer">
                             <input type="checkbox" name="payment_options[]" value="{{ $val }}"
-                                   {{ is_array(old('payment_options')) && in_array($val, old('payment_options')) ? 'checked' : '' }}
+                                   {{ in_array($val, (array) $wpPay, true) ? 'checked' : '' }}
                                    class="w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500">
                             {{ $lbl }}
                         </label>
                         @endforeach
                     </div>
                 </div>
+
+                <label class="flex items-start gap-2 text-sm cursor-pointer bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5">
+                    <input type="hidden" name="add_cod_policy" value="0">
+                    <input type="checkbox" name="add_cod_policy" value="1" {{ old('add_cod_policy', '1') === '1' ? 'checked' : '' }}
+                           class="mt-0.5 w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500">
+                    <span>পেমেন্ট নীতি কোটেশনে দেখান:
+                        <span class="block text-xs text-gray-500 mt-0.5">“{{ \App\Support\WholesalePolicy::codPolicyText() }}”</span></span>
+                </label>
 
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">নোট / বিশেষ শর্ত</label>
@@ -118,7 +159,7 @@
                     <div class="grid grid-cols-2 gap-2 text-amber-700">
                         <span>সাবটোটাল:</span><span id="sum-subtotal" class="font-bold text-right">—</span>
                         <span>ডেলিভারি চার্জ:</span><span id="sum-delivery" class="font-bold text-right">—</span>
-                        <span class="font-semibold">মোট:</span><span id="sum-total" class="font-bold text-lg text-right">—</span>
+                        <span class="font-semibold" id="sum-total-label">মোট:</span><span id="sum-total" class="font-bold text-lg text-right">—</span>
                         <span>অগ্রিম পরিমাণ:</span><span id="sum-advance" class="font-bold text-right">—</span>
                     </div>
                 </div>
@@ -162,18 +203,29 @@
 (function () {
     function n(sel) { return parseFloat(document.querySelector(sel)?.value) || 0; }
     function fmt(v) { return '৳' + v.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+    function mode() { var r = document.querySelector('[name="delivery_charge_mode"]:checked'); return r ? r.value : 'fixed'; }
     function recalc() {
+        var m = mode();
+        document.querySelectorAll('.dc-mode').forEach(function (l) {
+            var on = l.querySelector('input').checked;
+            l.classList.toggle('bg-amber-600', on); l.classList.toggle('text-white', on); l.classList.toggle('border-amber-600', on);
+            l.classList.toggle('border-gray-200', !on); l.classList.toggle('text-gray-600', !on);
+        });
+        document.getElementById('dc-amount').style.display = m === 'fixed' ? '' : 'none';
+        document.getElementById('dc-later-note').style.display = m === 'later' ? '' : 'none';
         var price = n('[name="unit_price"]'), qty = n('[name="quantity"]'),
-            del = n('[name="delivery_charge"]'), advPct = n('[name="advance_percentage"]');
+            del = m === 'fixed' ? n('[name="delivery_charge"]') : 0, advPct = n('[name="advance_percentage"]');
         var sub = price * qty, total = sub + del, adv = advPct > 0 ? total * advPct / 100 : 0;
         document.getElementById('prev-subtotal').textContent = sub > 0 ? fmt(sub) : '—';
         document.getElementById('sum-subtotal').textContent  = sub > 0 ? fmt(sub) : '—';
-        document.getElementById('sum-delivery').textContent  = fmt(del);
+        document.getElementById('sum-delivery').textContent  = m === 'later' ? 'প্রযোজ্য (পরে জানানো হবে)' : (m === 'free' ? 'ফ্রি' : fmt(del));
+        document.getElementById('sum-total-label').textContent = m === 'later' ? 'মোট (ডেলিভারি চার্জ ছাড়া):' : 'মোট:';
         document.getElementById('sum-total').textContent     = total > 0 ? fmt(total) : '—';
         document.getElementById('sum-advance').textContent   = adv > 0 ? fmt(adv) : '—';
     }
     document.querySelectorAll('[name="unit_price"],[name="quantity"],[name="delivery_charge"],[name="advance_percentage"]')
         .forEach(function (el) { el.addEventListener('input', recalc); });
+    document.querySelectorAll('[name="delivery_charge_mode"]').forEach(function (el) { el.addEventListener('change', recalc); });
     recalc();
 })();
 </script>

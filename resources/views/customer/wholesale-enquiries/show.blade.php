@@ -52,8 +52,8 @@
                     <div><span class="text-gray-400 text-xs">ইউনিট মূল্য</span><div class="font-bold text-[#14532d] text-lg mt-0.5">৳{{ number_format($quote->unit_price, 2) }}</div></div>
                     <div><span class="text-gray-400 text-xs">পরিমাণ</span><div class="font-semibold text-gray-700 mt-0.5">{{ rtrim(rtrim(number_format((float)$quote->quantity,2),'0'),'.') }} {{ $quote->quantity_unit }}</div></div>
                     <div><span class="text-gray-400 text-xs">সাবটোটাল</span><div class="font-semibold text-gray-700 mt-0.5">৳{{ number_format($quote->subtotal, 2) }}</div></div>
-                    <div><span class="text-gray-400 text-xs">ডেলিভারি চার্জ</span><div class="font-semibold text-gray-700 mt-0.5">৳{{ number_format($quote->delivery_charge, 2) }}</div></div>
-                    <div><span class="text-gray-400 text-xs">মোট</span><div class="font-bold text-[#c9a227] text-lg mt-0.5">৳{{ number_format($quote->grandTotal(), 2) }}</div></div>
+                    <div><span class="text-gray-400 text-xs">ডেলিভারি চার্জ</span><div class="font-semibold text-gray-700 mt-0.5">{{ $quote->deliveryChargeLabel() }}</div></div>
+                    <div><span class="text-gray-400 text-xs">{{ $quote->totalLabel() }}</span><div class="font-bold text-[#c9a227] text-lg mt-0.5">৳{{ number_format($quote->grandTotal(), 2) }}</div></div>
                     @if($quote->advanceAmount() > 0)
                     <div><span class="text-gray-400 text-xs">অগ্রিম</span><div class="font-semibold text-gray-700 mt-0.5">৳{{ number_format($quote->advanceAmount(), 2) }}@if($quote->advance_percentage) ({{ rtrim(rtrim(number_format($quote->advance_percentage,2),'0'),'.') }}%)@endif</div></div>
                     @endif
@@ -73,6 +73,7 @@
                 </div>
                 @endif
 
+                @include('partials.wholesale-quote-terms', ['termsClass' => 'mb-3'])
                 @if($quote->note)
                 <p class="text-gray-600 text-sm bg-gray-50 rounded-xl p-3 mb-3">{{ $quote->note }}</p>
                 @endif

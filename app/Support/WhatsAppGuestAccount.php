@@ -73,7 +73,10 @@ class WhatsAppGuestAccount
             . "আসসালামু আলাইকুম {$enquiry->customer_name},\n"
             . "📦 পণ্য: {$enquiry->productLabel()}\n\n"
             . "💰 ইউনিট মূল্য: *৳{$unit}/{$quote->quantity_unit}*\n"
-            . "💰 মোট: *৳{$total}*\n\n"
+            . "💰 {$quote->totalLabel()}: *৳{$total}*\n"
+            . "🚚 ডেলিভারি চার্জ: {$quote->deliveryChargeLabel()}\n"
+            . collect((array) $quote->terms)->map(fn ($t) => "• {$t}\n")->implode('')
+            . "\n"
             . "🧾 সম্পূর্ণ PDF ইনভয়েস:\n{$pdfUrl}\n"
             . "━━━━━━━━━━━━━━━\n"
             . "— MoslaMart";
