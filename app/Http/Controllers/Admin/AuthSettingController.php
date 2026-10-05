@@ -36,6 +36,7 @@ class AuthSettingController extends Controller
         'otp_sms_enabled', 'otp_whatsapp_enabled', 'otp_email_enabled',
         'show_email_field_register',
         'guest_checkout_enabled', 'guest_enquiry_enabled', 'guest_review_enabled',
+        'customer_google_login', 'customer_facebook_login',
     ];
 
     public function index()

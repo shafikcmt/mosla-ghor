@@ -70,6 +70,8 @@
             </button>
         </form>
 
+        @include('partials.social-login-buttons', ['socialRedirect' => $redirectParam])
+
         @if(\App\Support\AuthSettings::customerOtpLogin() && \App\Support\AuthSettings::enabledChannels() !== [])
         <div class="mt-4 pt-4 border-t border-gray-100 text-center">
             <a href="{{ route('customer.login.otp') }}{{ $redirectParam ? '?redirect='.urlencode($redirectParam) : '' }}"

@@ -283,6 +283,33 @@
         </div>
     </div>
 
+    {{-- Social login --}}
+    <div class="bg-white rounded shadow mb-5" id="social-login">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">সোশ্যাল লগইন (Google / Facebook)</h3>
+            <p class="text-xs text-gray-400 mt-1">কাস্টমার এক ক্লিকে Google বা Facebook দিয়ে লগইন/enquiry করতে পারবে। প্রথমবার শুধু মোবাইল নম্বর চাওয়া হবে। Key গুলো .env-এ সেট করুন।</p>
+        </div>
+        <div class="px-6 py-5 space-y-4">
+            @foreach(\App\Support\AuthSettings::SOCIAL_PROVIDERS as $provider => $label)
+            @php $ready = \App\Support\AuthSettings::socialConfigured($provider); @endphp
+            <label class="flex items-center justify-between py-3 border-b border-gray-50">
+                <div>
+                    <p class="text-sm font-medium text-gray-800">{{ $label }} দিয়ে লগইন</p>
+                    @if($ready)
+                        <p class="text-xs text-green-600 mt-0.5">✓ Key সেট করা আছে</p>
+                    @else
+                        <p class="text-xs text-amber-600 mt-0.5">Key সেট করা নেই — .env-এ {{ strtoupper($provider) }}_CLIENT_ID ও {{ strtoupper($provider) }}_CLIENT_SECRET দিন। বাটন ততক্ষণ দেখাবে না।</p>
+                    @endif
+                    <p class="text-[11px] text-gray-400 mt-0.5">Callback URL: <code class="select-all">{{ url('/auth/'.$provider.'/callback') }}</code></p>
+                </div>
+                <input type="checkbox" name="customer_{{ $provider }}_login"
+                       {{ ($settings['customer_'.$provider.'_login'] ?? '1') === '1' ? 'checked' : '' }}
+                       class="w-5 h-5 rounded text-[#14532d] border-gray-300 focus:ring-[#14532d]">
+            </label>
+            @endforeach
+        </div>
+    </div>
+
     <div class="bg-white rounded shadow px-6 py-5">
         <button type="submit"
                 class="bg-gray-800 text-white px-6 py-2.5 rounded text-sm font-semibold hover:bg-gray-700 transition-colors">

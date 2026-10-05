@@ -186,6 +186,7 @@ class ProductController extends Controller
             'customer_whatsapp'  => ['nullable', 'string', 'max:20'],
             'customer_email'     => ['nullable', 'email', 'max:150'],
             'message'            => ['nullable', 'string', 'max:1000'],
+            'contact_channel'    => ['nullable', 'in:form,whatsapp,call'],
         ], [
             'customer_phone.regex' => 'সঠিক ফোন নম্বর দিন।',
         ]);
@@ -218,6 +219,20 @@ class ProductController extends Controller
         $customer = $loggedIn ? Auth::user()->customer : null;
         $account  = null;
 
+        // Google/Facebook login that skipped the mobile step: adopt the typed phone
+        // when no other login owns it, so the enquiry lands in THIS account.
+        if ($loggedIn && ! $customer && empty(Auth::user()->phone)) {
+            $phone = \App\Support\Phone::normalize($validated['customer_phone']);
+            if ($phone && ! \App\Models\User::where('phone', $phone)->exists()
+                && ! \App\Models\Customer::where('mobile_number', $phone)->exists()) {
+                Auth::user()->update(['phone' => $phone]);
+                $customer = \App\Models\Customer::create([
+                    'name' => $validated['customer_name'], 'mobile_number' => $phone,
+                    'email' => Auth::user()->email, 'is_active' => true,
+                ]);
+            }
+        }
+
         if (! $customer) {
             $account  = GuestWholesaleAccount::findOrCreate(
                 $validated['customer_name'],
@@ -236,6 +251,7 @@ class ProductController extends Controller
             'quantity_unit'      => $validated['quantity_unit'] ?? ($product->min_order_unit ?: 'kg'),
             'delivery_location'  => $validated['delivery_location'] ?? '',
             'business_type'      => $validated['business_type'] ?? 'other',
+            'contact_channel'    => $validated['contact_channel'] ?? 'form',
             'message'            => $validated['message'] ?? null,
             'customer_name'      => $validated['customer_name'],
             'customer_phone'     => $validated['customer_phone'],
@@ -278,7 +294,13 @@ class ProductController extends Controller
 
         // Quick enquiry popup (fetch) → JSON; the page stays where the buyer was.
         if ($request->expectsJson()) {
-            return response()->json(['ok' => true, 'message' => $msg, 'enquiry_id' => $enquiry->id], 201);
+            return response()->json([
+                'ok'         => true,
+                'message'    => $msg,
+                'enquiry_id' => $enquiry->id,
+                // WhatsApp / call is unlocked only after the lead (qty ≥ MOQ + contact) is saved.
+                'contact'    => $this->wholesaleContactLinks($enquiry),
+            ], 201);
         }
 
         // Return to whichever page the enquiry was sent from (wholesale stays on its URL).
@@ -287,5 +309,25 @@ class ProductController extends Controller
         return redirect()
             ->to(route($backRoute, $product->slug) . '#enquiry')
             ->with('success', $msg);
+    }
+
+    /** wa.me (pre-filled with the enquiry) + tel: links for the site's WhatsApp number. */
+    private function wholesaleContactLinks(WholesaleEnquiry $enquiry): ?array
+    {
+        $digits = preg_replace('/\D+/', '', \App\Models\WebsiteSetting::get('whatsapp_number'));
+        if ($digits === '') {
+            return null;
+        }
+        $intl = str_starts_with($digits, '0') ? '88'.$digits : $digits;
+        $qty  = rtrim(rtrim(number_format((float) $enquiry->quantity_kg, 2, '.', ''), '0'), '.');
+        $text = "আসসালামু আলাইকুম, পাইকারি enquiry #{$enquiry->id}\n"
+            ."পণ্য: {$enquiry->product_name}".($enquiry->variant_name ? " ({$enquiry->variant_name})" : '')."\n"
+            ."পরিমাণ: {$qty} {$enquiry->quantity_unit}\n"
+            ."নাম: {$enquiry->customer_name}, মোবাইল: {$enquiry->customer_phone}";
+
+        return [
+            'whatsapp' => 'https://wa.me/'.$intl.'?text='.rawurlencode($text),
+            'tel'      => 'tel:+'.$intl,
+        ];
     }
 }

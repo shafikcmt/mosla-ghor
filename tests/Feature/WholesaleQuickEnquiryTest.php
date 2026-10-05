@@ -44,9 +44,39 @@ class WholesaleQuickEnquiryTest extends TestCase
     public function test_wholesale_card_shows_price_whatsapp_and_call_buttons(): void
     {
         $this->get('/?mode=wholesale')->assertOk()
-            ->assertSee('msQuickEnquiry(this)', false)
-            ->assertSee('https://wa.me/8801768987779?text=', false)
-            ->assertSee('tel:+8801768987779', false)
+            ->assertSee("msQuickEnquiry(this, 'form')", false)
+            ->assertSee("msQuickEnquiry(this, 'whatsapp')", false)
+            ->assertSee("msQuickEnquiry(this, 'call')", false)
+            ->assertSee('data-moq="10"', false)
             ->assertSee('id="ms-qe"', false);
+    }
+
+    public function test_whatsapp_contact_is_unlocked_only_after_the_lead_is_saved(): void
+    {
+        $response = $this->postJson(route('products.enquiry.store', 'cumin'), [
+            'customer_name' => 'Rahim', 'customer_phone' => '01712345678', 'quantity_kg' => 20,
+            'quantity_unit' => 'kg', 'business_type' => 'shop', 'contact_channel' => 'whatsapp',
+        ])->assertCreated();
+
+        $enquiry = WholesaleEnquiry::sole();
+        $this->assertSame('whatsapp', $enquiry->contact_channel);
+        $this->assertSame('shop', $enquiry->business_type);
+        $this->assertStringStartsWith('https://wa.me/8801768987779?text=', $response->json('contact.whatsapp'));
+        $this->assertStringContainsString(rawurlencode('#'.$enquiry->id), $response->json('contact.whatsapp'));
+        $this->assertSame('tel:+8801768987779', $response->json('contact.tel'));
+
+        // Below the MOQ never unlocks a contact link.
+        $this->postJson(route('products.enquiry.store', 'cumin'), [
+            'customer_name' => 'Karim', 'customer_phone' => '01812345678', 'quantity_kg' => 2, 'contact_channel' => 'call',
+        ])->assertStatus(422)->assertJsonMissingPath('contact');
+    }
+
+    public function test_plain_form_enquiry_defaults_to_form_channel(): void
+    {
+        $this->postJson(route('products.enquiry.store', 'cumin'), [
+            'customer_name' => 'Rahim', 'customer_phone' => '01712345678', 'quantity_kg' => 10,
+        ])->assertCreated();
+
+        $this->assertSame('form', WholesaleEnquiry::sole()->contact_channel);
     }
 }

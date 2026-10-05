@@ -29,6 +29,20 @@ class CheckoutService
      * @param  array     $priceIds  ProductPrice ids for a custom/single order
      * @return array{items: array, subtotal: float, order_type: string, combo_id: ?int}
      */
+    /** Most packs of one price allowed in a single order line. */
+    public const MAX_PACKS_PER_LINE = 50;
+
+    /** [priceId => packs], in first-seen order. */
+    public static function countPacks(array $priceIds): array
+    {
+        $packs = [];
+        foreach ($priceIds as $id) {
+            $packs[(int) $id] = ($packs[(int) $id] ?? 0) + 1;
+        }
+
+        return $packs;
+    }
+
     public function resolveItems(?int $comboId, array $priceIds): array
     {
         if ($comboId) {
@@ -38,14 +52,19 @@ class CheckoutService
         if (empty($priceIds)) {
             throw new CheckoutException('কমপক্ষে একটি পণ্য যোগ করুন।');
         }
-        if (count($priceIds) > 20) {
+        // A repeated price id is another pack of the same line (2 × 1kg).
+        $packs = self::countPacks($priceIds);
+        if (count($packs) > 20) {
             throw new CheckoutException('সর্বোচ্চ ২০টি পণ্য যোগ করা যাবে।');
+        }
+        if (max($packs) > self::MAX_PACKS_PER_LINE) {
+            throw new CheckoutException('একটি পণ্য সর্বোচ্চ '.self::MAX_PACKS_PER_LINE.'টি যোগ করা যাবে।');
         }
 
         $subtotal = 0.0;
         $items    = [];
 
-        foreach ($priceIds as $priceId) {
+        foreach ($packs as $priceId => $qty) {
             $productPrice = ProductPrice::with(['product.vendor', 'variant'])
                 ->where('id', (int) $priceId)
                 ->where('is_active', true)
@@ -55,7 +74,8 @@ class CheckoutService
                 throw new CheckoutException('একটি পণ্যের তথ্য পাওয়া যায়নি। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।');
             }
 
-            $lineTotal = (float) $productPrice->final_price;
+            $unitPrice = (float) $productPrice->final_price;
+            $lineTotal = $unitPrice * $qty;
             $subtotal += $lineTotal;
             $vendorId  = $productPrice->product->vendor_id;
 
@@ -65,9 +85,10 @@ class CheckoutService
                 'product_id'    => $productPrice->product->id,
                 'product_name'  => $productPrice->product->name_bn,
                 'variant_name'  => $productPrice->variant?->name,
-                'quantity_gram' => (int) $productPrice->quantity_gram,
-                'unit_price'    => $lineTotal,
+                'quantity_gram' => (int) $productPrice->quantity_gram * $qty,
+                'unit_price'    => $unitPrice,
                 'line_total'    => $lineTotal,
+                'qty'           => $qty, // packs; display + payment form only
                 'vendor_id'     => $vendorId,
                 'vendor_name'   => $vendorId ? ($productPrice->product->vendor?->shop_name ?? null) : null,
                 // Display-only fields (not persisted to order_items)

@@ -138,6 +138,17 @@ Route::name('customer.')->group(function () {
 
     Route::post('logout',   [CustomerAuthController::class, 'logout'])->name('logout');
 
+    // ── Continue with Google / Facebook ────────────────────────────────────
+    Route::get('auth/{provider}/redirect', [\App\Http\Controllers\SocialAuthController::class, 'redirect'])
+        ->whereIn('provider', ['google', 'facebook'])->middleware('throttle:20,1')->name('social.redirect');
+    Route::get('auth/{provider}/callback', [\App\Http\Controllers\SocialAuthController::class, 'callback'])
+        ->whereIn('provider', ['google', 'facebook'])->middleware('throttle:20,1')->name('social.callback');
+    // One-time mobile number step for social accounts (links the CRM profile).
+    Route::get('auth/complete-phone',  [\App\Http\Controllers\SocialAuthController::class, 'showPhone'])
+        ->middleware('customer-auth')->name('social.phone');
+    Route::post('auth/complete-phone', [\App\Http\Controllers\SocialAuthController::class, 'savePhone'])
+        ->middleware(['customer-auth', 'throttle:10,1'])->name('social.phone.save');
+
     // ── Set password (claim a guest-created account via a signed link) ──────
     // Public + signed: reachable without login so guests can claim the account
     // that was auto-created for their enquiry.

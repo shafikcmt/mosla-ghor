@@ -49,6 +49,22 @@ return [
         'from'     => env('WHATSAPP_FROM'),
     ],
 
+    // ── Social login (Continue with Google / Facebook) ─────────────────────
+    // Buttons appear only when both id + secret are set AND the admin toggle is on.
+    // Callback URLs to register with Google / Meta: {APP_URL}/auth/google/callback
+    // and {APP_URL}/auth/facebook/callback.
+    'google' => [
+        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect'      => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
+    ],
+
+    'facebook' => [
+        'client_id'     => env('FACEBOOK_CLIENT_ID'),
+        'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
+        'redirect'      => env('FACEBOOK_REDIRECT_URI', '/auth/facebook/callback'),
+    ],
+
     // ── Meta Conversions API (token + switches live in admin → Marketing) ──
     'meta' => [
         'graph_version' => env('META_GRAPH_VERSION', 'v23.0'),

@@ -8,7 +8,7 @@
        (moved here out of storefront/layout so they exist on the home page too)
      • The retail item shape matches the home combo builder exactly:
          { uid, productId, priceId, variantId, variantName, sellType,
-           quantity_gram, nameBn, label, price }
+           quantity_gram, nameBn, label, price, qty }   (qty = packs, default 1)
 
      Layout opt-outs (set before @include):
        $msHideFloat = true   → suppress the mobile floating button (home uses #combo-bar)
@@ -276,6 +276,8 @@
 
     // ── Retail cart store (localStorage['ms_cart']) ───────────────────────
     const MS_CART_KEY = 'ms_cart';
+    const MS_MAX_QTY  = {{ \App\Services\CheckoutService::MAX_PACKS_PER_LINE }};
+    window.msQty = function (it) { return Math.max(1, parseInt(it && it.qty, 10) || 1); };
     window.msCart = {
         get() { try { return JSON.parse(localStorage.getItem(MS_CART_KEY) || '[]'); } catch (e) { return []; } },
         _write(items) { try { localStorage.setItem(MS_CART_KEY, JSON.stringify(items || [])); } catch (e) {} },
@@ -284,7 +286,7 @@
         replace(items) { this._write(items); msBadges(); msCartRender(); },
         save(items) { this.replace(items); },
         count() { return this.get().length; },
-        subtotal() { return this.get().reduce(function (s, x) { return s + (parseFloat(x.price) || 0); }, 0); },
+        subtotal() { return this.get().reduce(function (s, x) { return s + (parseFloat(x.price) || 0) * msQty(x); }, 0); },
         // Add a fully-formed line (used by product-detail). Numeric uid keeps the
         // home builder's comboUid math intact when the item later appears there.
         add(item) {
@@ -293,11 +295,22 @@
                 return x.productId === item.productId && x.priceId === item.priceId &&
                        (x.variantId || null) === (item.variantId || null);
             });
-            if (dup) { this.replace(items); return dup.uid; }
+            // Same pack again → more packs on the same line (2 × 1kg), not a no-op.
+            if (dup) { dup.qty = Math.min(MS_MAX_QTY, msQty(dup) + (parseInt(item.qty, 10) || 1)); this.replace(items); return dup.uid; }
+            item.qty = Math.min(MS_MAX_QTY, Math.max(1, parseInt(item.qty, 10) || 1));
             item.uid = Date.now() + Math.floor(Math.random() * 1000);
             items.push(item);
             this.replace(items);
             return item.uid;
+        },
+        // Set a line's pack count (1…MS_MAX_QTY). Home builder gets the same objects.
+        setQty(uid, q) {
+            const items = this.get();
+            const it = items.find(function (x) { return String(x.uid) === String(uid); });
+            if (!it) return;
+            it.qty = Math.min(MS_MAX_QTY, Math.max(1, parseInt(q, 10) || 1));
+            if (window.msComboBridge && window.msComboBridge.setQty) { window.msComboBridge.setQty(it.uid, it.qty); }
+            else { this.replace(items); }
         },
         remove(uid) {
             if (window.msComboBridge) { window.msComboBridge.remove(uid); }       // home: keep builder in sync
@@ -389,7 +402,12 @@
                             '<div class="font-serif-bn text-[#14532d] text-sm font-semibold truncate">' + (it.nameBn || '') + '</div>' +
                             '<div class="text-[11px] text-gray-500 mt-0.5">' + (it.label || '') + variant + '</div>' +
                         '</div>' +
-                        '<div class="text-[#c9a227] font-serif-bn font-bold text-sm whitespace-nowrap">৳' + msFmt(it.price) + '</div>' +
+                        '<div class="flex items-center border border-gray-200 rounded-lg overflow-hidden shrink-0">' +
+                            '<button type="button" onclick="msCart.setQty(\'' + it.uid + '\',' + (msQty(it) - 1) + ')" aria-label="কমান" class="w-7 h-7 text-gray-600 hover:bg-gray-100 disabled:opacity-30"' + (msQty(it) <= 1 ? ' disabled' : '') + '>−</button>' +
+                            '<span class="w-7 text-center text-sm font-semibold text-[#14532d]">' + msQty(it) + '</span>' +
+                            '<button type="button" onclick="msCart.setQty(\'' + it.uid + '\',' + (msQty(it) + 1) + ')" aria-label="বাড়ান" class="w-7 h-7 text-gray-600 hover:bg-gray-100">+</button>' +
+                        '</div>' +
+                        '<div class="text-[#c9a227] font-serif-bn font-bold text-sm whitespace-nowrap min-w-[56px] text-right">৳' + msFmt((parseFloat(it.price) || 0) * msQty(it)) + '</div>' +
                         '<button onclick="msCart.remove(\'' + it.uid + '\')" aria-label="মুছুন" ' +
                             'class="w-7 h-7 rounded-full bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500 flex items-center justify-center text-lg leading-none transition shrink-0">&times;</button>' +
                     '</div>';
@@ -481,6 +499,9 @@
             const inp = document.createElement('input');
             inp.type = 'hidden'; inp.name = 'items[' + i + ']'; inp.value = it.priceId;
             form.appendChild(inp);
+            const q = document.createElement('input');
+            q.type = 'hidden'; q.name = 'qty[' + i + ']'; q.value = msQty(it);
+            form.appendChild(q);
         });
         document.body.appendChild(form);
         form.submit();
