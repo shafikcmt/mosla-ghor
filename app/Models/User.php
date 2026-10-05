@@ -23,6 +23,9 @@ class User extends Authenticatable
         'password_set_at',
         'is_admin',
         'role',
+        'google_id',
+        'facebook_id',
+        'avatar_url',
     ];
 
     /**

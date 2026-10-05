@@ -24,6 +24,20 @@
             <button type="button" onclick="msQuickEnquiryClose()" class="text-gray-400 hover:text-gray-700 text-2xl leading-none px-1" aria-label="বন্ধ করুন">&times;</button>
         </div>
 
+        @guest
+        @if(\App\Support\AuthSettings::socialProviders())
+        {{-- One-tap sign in: name/email come from Google/Facebook; the enquiry popup reopens on return. --}}
+        <div id="ms-qe-social" class="px-4 pt-4">
+            @include('partials.social-login-buttons', ['socialRedirect' => request()->getRequestUri(), 'socialDivider' => false, 'socialOnclick' => 'return msQuickEnquirySocial(this)'])
+            <div class="flex items-center gap-3 mt-4" aria-hidden="true">
+                <span class="flex-1 h-px bg-gray-200"></span>
+                <span class="text-xs font-semibold text-gray-400">অথবা নিচে নাম ও নম্বর দিন</span>
+                <span class="flex-1 h-px bg-gray-200"></span>
+            </div>
+        </div>
+        @endif
+        @endguest
+
         <form id="ms-qe-form" class="p-4 space-y-3" novalidate>
             <input type="hidden" name="product_variant_id" value="">
             <div>
@@ -102,6 +116,7 @@
 
     window.msQuickEnquiry = function (btn) {
         const d = btn.dataset;
+        lastData = Object.assign({}, d);
         action = d.action; productName = d.name || ''; moq = parseFloat(d.moq) || 0;
         document.getElementById('ms-qe-title').textContent = productName;
         const img = document.getElementById('ms-qe-img');
@@ -119,11 +134,28 @@
         if (!form.customer_phone.value) form.customer_phone.value = read('ms_qe_phone');
         if (!form.delivery_location.value) form.delivery_location.value = read('ms_qe_area');
 
+        if (d.qty) form.quantity_kg.value = d.qty;
+        if (d.qunit) form.quantity_unit.value = d.qunit;
+
         err.classList.add('hidden');
         form.classList.remove('hidden'); done.classList.add('hidden');
+        const socialBox = document.getElementById('ms-qe-social');
+        if (socialBox) socialBox.classList.remove('hidden');
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
         setTimeout(() => (form.customer_name.value && form.customer_phone.value ? form.quantity_kg : form.customer_name).focus(), 50);
+    };
+
+    // Social sign-in from the popup: remember what they were asking about, then
+    // reopen the popup for the same product once they are back (logged in).
+    let lastData = null;
+    window.msQuickEnquirySocial = function (link) {
+        if (lastData) {
+            lastData.qty = form.quantity_kg.value;
+            lastData.qunit = form.quantity_unit.value;
+            store('ms_qe_pending', JSON.stringify(lastData));
+        }
+        return true;
     };
 
     window.msQuickEnquiryClose = function () {
@@ -164,11 +196,23 @@
                 wa.href = waBase + '?text=' + encodeURIComponent('আসসালামু আলাইকুম, আমি "' + productName + '" ' + qty + ' ' + form.quantity_unit.value + ' পাইকারি নিতে চাই। নাম: ' + name + ', মোবাইল: ' + phone);
             }
             form.classList.add('hidden'); done.classList.remove('hidden');
+            const social = document.getElementById('ms-qe-social');
+            if (social) social.classList.add('hidden');
         } catch (ex) {
             showError('ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।');
         } finally {
             submitBtn.disabled = false; submitBtn.textContent = 'দাম জানতে চাই';
         }
     });
+
+    @auth
+    // Back from Google/Facebook → reopen the popup that started the sign-in.
+    (function () {
+        const raw = read('ms_qe_pending');
+        if (!raw) return;
+        try { localStorage.removeItem('ms_qe_pending'); } catch (e) {}
+        try { msQuickEnquiry({ dataset: JSON.parse(raw) }); } catch (e) {}
+    })();
+    @endauth
 })();
 </script>

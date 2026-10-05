@@ -218,6 +218,20 @@ class ProductController extends Controller
         $customer = $loggedIn ? Auth::user()->customer : null;
         $account  = null;
 
+        // Google/Facebook login that skipped the mobile step: adopt the typed phone
+        // when no other login owns it, so the enquiry lands in THIS account.
+        if ($loggedIn && ! $customer && empty(Auth::user()->phone)) {
+            $phone = \App\Support\Phone::normalize($validated['customer_phone']);
+            if ($phone && ! \App\Models\User::where('phone', $phone)->exists()
+                && ! \App\Models\Customer::where('mobile_number', $phone)->exists()) {
+                Auth::user()->update(['phone' => $phone]);
+                $customer = \App\Models\Customer::create([
+                    'name' => $validated['customer_name'], 'mobile_number' => $phone,
+                    'email' => Auth::user()->email, 'is_active' => true,
+                ]);
+            }
+        }
+
         if (! $customer) {
             $account  = GuestWholesaleAccount::findOrCreate(
                 $validated['customer_name'],

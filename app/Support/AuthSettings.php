@@ -28,6 +28,15 @@ class AuthSettings
         'guest_checkout_enabled'     => '1',
         'guest_enquiry_enabled'      => '1',
         'guest_review_enabled'       => '1',
+        // Social login — only shown once the provider keys are set in .env.
+        'customer_google_login'      => '1',
+        'customer_facebook_login'    => '1',
+    ];
+
+    /** Social login providers: key => button label. */
+    public const SOCIAL_PROVIDERS = [
+        'google'   => 'Google',
+        'facebook' => 'Facebook',
     ];
 
     /** Features a guest may be allowed to use, and the Bangla prompt shown when not. */
@@ -99,6 +108,28 @@ class AuthSettings
     {
         return WebsiteSetting::get('customer_login_enabled', '1') === '1'
             && (self::customerPasswordLogin() || self::customerOtpLogin());
+    }
+
+    /** Provider keys are present in config (from .env). */
+    public static function socialConfigured(string $provider): bool
+    {
+        return isset(self::SOCIAL_PROVIDERS[$provider])
+            && filled(config("services.{$provider}.client_id"))
+            && filled(config("services.{$provider}.client_secret"));
+    }
+
+    /** "Continue with …" is usable: keys set, admin toggle on, customer login on. */
+    public static function socialEnabled(string $provider): bool
+    {
+        return self::socialConfigured($provider)
+            && self::bool("customer_{$provider}_login")
+            && WebsiteSetting::get('customer_login_enabled', '1') === '1';
+    }
+
+    /** Enabled providers in display order. */
+    public static function socialProviders(): array
+    {
+        return array_values(array_filter(array_keys(self::SOCIAL_PROVIDERS), fn ($p) => self::socialEnabled($p)));
     }
 
     public static function customerRegistrationEnabled(): bool

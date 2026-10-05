@@ -74,6 +74,7 @@
                 রেজিস্ট্রেশন করুন
             </button>
         </form>
+        @include('partials.social-login-buttons', ['socialRedirect' => $redirectParam])
     </div>
 
     <div class="text-center mt-5 space-y-2 text-sm text-gray-500">
