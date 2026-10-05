@@ -8,6 +8,10 @@
         'unit'  => $p->stockUnit(),
         'price' => (float) ($p->retail_price_1kg ?: $p->selling_price ?: 0),
         'stock' => $p->onHand(),
+        // Packs (২৫ গ্রাম, ১ কেজি…) — retail first, then wholesale.
+        'packs' => $p->activePrices->sortBy(fn ($pr) => [$pr->sell_type === 'retail' ? 0 : 1, $pr->quantity_gram])->values()
+            ->map(fn ($pr) => ['id' => $pr->id, 'label' => $pr->weight_label, 'price' => (float) $pr->final_price,
+                'type' => $pr->sell_type === 'retail' ? 'খুচরা' : 'পাইকারি'])->all(),
     ]]);
     $customerData = $customers->mapWithKeys(fn ($c) => [$c->mobile_number => [
         'name' => $c->name, 'email' => $c->email, 'address' => $c->last_full_address,
@@ -101,17 +105,20 @@
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h2 class="text-sm font-bold text-gray-800 mb-4">২. পণ্য</h2>
             <div class="hidden sm:grid grid-cols-12 gap-2 text-[11px] font-semibold text-gray-500 uppercase mb-1.5 px-1">
-                <span class="col-span-5">পণ্য</span><span class="col-span-2">পরিমাণ</span><span class="col-span-2">দর (৳/একক)</span><span class="col-span-2 text-right">মোট</span><span></span>
+                <span class="col-span-5">পণ্য ও প্যাক</span><span class="col-span-2">পরিমাণ</span><span class="col-span-2">দর (৳/একক)</span><span class="col-span-2 text-right">মোট</span><span></span>
             </div>
             <div id="mo-items" class="space-y-2">
                 @foreach($oldItems as $i => $row)
                 <div class="mo-row grid grid-cols-12 gap-2 items-center bg-gray-50 sm:bg-transparent rounded-lg p-2 sm:p-1">
-                    <select name="items[{{ $i }}][product_id]" required class="mo-product col-span-12 sm:col-span-5 {{ $inp }}">
-                        <option value="">— পণ্য বেছে নিন —</option>
-                        @foreach($products as $p)
-                        <option value="{{ $p->id }}" @selected((string) ($row['product_id'] ?? '') === (string) $p->id)>{{ $p->name_bn ?: $p->name_en }}</option>
-                        @endforeach
-                    </select>
+                    <div class="col-span-12 sm:col-span-5 space-y-1.5">
+                        <select name="items[{{ $i }}][product_id]" required class="mo-product {{ $inp }}">
+                            <option value="">— পণ্য বেছে নিন —</option>
+                            @foreach($products as $p)
+                            <option value="{{ $p->id }}" @selected((string) ($row['product_id'] ?? '') === (string) $p->id)>{{ $p->name_bn ?: $p->name_en }}</option>
+                            @endforeach
+                        </select>
+                        <select name="items[{{ $i }}][price_id]" class="mo-pack {{ $inp }}" data-selected="{{ $row['price_id'] ?? '' }}" aria-label="প্যাক / ওজন"></select>
+                    </div>
                     <div class="col-span-4 sm:col-span-2 flex items-center gap-1">
                         <input type="number" name="items[{{ $i }}][quantity]" value="{{ $row['quantity'] ?? 1 }}" step="0.001" min="0.001" required class="mo-qty {{ $inp }}">
                         <span class="mo-unit text-xs text-gray-500 w-8">kg</span>
@@ -168,10 +175,13 @@
 
 <template id="mo-row-tpl">
     <div class="mo-row grid grid-cols-12 gap-2 items-center bg-gray-50 sm:bg-transparent rounded-lg p-2 sm:p-1">
-        <select name="items[__I__][product_id]" required class="mo-product col-span-12 sm:col-span-5 {{ $inp }}">
-            <option value="">— পণ্য বেছে নিন —</option>
-            @foreach($products as $p)<option value="{{ $p->id }}">{{ $p->name_bn ?: $p->name_en }}</option>@endforeach
-        </select>
+        <div class="col-span-12 sm:col-span-5 space-y-1.5">
+            <select name="items[__I__][product_id]" required class="mo-product {{ $inp }}">
+                <option value="">— পণ্য বেছে নিন —</option>
+                @foreach($products as $p)<option value="{{ $p->id }}">{{ $p->name_bn ?: $p->name_en }}</option>@endforeach
+            </select>
+            <select name="items[__I__][price_id]" class="mo-pack {{ $inp }}" data-selected="" aria-label="প্যাক / ওজন"></select>
+        </div>
         <div class="col-span-4 sm:col-span-2 flex items-center gap-1">
             <input type="number" name="items[__I__][quantity]" value="1" step="0.001" min="0.001" required class="mo-qty {{ $inp }}">
             <span class="mo-unit text-xs text-gray-500 w-8">kg</span>
@@ -192,12 +202,33 @@
     const tk = n => '৳' + Math.round(n).toLocaleString('en-US');
     const num = el => parseFloat(el && el.value) || 0;
 
+    // Product chosen → list its packs (২৫ গ্রাম … ১ কেজি) + "কেজি দরে" (custom weight).
     function fillRow(row, setPrice) {
         const p = PRODUCTS[row.querySelector('.mo-product').value];
-        row.querySelector('.mo-unit').textContent = p ? p.unit : '';
-        const price = row.querySelector('.mo-price');
-        if (p && setPrice && !price.value) price.value = p.price || '';
+        const pack = row.querySelector('.mo-pack');
+        const keep = pack.dataset.selected || '';
+        pack.innerHTML = '';
+        pack.hidden = !p;
+        if (p) {
+            pack.add(new Option('কেজি / একক দরে — ৳' + (p.price || 0) + '/' + p.unit, ''));
+            (p.packs || []).forEach(k => pack.add(new Option(k.label + ' প্যাক — ৳' + Math.round(k.price) + ' (' + k.type + ')', k.id)));
+            pack.value = keep;
+            pack.dataset.selected = '';
+        }
         row.querySelector('.mo-stock').textContent = p ? 'স্টক: ' + p.stock + ' ' + p.unit : '';
+        applyPack(row, setPrice);
+    }
+    // Pack → quantity counts packs at the pack price; custom → weight at the per-kg rate.
+    function applyPack(row, setPrice) {
+        const p = PRODUCTS[row.querySelector('.mo-product').value];
+        const packId = row.querySelector('.mo-pack').value;
+        const k = p && packId ? (p.packs || []).find(x => String(x.id) === packId) : null;
+        const qty = row.querySelector('.mo-qty'), price = row.querySelector('.mo-price');
+        row.querySelector('.mo-unit').textContent = k ? 'টি' : (p ? p.unit : '');
+        qty.step = k ? '1' : '0.001';
+        qty.min = k ? '1' : '0.001';
+        if (k) { if (setPrice) price.value = k.price; if (!(parseFloat(qty.value) >= 1)) qty.value = 1; qty.value = Math.round(parseFloat(qty.value)); }
+        else if (p && setPrice) price.value = p.price || '';
     }
     function recalc() {
         let sub = 0;
@@ -222,7 +253,10 @@
         if (box.querySelectorAll('.mo-row').length > 1) btn.closest('.mo-row').remove();
         recalc();
     };
-    box.addEventListener('change', e => { if (e.target.classList.contains('mo-product')) { fillRow(e.target.closest('.mo-row'), true); recalc(); } });
+    box.addEventListener('change', e => {
+        if (e.target.classList.contains('mo-product')) { fillRow(e.target.closest('.mo-row'), true); recalc(); }
+        if (e.target.classList.contains('mo-pack')) { applyPack(e.target.closest('.mo-row'), true); recalc(); }
+    });
     document.getElementById('mo-form').addEventListener('input', recalc);
 
     // Known customer → fill name / email / address from the phone number.
@@ -237,7 +271,7 @@
         if (!addr.value) addr.value = c.address || '';
     });
 
-    box.querySelectorAll('.mo-row').forEach(r => fillRow(r, true));
+    box.querySelectorAll('.mo-row').forEach(r => fillRow(r, !r.querySelector('.mo-price').value));
     recalc();
 })();
 </script>

@@ -35,6 +35,7 @@ class ManualOrderController extends Controller
     public function create(Request $request)
     {
         $products = Product::where('is_active', true)->orderBy('name_bn')
+            ->with(['activePrices' => fn ($q) => $q->whereNull('product_variant_id')])
             ->get(['id', 'name_bn', 'name_en', 'unit', 'retail_price_1kg', 'selling_price', 'stock', 'stock_qty']);
         $customers = Customer::orderByDesc('last_order_at')->limit(500)->get(['name', 'mobile_number', 'email', 'last_full_address']);
 
@@ -72,6 +73,8 @@ class ManualOrderController extends Controller
             'order_type'         => ['required', 'in:retail,wholesale'],
             'items'              => ['required', 'array', 'min:1', 'max:30'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            // Optional pack (২৫ গ্রাম, ১ কেজি…): quantity = number of packs, price = pack price.
+            'items.*.price_id'   => ['nullable', 'integer', 'exists:product_prices,id'],
             'items.*.quantity'   => ['required', 'numeric', 'min:0.001'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'delivery_charge'    => ['nullable', 'numeric', 'min:0'],
@@ -93,16 +96,36 @@ class ManualOrderController extends Controller
             $unitPrice = (float) $row['unit_price'];
             $lineTotal = round($qty * $unitPrice, 2);
             $unit      = $product->stockUnit();
+            $grams     = in_array($unit, ['kg', 'কেজি'], true) ? (int) round($qty * 1000) : null;
+            $name      = $product->name_bn ?: $product->name_en;
+
+            $pack = ! empty($row['price_id'])
+                ? $product->activePrices()->whereKey($row['price_id'])->first()
+                : null;
+            if (! empty($row['price_id']) && ! $pack) {
+                return back()->withInput()->with('error', "\"{$name}\"-এর বেছে নেওয়া প্যাকটি আর চালু নেই।");
+            }
+            if ($pack) {
+                // e.g. 3 × "২৫ গ্রাম" → unit "২৫ গ্রাম প্যাক", 75 g for stock.
+                $unit  = mb_substr(($pack->label ?: $pack->quantity_gram.'g').' প্যাক', 0, 20);
+                $grams = (int) $pack->quantity_gram * (int) round($qty);
+                $qty   = (float) (int) round($qty);
+                if ($qty < 1) {
+                    return back()->withInput()->with('error', "\"{$name}\" — প্যাকের সংখ্যা অন্তত ১ দিন।");
+                }
+                $lineTotal = round($qty * $unitPrice, 2);
+            }
             $subtotal += $lineTotal;
             $lines[] = [
                 'vendor_id'     => $product->vendor_id,
                 'vendor_name'   => $product->vendor?->shop_name,
                 'product_id'    => $product->id,
-                'product_name'  => $product->name_bn ?: $product->name_en,
-                'sell_type'     => $data['order_type'],
+                'product_name'  => $name,
+                'price_id'      => $pack?->id,
+                'sell_type'     => $pack->sell_type ?? $data['order_type'],
                 'quantity'      => $qty,
                 'unit'          => $unit,
-                'quantity_gram' => in_array($unit, ['kg', 'কেজি'], true) ? (int) round($qty * 1000) : null,
+                'quantity_gram' => $grams,
                 'unit_price'    => $unitPrice,
                 'line_total'    => $lineTotal,
             ];

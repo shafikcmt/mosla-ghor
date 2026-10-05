@@ -114,4 +114,27 @@ class AdminManualOrderTest extends TestCase
         $this->assertModelExists($buyer);
         $this->assertModelExists($this->admin);
     }
+
+    public function test_retail_pack_lines_price_by_pack_and_deduct_real_weight(): void
+    {
+        $this->product->syncPrices();
+        $pack = $this->product->activePrices()->where('sell_type', 'retail')->where('quantity_gram', 25)->firstOrFail();
+
+        $this->actingAs($this->admin)->get(route('admin.orders.manual.create'))->assertOk()
+            ->assertSee('"packs":[', false);
+
+        $this->post(route('admin.orders.manual.store'), $this->payload([
+            'order_type' => 'retail', 'delivery_charge' => 0, 'discount' => 0, 'paid_amount' => 0,
+            'items' => [['product_id' => $this->product->id, 'price_id' => $pack->id, 'quantity' => 3, 'unit_price' => $pack->final_price]],
+        ]))->assertSessionHasNoErrors();
+
+        $item = Order::sole()->items->first();
+        $this->assertEquals(3, $item->quantity);
+        $this->assertSame($pack->id, $item->price_id);
+        $this->assertSame(75, (int) $item->quantity_gram);
+        $this->assertStringEndsWith('প্যাক', $item->unit);
+        $this->assertEquals(round($pack->final_price * 3, 2), (float) $item->line_total);
+        // Stock sees the real weight (0.075 kg), not "3 kg". (Legacy whole-kg products round it.)
+        $this->assertEquals(0.075, app(\App\Services\StockService::class)->itemQuantity($item));
+    }
 }

@@ -154,6 +154,11 @@ class StockService
     /** Quantity to move for an order line, in the product's own unit. */
     public function itemQuantity($item): float
     {
+        // Pack line from an admin phone order (3 × "২৫ গ্রাম প্যাক"): quantity counts
+        // packs, so deduct the real weight in kg instead.
+        if ($item->price_id && $item->quantity_gram && $item->unit && str_ends_with($item->unit, 'প্যাক')) {
+            return round($item->quantity_gram / 1000, 3);
+        }
         if ($item->quantity !== null) {
             return (float) $item->quantity;
         }
