@@ -258,6 +258,9 @@ Route::post('/invoice/{token}/pay',     [InvoiceController::class, 'payStore'])-
 Route::get('/wholesale-invoice/{token}',     [WholesaleQuoteInvoiceController::class, 'show'])->name('wholesale.invoice.show');
 Route::get('/wholesale-invoice/{token}/pdf', [WholesaleQuoteInvoiceController::class, 'pdf'])->name('wholesale.invoice.pdf');
 
+// ── Public খাতা voucher (shared with a party over WhatsApp) ──────────────────
+Route::get('/v/{token}', [\App\Http\Controllers\KhataVoucherController::class, 'show'])->name('khata.voucher.public');
+
 // ── Vendor public routes ───────────────────────────────────────────────────
 Route::prefix('vendor')->name('vendor.')->group(function () {
     Route::get('register',  [VendorAuthController::class, 'showRegister'])->name('register');
@@ -278,6 +281,28 @@ Route::prefix('vendor')->name('vendor.')->group(function () {
 // ── Vendor authenticated routes ────────────────────────────────────────────
 Route::prefix('vendor')->name('vendor.')->middleware('vendor')->group(function () {
     Route::get('dashboard', [VendorDashboardController::class, 'index'])->name('dashboard');
+
+    // ── দোকানের খাতা (stock & ledger book; the whole panel for inventory-only shops) ──
+    Route::prefix('khata')->name('khata.')->group(function () {
+        $k = 'App\\Http\\Controllers\\Vendor\\Khata\\';
+        Route::get('/',             [$k.'HomeController', 'home'])->name('home');
+        Route::get('transactions',  [$k.'HomeController', 'transactions'])->name('transactions');
+        Route::get('report',        [$k.'HomeController', 'report'])->name('report');
+        Route::get('settings',      [$k.'HomeController', 'settings'])->name('settings');
+        Route::post('settings',     [$k.'HomeController', 'saveSettings'])->name('settings.save');
+
+        Route::post('items/{item}/adjust', [$k.'ItemController', 'adjust'])->name('items.adjust');
+        Route::resource('items', $k.'ItemController');
+        Route::get('parties/{party}/statement', [$k.'PartyController', 'statement'])->name('parties.statement');
+        Route::resource('parties', $k.'PartyController');
+
+        Route::get('new/{type}',  [$k.'TransactionController', 'createTrade'])->whereIn('type', ['sale', 'purchase'])->name('trade.create');
+        Route::post('new/{type}', [$k.'TransactionController', 'storeTrade'])->whereIn('type', ['sale', 'purchase'])->name('trade.store');
+        Route::get('entry/{type}',  [$k.'TransactionController', 'createAmount'])->whereIn('type', ['payment_in', 'payment_out', 'expense'])->name('amount.create');
+        Route::post('entry/{type}', [$k.'TransactionController', 'storeAmount'])->whereIn('type', ['payment_in', 'payment_out', 'expense'])->name('amount.store');
+        Route::get('tx/{tx}',     [$k.'TransactionController', 'show'])->name('tx.show');
+        Route::delete('tx/{tx}',  [$k.'TransactionController', 'destroy'])->name('tx.destroy');
+    });
 
     Route::post('products/uploads', [\App\Http\Controllers\ProductImageUploadController::class, 'store'])
         ->middleware('throttle:60,1')->name('products.uploads');

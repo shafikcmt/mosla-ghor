@@ -34,6 +34,16 @@ class VendorMiddleware
         $vendor = $user->vendor;
         view()->share('authVendor', $vendor);
 
+        // Inventory-only shops live in দোকানের খাতা — every e-commerce page sends them there.
+        if ($vendor?->isInventoryOnly()) {
+            $route = $request->route()?->getName() ?? '';
+            $open  = str_starts_with($route, 'vendor.khata.')
+                || in_array($route, ['vendor.logout', 'vendor.notifications.index', 'vendor.notifications.read', 'vendor.notifications.readAll'], true);
+            if (! $open) {
+                return redirect()->route('vendor.khata.home');
+            }
+        }
+
         return $next($request);
     }
 }

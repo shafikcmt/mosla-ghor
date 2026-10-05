@@ -15,10 +15,17 @@ class Vendor extends Model
         'payment_info', 'commission_type', 'commission_value',
         'product_auto_approve', 'status', 'is_active', 'admin_note',
         'approved_at', 'approved_by', 'suspended_at',
+        'panel_mode', 'khata_settings',
+    ];
+
+    public const PANEL_MODES = [
+        'full'      => 'ই-কমার্স (সম্পূর্ণ প্যানেল)',
+        'inventory' => 'শুধু স্টক ও হিসাব (দোকানের খাতা)',
     ];
 
     protected $casts = [
         'payment_info'         => 'array',
+        'khata_settings'       => 'array',
         'commission_value'     => 'decimal:2',
         'product_auto_approve' => 'boolean',
         'is_active'            => 'boolean',
@@ -93,6 +100,23 @@ class Vendor extends Model
     public function commissionLedger(): HasMany
     {
         return $this->hasMany(WholesaleCommissionLedger::class);
+    }
+
+    /** Inventory-only shop: sees just দোকানের খাতা (no e-commerce features). */
+    public function isInventoryOnly(): bool
+    {
+        return $this->panel_mode === 'inventory';
+    }
+
+    /** Voucher / book settings with defaults. */
+    public function khataSetting(string $key, mixed $default = null): mixed
+    {
+        $defaults = [
+            'terms'       => "ধন্যবাদ আপনাকে\nআমাদের সাথে থাকার জন্য",
+            'show_balance'=> true,
+        ];
+
+        return ($this->khata_settings ?? [])[$key] ?? $defaults[$key] ?? $default;
     }
 
     public function isApproved(): bool
