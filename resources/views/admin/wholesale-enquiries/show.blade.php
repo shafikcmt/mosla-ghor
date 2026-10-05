@@ -78,10 +78,16 @@
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-base font-bold text-gray-800">Quote সমূহ</h3>
                 @if(in_array($enquiry->status, ['pending', 'quoted']))
-                <a href="{{ route('admin.wholesale.quote.create', $enquiry->id) }}"
-                   class="text-xs bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl font-bold transition-colors">
-                    + কোটেশন পাঠান
-                </a>
+                <div class="flex gap-2">
+                    <a href="{{ route('admin.orders.manual.create', ['enquiry' => $enquiry->id]) }}" title="ফোন/WhatsApp-এ দাম ঠিক হলে সরাসরি অর্ডার তৈরি করুন"
+                       class="text-xs bg-[#14532d] hover:bg-[#0d3520] text-white px-4 py-2 rounded-xl font-bold transition-colors">
+                        + অর্ডার তৈরি করুন
+                    </a>
+                    <a href="{{ route('admin.wholesale.quote.create', $enquiry->id) }}"
+                       class="text-xs bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl font-bold transition-colors">
+                        + কোটেশন পাঠান
+                    </a>
+                </div>
                 @endif
             </div>
             @forelse($enquiry->quotes as $quote)

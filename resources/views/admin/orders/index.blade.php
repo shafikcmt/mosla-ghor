@@ -31,7 +31,11 @@
 
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
         <h1 class="text-xl font-bold text-gray-800">অর্ডার তালিকা</h1>
-        <span class="text-sm text-gray-500">মোট: {{ $orders->total() }} টি অর্ডার</span>
+        <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-500">মোট: {{ $orders->total() }} টি অর্ডার</span>
+            <a href="{{ route('admin.orders.manual.create') }}"
+               class="bg-[#14532d] hover:bg-[#0d3520] text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">+ ফোন / WhatsApp অর্ডার</a>
+        </div>
     </div>
 
     {{-- Filter tabs + search --}}
