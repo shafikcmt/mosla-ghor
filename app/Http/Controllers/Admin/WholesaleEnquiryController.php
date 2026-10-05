@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Vendor;
 use App\Models\WholesaleEnquiry;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class WholesaleEnquiryController extends Controller
 {
@@ -60,5 +61,62 @@ class WholesaleEnquiryController extends Controller
         ]);
 
         return back()->with('success', 'Enquiry status আপডেট হয়েছে।');
+    }
+
+    /** Delete one enquiry (e.g. a test entry) with its quotes and chat. */
+    public function destroy(WholesaleEnquiry $enquiry)
+    {
+        if (! $this->deletable($enquiry)) {
+            return back()->with('error', "Enquiry #{$enquiry->id} থেকে অর্ডার / কমিশন হয়েছে — রেকর্ড রক্ষায় এটি মুছা যাবে না।");
+        }
+
+        $id = $enquiry->id;
+        $this->purge($enquiry);
+
+        return redirect()->route('admin.wholesale.enquiry.index')->with('success', "Enquiry #{$id} মুছে ফেলা হয়েছে।");
+    }
+
+    /** Delete the ticked enquiries; ones that already became an order are kept. */
+    public function bulkDestroy(Request $request)
+    {
+        $data = $request->validate([
+            'ids'   => ['required', 'array', 'max:100'],
+            'ids.*' => ['integer'],
+        ], ['ids.required' => 'অন্তত একটি enquiry বেছে নিন।']);
+
+        $deleted = 0;
+        $kept    = [];
+        foreach (WholesaleEnquiry::whereIn('id', $data['ids'])->get() as $enquiry) {
+            if ($this->deletable($enquiry)) {
+                $this->purge($enquiry);
+                $deleted++;
+            } else {
+                $kept[] = '#'.$enquiry->id;
+            }
+        }
+
+        $msg = "{$deleted}টি enquiry মুছে ফেলা হয়েছে।";
+        if ($kept) {
+            $msg .= ' অর্ডার হয়ে যাওয়ায় রাখা হয়েছে: '.implode(', ', $kept).'।';
+        }
+
+        return back()->with($deleted ? 'success' : 'error', $msg);
+    }
+
+    /** Orders / commission rows are financial records — never orphan them. */
+    private function deletable(WholesaleEnquiry $enquiry): bool
+    {
+        return ! $enquiry->orders()->exists()
+            && ! DB::table('wholesale_commission_ledger')->where('enquiry_id', $enquiry->id)->exists();
+    }
+
+    private function purge(WholesaleEnquiry $enquiry): void
+    {
+        DB::transaction(function () use ($enquiry) {
+            // Explicit (not only FK cascade) so it also holds where FKs are off.
+            $enquiry->chatMessages()->delete();
+            $enquiry->quotes()->delete();
+            $enquiry->delete();
+        });
     }
 }

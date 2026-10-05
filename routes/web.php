@@ -564,6 +564,8 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
         Route::get('enquiries/{enquiry}',          [AdminWholesaleEnquiryController::class, 'show'])->name('enquiry.show');
         Route::post('enquiries/{enquiry}/status',  [AdminWholesaleEnquiryController::class, 'updateStatus'])->name('enquiry.status');
         Route::post('enquiries/{enquiry}/assign',  [AdminWholesaleEnquiryController::class, 'assign'])->name('enquiry.assign');
+        Route::delete('enquiries/{enquiry}',       [AdminWholesaleEnquiryController::class, 'destroy'])->name('enquiry.destroy');
+        Route::post('enquiries/bulk-delete',       [AdminWholesaleEnquiryController::class, 'bulkDestroy'])->name('enquiry.bulk-destroy');
 
         Route::get('enquiries/{enquiry}/quote',    [AdminWholesaleQuoteController::class, 'create'])->name('quote.create');
         Route::post('enquiries/{enquiry}/quote',   [AdminWholesaleQuoteController::class, 'store'])->name('quote.store');

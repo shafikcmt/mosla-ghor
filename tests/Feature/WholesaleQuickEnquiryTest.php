@@ -79,4 +79,53 @@ class WholesaleQuickEnquiryTest extends TestCase
 
         $this->assertSame('form', WholesaleEnquiry::sole()->contact_channel);
     }
+
+    private function enquiry(string $name): WholesaleEnquiry
+    {
+        $this->postJson(route('products.enquiry.store', 'cumin'), [
+            'customer_name' => $name, 'customer_phone' => '01712345678', 'quantity_kg' => 10,
+        ])->assertCreated();
+
+        return WholesaleEnquiry::latest('id')->firstOrFail();
+    }
+
+    public function test_admin_can_delete_test_enquiries_but_not_ones_that_became_orders(): void
+    {
+        $test    = $this->enquiry('Test One');
+        $test2   = $this->enquiry('Test Two');
+        $ordered = $this->enquiry('Real Buyer');
+        $admin   = \App\Models\User::factory()->create(['role' => 'admin', 'is_admin' => true]);
+        \App\Models\WholesaleChatMessage::create(['enquiry_id' => $test->id, 'sender_type' => 'admin', 'sender_id' => $admin->id, 'message' => 'hi']);
+        \App\Models\Order::create([
+            'order_number' => 'ENQ-ORDER', 'customer_name' => 'Real Buyer', 'mobile_number' => '01712345678',
+            'full_address' => 'Dhaka', 'district' => 'Dhaka', 'area' => 'Dhaka', 'subtotal' => 100, 'packaging_cost' => 0,
+            'delivery_charge' => 0, 'grand_total' => 100, 'payment_method' => 'cash_on_delivery', 'order_status' => 'pending',
+            'enquiry_id' => $ordered->id,
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.wholesale.enquiry.index'))->assertOk()->assertSee('enq-bulk', false);
+
+        $this->delete(route('admin.wholesale.enquiry.destroy', $test))
+            ->assertRedirect(route('admin.wholesale.enquiry.index'))->assertSessionHas('success');
+        $this->assertModelMissing($test);
+        $this->assertSame(0, \App\Models\WholesaleChatMessage::where('enquiry_id', $test->id)->count());
+
+        $this->delete(route('admin.wholesale.enquiry.destroy', $ordered))->assertSessionHas('error');
+        $this->assertModelExists($ordered);
+
+        $this->from(route('admin.wholesale.enquiry.index'))
+            ->post(route('admin.wholesale.enquiry.bulk-destroy'), ['ids' => [$test2->id, $ordered->id]])
+            ->assertSessionHas('success', fn ($m) => str_contains($m, '1টি') && str_contains($m, '#'.$ordered->id));
+        $this->assertModelMissing($test2);
+        $this->assertModelExists($ordered);
+    }
+
+    public function test_guests_and_customers_cannot_delete_enquiries(): void
+    {
+        $enquiry = $this->enquiry('Someone');
+        $this->delete(route('admin.wholesale.enquiry.destroy', $enquiry));
+        $this->actingAs(\App\Models\User::factory()->create(['role' => 'customer']))
+            ->delete(route('admin.wholesale.enquiry.destroy', $enquiry));
+        $this->assertModelExists($enquiry);
+    }
 }

@@ -2,8 +2,13 @@
 @section('title', 'Enquiry বিস্তারিত')
 
 @section('content')
-<div class="mb-5 flex items-center gap-3">
+<div class="mb-5 flex items-center justify-between gap-3">
     <a href="{{ route('admin.wholesale.enquiry.index') }}" class="text-gray-500 hover:text-gray-700 text-sm">← Enquiry তালিকা</a>
+    <form method="POST" action="{{ route('admin.wholesale.enquiry.destroy', $enquiry->id) }}"
+          onsubmit="return confirm('Enquiry #{{ $enquiry->id }} (quote ও চ্যাটসহ) স্থায়ীভাবে মুছে ফেলবেন?');">
+        @csrf @method('DELETE')
+        <button type="submit" class="text-xs border border-red-200 text-red-600 hover:bg-red-50 font-semibold px-3 py-1.5 rounded-lg transition-colors">🗑 Enquiry মুছুন</button>
+    </form>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
