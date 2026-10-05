@@ -2539,6 +2539,7 @@ var comboUid   = comboItems.reduce(function (m, x) { return Math.max(m, x.uid ||
 window.msComboBridge = {
     // uid arrives as a string from the drawer; builder uids are numeric → coerce.
     remove: function (uid) { removeFromCombo(Number(uid)); },
+    setQty: function (uid, q) { setComboQty(Number(uid), q); },
     clear:  function () { comboItems = []; renderCombo(); }
 };
 msCartReady = true;
@@ -2575,7 +2576,7 @@ function addToCombo(productId) {
 
     // Duplicate → flash existing item in summary
     const dup = comboItems.find(x => x.productId === productId && x.priceId === priceId && x.variantId === variantId);
-    if (dup) { flashComboItem(dup.uid); return; }
+    if (dup) { comboBumpQty(dup); flashComboItem(dup.uid); return; }
 
     comboUid++;
     comboItems.push({ uid: comboUid, productId, priceId, variantId, variantName, sellType: activeTab, quantity_gram: price.quantity_gram, nameBn: p.name_bn, label: price.label, price: price.final_price });
@@ -2589,6 +2590,20 @@ function addToCombo(productId) {
         setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1400);
     }
 
+    renderCombo();
+}
+
+// Same pack added again → one more pack on that line (2 × 1kg), capped per line.
+const COMBO_MAX_QTY = {{ \App\Services\CheckoutService::MAX_PACKS_PER_LINE }};
+function comboQty(item) { return Math.max(1, parseInt(item.qty, 10) || 1); }
+function comboBumpQty(item, delta) {
+    item.qty = Math.min(COMBO_MAX_QTY, Math.max(1, comboQty(item) + (delta === undefined ? 1 : delta)));
+    renderCombo();
+}
+function setComboQty(uid, q) {
+    const item = comboItems.find(x => x.uid === uid);
+    if (!item) return;
+    item.qty = Math.min(COMBO_MAX_QTY, Math.max(1, parseInt(q, 10) || 1));
     renderCombo();
 }
 
@@ -2646,9 +2661,9 @@ function cardAddToBag(btn, productId) {
     // Same product + same variant + same pack → already in the box (one line).
     const dup = comboItems.find(x => x.productId === productId && x.priceId === priceId && (x.variantId || null) === (variantId || null));
     if (dup) {
-        renderCombo();
+        comboBumpQty(dup);
         if (window.flashComboItem) flashComboItem(dup.uid);
-        if (window.msToast) msToast('এই পণ্যটি ইতিমধ্যে ব্যাগে আছে');
+        if (window.msToast) msToast('🛍️ আরও ১টি যোগ হয়েছে (মোট ' + msQty(dup) + 'টি)');
         if (window.msCartOpen) msCartOpen('retail');
         return;
     }
@@ -2737,14 +2752,21 @@ function renderCombo() {
                     ${opts}
                 </select>
             </div>
-            <div class="text-[#c9a227] font-bold font-serif-bn text-sm flex-shrink-0 min-w-[52px] text-right">৳${fmt(item.price)}</div>
+            <div class="flex items-center flex-shrink-0 border border-green-600 rounded-lg overflow-hidden">
+                <button type="button" onclick="setComboQty(${item.uid}, ${comboQty(item) - 1})" ${comboQty(item) <= 1 ? 'disabled' : ''} aria-label="কমান"
+                        class="w-6 h-6 text-green-200 hover:bg-green-800 disabled:opacity-30">−</button>
+                <span class="w-6 text-center text-xs font-bold text-[#fef9ee]">${comboQty(item)}</span>
+                <button type="button" onclick="setComboQty(${item.uid}, ${comboQty(item) + 1})" aria-label="বাড়ান"
+                        class="w-6 h-6 text-green-200 hover:bg-green-800">+</button>
+            </div>
+            <div class="text-[#c9a227] font-bold font-serif-bn text-sm flex-shrink-0 min-w-[52px] text-right">৳${fmt(item.price * comboQty(item))}</div>
             <button onclick="removeFromCombo(${item.uid})"
                     class="flex-shrink-0 w-6 h-6 rounded-full bg-green-800 hover:bg-red-900 text-green-300 hover:text-red-300 flex items-center justify-center text-base leading-none transition-colors">&times;</button>
         </div>`;
     }).join('');
 
     // Totals
-    const sub    = comboItems.reduce((s, x) => s + x.price, 0);
+    const sub    = comboItems.reduce((s, x) => s + x.price * comboQty(x), 0);
     const grand  = sub + PACKAGING_COST;
     const minOk  = grand >= MIN_ORDER_AMOUNT;
     subEl.textContent   = '৳' + fmt(sub);
@@ -2843,7 +2865,7 @@ function addToComboFromModal() {
     if (!price) return;
 
     const dup = comboItems.find(x => x.productId === currentId && x.priceId === priceId && x.variantId === variantId);
-    if (dup) { closeModal(); flashComboItem(dup.uid); return; }
+    if (dup) { comboBumpQty(dup); closeModal(); flashComboItem(dup.uid); return; }
 
     comboUid++;
     comboItems.push({ uid: comboUid, productId: currentId, priceId, variantId, variantName, sellType: activeTab, quantity_gram: price.quantity_gram, nameBn: p.name_bn, label: price.label, price: price.final_price });
@@ -2895,6 +2917,9 @@ function proceedToCheckout() {
             const inp = document.createElement('input');
             inp.type = 'hidden'; inp.name = 'items[' + i + ']'; inp.value = item.priceId;
             form.appendChild(inp);
+            const q = document.createElement('input');
+            q.type = 'hidden'; q.name = 'qty[' + i + ']'; q.value = comboQty(item);
+            form.appendChild(q);
         });
     }
 
@@ -2943,9 +2968,9 @@ function openOrderForm() {
             preview.innerHTML = comboItems.map(item =>
                 `<div class="flex justify-between items-baseline gap-2">
                     <span class="text-gray-700 font-serif-bn font-medium truncate">${item.nameBn}
-                        <span class="text-gray-400 text-[11px] font-sans">(${item.label})</span>
+                        <span class="text-gray-400 text-[11px] font-sans">(${item.label}${comboQty(item) > 1 ? ' × ' + comboQty(item) : ''})</span>
                     </span>
-                    <span class="text-[#c9a227] font-bold font-serif-bn flex-shrink-0">৳${fmt(item.price)}</span>
+                    <span class="text-[#c9a227] font-bold font-serif-bn flex-shrink-0">৳${fmt(item.price * comboQty(item))}</span>
                 </div>`
             ).join('');
         }
@@ -3171,7 +3196,7 @@ function selectAddr(type, id, displayName) {
 
 function getOrderSubtotal() {
     if (fixedComboData) return fixedComboData.sell_price;
-    return comboItems.reduce((s, x) => s + x.price, 0);
+    return comboItems.reduce((s, x) => s + x.price * comboQty(x), 0);
 }
 
 function calcDeliveryCharge(zone, location) {
@@ -3406,7 +3431,8 @@ function populateOrderItems() {
     const container = document.getElementById('order-items-hidden');
     if (!container) return;
     container.innerHTML = comboItems.map((item, i) =>
-        `<input type="hidden" name="items[${i}][price_id]" value="${item.priceId}">`
+        `<input type="hidden" name="items[${i}][price_id]" value="${item.priceId}">` +
+        `<input type="hidden" name="items[${i}][qty]" value="${comboQty(item)}">`
     ).join('');
 }
 

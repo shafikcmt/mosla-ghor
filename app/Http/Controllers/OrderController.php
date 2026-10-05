@@ -76,6 +76,7 @@ class OrderController extends Controller
             'payment_screenshot'       => ['bail', 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'items'            => [$isComboOrder ? 'nullable' : 'required', 'array', 'min:1', 'max:20'],
             'items.*.price_id' => ['required_with:items', 'integer', 'exists:product_prices,id'],
+            'items.*.qty'      => ['nullable', 'integer', 'min:1', 'max:'.\App\Services\CheckoutService::MAX_PACKS_PER_LINE],
         ], [
             'mobile_number.regex'          => 'সঠিক মোবাইল নম্বর দিন। যেমন: 01700000000',
             'alternative_number.regex'     => 'সঠিক বিকল্প নম্বর দিন। যেমন: 01700000000',
@@ -174,7 +175,10 @@ class OrderController extends Controller
                     ], 422);
                 }
 
-                $lineTotal = (float) $productPrice->final_price;
+                // qty = packs of this price (2 × 1kg); unit_price stays the pack price.
+                $qty       = max(1, (int) ($item['qty'] ?? 1));
+                $unitPrice = (float) $productPrice->final_price;
+                $lineTotal = $unitPrice * $qty;
                 $subtotal += $lineTotal;
 
                 $vendorId   = $productPrice->product->vendor_id;
@@ -188,8 +192,8 @@ class OrderController extends Controller
                     'product_id'    => $productPrice->product->id,
                     'product_name'  => $productPrice->product->name_bn,
                     'variant_name'  => $productPrice->variant?->name,
-                    'quantity_gram' => (int) $productPrice->quantity_gram,
-                    'unit_price'    => $lineTotal,
+                    'quantity_gram' => (int) $productPrice->quantity_gram * $qty,
+                    'unit_price'    => $unitPrice,
                     'line_total'    => $lineTotal,
                     'vendor_id'     => $vendorId,
                     'vendor_name'   => $vendorName,

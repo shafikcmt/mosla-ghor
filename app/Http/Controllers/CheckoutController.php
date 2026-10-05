@@ -27,10 +27,21 @@ class CheckoutController extends Controller
             'combo_id'   => ['nullable', 'integer', 'exists:combos,id'],
             'items'      => ['nullable', 'array', 'max:20'],
             'items.*'    => ['integer', 'exists:product_prices,id'],
+            // Packs per line (parallel to items[]); missing = 1.
+            'qty'        => ['nullable', 'array'],
+            'qty.*'      => ['nullable', 'integer', 'min:1', 'max:'.CheckoutService::MAX_PACKS_PER_LINE],
         ]);
 
         $comboId  = $validated['combo_id'] ?? null;
-        $priceIds = array_map('intval', $validated['items'] ?? []);
+        // The session keeps one price id per pack (2 × 1kg = the id twice);
+        // CheckoutService::resolveItems folds repeats back into one line.
+        $priceIds = [];
+        foreach (array_values($validated['items'] ?? []) as $i => $priceId) {
+            $qty = (int) (array_values($validated['qty'] ?? [])[$i] ?? 1);
+            for ($n = 0; $n < max(1, $qty); $n++) {
+                $priceIds[] = (int) $priceId;
+            }
+        }
 
         if (! $comboId && empty($priceIds)) {
             return redirect('/#combo-builder')->with('error', 'কমপক্ষে একটি পণ্য যোগ করুন।');

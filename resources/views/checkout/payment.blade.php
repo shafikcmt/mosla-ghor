@@ -32,7 +32,7 @@
             <div class="border-t border-gray-50 pt-2 space-y-1">
                 @foreach($items as $item)
                 <div class="flex justify-between text-xs text-gray-600">
-                    <span class="truncate pr-2">{{ $item['product_name'] }} <span class="text-gray-400">{{ $item['label'] ?? '' }}</span></span>
+                    <span class="truncate pr-2">{{ $item['product_name'] }} <span class="text-gray-400">{{ $item['label'] ?? '' }}@if(($item['qty'] ?? 1) > 1) × {{ $item['qty'] }}@endif</span></span>
                     <span>৳{{ number_format($item['line_total'], 0) }}</span>
                 </div>
                 @endforeach
@@ -61,6 +61,7 @@
         @else
             @foreach($items as $i => $item)
             <input type="hidden" name="items[{{ $i }}][price_id]" value="{{ $item['price_id'] }}">
+            <input type="hidden" name="items[{{ $i }}][qty]" value="{{ $item['qty'] ?? 1 }}">
             @endforeach
         @endif
         <input type="hidden" name="payment_mode" id="f-payment_mode" value="cod">

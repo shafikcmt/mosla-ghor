@@ -120,7 +120,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold text-gray-800 truncate">{{ $item['product_name'] }}</p>
-                    <p class="text-xs text-gray-400">{{ $item['label'] ?? '' }}{{ !empty($item['variant_name']) ? ' · '.$item['variant_name'] : '' }}</p>
+                    <p class="text-xs text-gray-400">{{ $item['label'] ?? '' }}@if(($item['qty'] ?? 1) > 1) × {{ $item['qty'] }}@endif{{ !empty($item['variant_name']) ? ' · '.$item['variant_name'] : '' }}</p>
                 </div>
                 <div class="text-sm font-bold text-[#14532d] flex-shrink-0">৳{{ number_format($item['line_total'], 0) }}</div>
             </div>

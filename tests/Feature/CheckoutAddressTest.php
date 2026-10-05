@@ -154,4 +154,29 @@ class CheckoutAddressTest extends TestCase
             $this->assertSame(0.0, $service->resolveCharge($zone->id, $location->id, 500)['delivery_charge']);
         }
     }
+
+    public function test_retail_cart_can_order_more_than_one_pack(): void
+    {
+        $kg = Product::where('slug', 'cumin')->firstOrFail()->prices()
+            ->where('sell_type', 'retail')->where('quantity_gram', 1000)->firstOrFail();
+        $this->priceId = $kg->id;
+        $this->post(route('checkout.start'), ['items' => [$this->priceId], 'qty' => [3]])->assertRedirect(route('checkout.review'));
+        $this->get(route('checkout.review'))->assertOk()->assertSee('× 3');
+        $this->post(route('checkout.address.store'), $this->address)->assertSessionHasNoErrors();
+        $this->get(route('checkout.payment'))->assertOk()->assertSee('name="items[0][qty]" value="3"', false);
+
+        $this->postJson(route('order.store'), $this->orderPayload(['items' => [['price_id' => $this->priceId, 'qty' => 3]]]))->assertSuccessful();
+
+        $item = Order::firstOrFail()->items()->firstOrFail();
+        $this->assertSame(3000, (int) $item->quantity_gram);
+        $this->assertEquals($kg->final_price, $item->unit_price);
+        $this->assertEquals($kg->final_price * 3, $item->line_total);
+        $this->assertEquals(97, Product::where('slug', 'cumin')->value('stock'));
+    }
+
+    public function test_pack_quantity_is_capped(): void
+    {
+        $this->post(route('checkout.start'), ['items' => [$this->priceId], 'qty' => [CheckoutService::MAX_PACKS_PER_LINE + 1]])
+            ->assertSessionHasErrors('qty.0');
+    }
 }

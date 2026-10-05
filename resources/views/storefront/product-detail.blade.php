@@ -127,6 +127,8 @@
     <style>
         .pd-thumb.active, .pd-thumb:focus { border-color: #14532d !important; outline-offset: 3px; }
         .pd-pack.active { background:#14532d !important; border-color:#14532d !important; }
+        .pd-tab { color:#4b5563; background:#f3f4f6; }
+        .pd-tab.active { color:#fff; background:#14532d; }
         .pd-pack.active .pd-pack-lbl { color:#86efac; }
         .pd-pack.active .pd-pack-val { color:#fff; }
         .star-input input { display:none; }
@@ -258,13 +260,7 @@
         @endif
 
         @if($product->description)
-        <div class="mt-3">
-            <div id="pd-desc" class="text-sm text-gray-600 leading-relaxed overflow-hidden transition-all" style="max-height: 4.5rem;">
-                {!! nl2br(e($product->description)) !!}
-            </div>
-            <button type="button" id="pd-desc-toggle" onclick="pdToggleDesc()"
-                    class="text-xs font-semibold text-[#14532d] mt-1 hover:underline">আরও পড়ুন ▾</button>
-        </div>
+        <a href="#pd-tabs" onclick="pdShowTab('desc')" class="inline-block text-xs font-semibold text-[#14532d] mt-2 hover:underline">বিস্তারিত বিবরণ দেখুন ↓</a>
         @endif
 
         @if($product->brand || $product->unit)
@@ -307,11 +303,16 @@
         </div>
         @endif
 
-        {{-- ── (c) RETAIL purchase block ──────────────────────────────────── --}}
+        {{-- ── (c) RETAIL purchase block (pack → price → quantity → actions) ── --}}
         @if($hasRetail)
-        <div class="mt-6">
-            <h2 class="text-sm font-bold text-gray-800 mb-2">খুচরা মূল্য</h2>
-            <div class="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
+        <div class="mt-6 border-t border-gray-100 pt-5">
+            <div class="flex items-end gap-2 flex-wrap">
+                <div id="pd-sel-price" class="text-[#d97706] font-serif-bn text-3xl font-bold leading-none">৳{{ number_format($retailPacks->first()->final_price, 0) }}</div>
+                <div id="pd-unit-note" class="text-xs text-gray-400 pb-0.5 hidden"></div>
+            </div>
+
+            <h2 class="text-sm font-semibold text-gray-700 mt-5 mb-2">প্যাক / ওজন</h2>
+            <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 @foreach($retailPacks as $i => $price)
                 <button type="button"
                         class="pd-pack {{ $i === 0 ? 'active' : '' }} border border-green-100 bg-[#f0faf4] rounded-lg p-2 text-center transition-colors"
@@ -323,22 +324,44 @@
                 @endforeach
             </div>
 
-            <div class="flex items-center gap-3">
-                <div class="text-gray-500 text-sm">নির্বাচিত মূল্য:</div>
-                <div id="pd-sel-price" class="text-[#c9a227] font-serif-bn text-2xl font-bold">৳{{ number_format($retailPacks->first()->final_price, 0) }}</div>
+            {{-- Quantity: how many of the selected pack (2 × 1kg = 2kg) --}}
+            <div class="flex items-center gap-4 mt-5">
+                <span class="text-sm font-semibold text-gray-700 w-20">পরিমাণ:</span>
+                <div class="flex items-center border border-gray-300 rounded-xl overflow-hidden">
+                    <button type="button" onclick="pdChangeQty(-1)" aria-label="কমান"
+                            class="w-10 h-10 text-xl text-gray-600 hover:bg-gray-100 disabled:opacity-30" id="pd-qty-minus" disabled>−</button>
+                    <input type="number" id="pd-qty" value="1" min="1" max="{{ \App\Services\CheckoutService::MAX_PACKS_PER_LINE }}" inputmode="numeric"
+                           onchange="pdSetPackQty(this.value)" aria-label="পরিমাণ"
+                           class="w-12 h-10 text-center font-semibold text-gray-800 border-x border-gray-200 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none">
+                    <button type="button" onclick="pdChangeQty(1)" aria-label="বাড়ান"
+                            class="w-10 h-10 text-xl text-gray-600 hover:bg-gray-100">+</button>
+                </div>
+                <span id="pd-qty-total" class="text-xs text-gray-500"></span>
             </div>
 
-            <div class="flex gap-3 mt-4">
+            <div class="grid grid-cols-2 gap-2.5 mt-5">
                 <button type="button" onclick="pdAddToCart(false)" {{ $product->isInStock() ? '' : 'disabled' }}
-                        class="flex-1 border-2 border-[#14532d] text-[#14532d] hover:bg-[#14532d] hover:text-white font-semibold text-sm py-3 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                    🛒 কার্টে যোগ করুন
+                        class="inline-flex items-center justify-center gap-2 bg-[#c9a227] hover:bg-[#b8921d] text-[#0f3d22] font-bold text-sm py-3 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                    কার্টে যোগ করুন
                 </button>
                 <button type="button" onclick="pdAddToCart(true)" {{ $product->isInStock() ? '' : 'disabled' }}
-                        class="flex-1 btn-gold text-[#0f3d22] font-bold text-sm py-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed">
+                        class="bg-[#0f3d22] hover:bg-[#14532d] text-white font-bold text-sm py-3 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                     এখনই কিনুন
                 </button>
+                @if($pdWa)
+                <a href="{{ $pdWaLink }}" id="pd-wa-order" target="_blank" rel="noopener"
+                   class="inline-flex items-center justify-center gap-2 bg-[#22a35a] hover:bg-[#1c8a4b] text-white font-semibold text-sm py-3 rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.05 21.785h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    WhatsApp-এ অর্ডার
+                </a>
+                <a href="tel:+{{ $pdWa }}"
+                   class="inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold text-sm py-3 rounded-xl transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                    কল করে অর্ডার
+                </a>
+                @endif
             </div>
-            <p class="text-[11px] text-gray-400 mt-2">কার্টে যোগ করলে উপরের ব্যাগ আইকনে দেখতে পাবেন।</p>
 
             {{-- Combo / box cross-sell CTA --}}
             <div class="mt-4 flex items-center justify-between gap-3 rounded-xl border border-[#c9a227]/40 bg-amber-50/50 px-4 py-3">
@@ -534,19 +557,47 @@
     </div>
 </div>
 
-{{-- ── (e) Reviews ────────────────────────────────────────────────────────── --}}
-<div id="reviews" class="mt-8 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-7">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-        <h2 class="text-lg font-bold text-gray-800">গ্রাহক রিভিউ</h2>
-        @if($reviewCount > 0)
-        <div class="flex items-center gap-2">
-            <div class="text-amber-400 text-lg leading-none">
+{{-- ── (e) Tabs: Description / Reviews ──────────────────────────────────── --}}
+@php
+    $pdHasDesc   = filled($product->description);
+    $starCounts  = collect(range(5, 1))->mapWithKeys(fn ($n) => [$n => $reviews->where('rating', $n)->count()]);
+@endphp
+<div id="pd-tabs" class="mt-8 bg-white rounded-2xl border border-gray-100 shadow-sm p-2 flex gap-2" role="tablist">
+    @if($pdHasDesc)
+    <button type="button" role="tab" data-pd-tab="desc" onclick="pdShowTab('desc')"
+            class="pd-tab px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">পণ্যের বিবরণ</button>
+    @endif
+    <button type="button" role="tab" data-pd-tab="reviews" onclick="pdShowTab('reviews')"
+            class="pd-tab px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">গ্রাহক রিভিউ ({{ $reviewCount }})</button>
+</div>
+
+@if($pdHasDesc)
+<div id="pd-panel-desc" data-pd-panel="desc" class="mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-8">
+    <h2 class="text-base font-bold text-gray-800 inline-block border-b-2 border-[#c9a227] pb-1.5 mb-4">পণ্যের বিস্তারিত</h2>
+    <div class="text-[15px] text-gray-700 leading-7 max-w-none">{!! nl2br(e($product->description)) !!}</div>
+</div>
+@endif
+
+<div id="reviews" data-pd-panel="reviews" class="mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-8">
+    {{-- Rating summary + per-star breakdown --}}
+    <div class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6 items-center mb-6 pb-6 border-b border-gray-100">
+        <div class="text-center md:text-left">
+            <div class="text-5xl font-bold text-gray-900 leading-none">{{ number_format((float) $avgRating, 1) }}</div>
+            <div class="text-amber-400 text-xl leading-none mt-2">
                 @for($s = 1; $s <= 5; $s++)<span class="{{ $s <= round($avgRating) ? '' : 'text-gray-200' }}">★</span>@endfor
             </div>
-            <span class="text-sm font-semibold text-gray-700">{{ $avgRating }}</span>
-            <span class="text-sm text-gray-400">({{ $reviewCount }} টি রিভিউ)</span>
+            <div class="text-xs text-gray-400 mt-1">{{ $reviewCount }} টি রিভিউ</div>
         </div>
-        @endif
+        <div class="space-y-1.5">
+            @foreach($starCounts as $stars => $count)
+            @php $pct = $reviewCount ? round($count / $reviewCount * 100) : 0; @endphp
+            <div class="flex items-center gap-3 text-xs">
+                <span class="w-10 text-gray-500 whitespace-nowrap">{{ $stars }} ★</span>
+                <div class="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden"><div class="h-full bg-amber-400 rounded-full" style="width: {{ $pct }}%"></div></div>
+                <span class="w-9 text-right text-gray-400">{{ $pct }}%</span>
+            </div>
+            @endforeach
+        </div>
     </div>
 
     {{-- Approved reviews list --}}
@@ -669,13 +720,21 @@
 </div>
 @endif
 
-{{-- ── Sticky mobile action bar ───────────────────────────────────────────── --}}
-<div class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 px-4 py-2.5 flex gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+{{-- ── Sticky mobile action bar (sits just above the 57px bottom nav) ──────── --}}
+<div class="lg:hidden fixed left-0 right-0 z-30 bg-white border-t border-gray-200 px-4 py-2.5 flex gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]"
+     style="bottom: calc(57px + env(safe-area-inset-bottom));">
     @if($hasRetail)
         <button type="button" onclick="pdAddToCart(false)" {{ $product->isInStock() ? '' : 'disabled' }}
                 class="flex-1 border-2 border-[#14532d] text-[#14532d] font-semibold text-sm py-2.5 rounded-xl disabled:opacity-40">কার্টে যোগ</button>
         <button type="button" onclick="pdAddToCart(true)" {{ $product->isInStock() ? '' : 'disabled' }}
-                class="flex-1 btn-gold text-[#0f3d22] font-bold text-sm py-2.5 rounded-xl disabled:opacity-40">এখনই কিনুন</button>
+                class="flex-1 bg-[#0f3d22] text-white font-bold text-sm py-2.5 rounded-xl disabled:opacity-40">এখনই কিনুন</button>
+        @if($pdWa)
+        <a href="{{ $pdWaLink }}" target="_blank" rel="noopener" aria-label="WhatsApp-এ অর্ডার"
+           onclick="const o=document.getElementById('pd-wa-order'); if (o) this.href=o.href;"
+           class="w-11 shrink-0 flex items-center justify-center bg-[#22a35a] text-white rounded-xl">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm5.8 14.03c-.25.69-1.44 1.32-1.99 1.41-.51.08-1.15.11-1.86-.12-.43-.14-.98-.32-1.69-.62-2.97-1.28-4.91-4.27-5.06-4.47-.15-.2-1.21-1.6-1.21-3.06 0-1.46.76-2.17 1.04-2.47.27-.3.59-.37.79-.37h.57c.18 0 .43-.07.67.51.25.59.84 2.05.91 2.2.07.15.12.32.02.52-.1.2-.15.32-.3.49-.15.17-.31.39-.44.52-.15.15-.3.31-.13.61.17.3.77 1.27 1.65 2.06 1.13 1.01 2.09 1.32 2.39 1.47.3.15.47.12.64-.07.17-.2.74-.86.94-1.16.2-.3.39-.25.67-.15.27.1 1.73.82 2.03.97.3.15.49.22.57.35.07.12.07.71-.18 1.39z"/></svg>
+        </a>
+        @endif
     @elseif($showWholesale)
         <button type="button" onclick="pdToggleEnquiry(true)"
                 class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl">দাম জানুন</button>
@@ -687,7 +746,7 @@
         @endif
     @endif
 </div>
-<div class="lg:hidden h-16"></div>{{-- spacer so sticky bar never covers content --}}
+<div class="lg:hidden h-20"></div>{{-- spacer so sticky bar never covers content --}}
 
 @endsection
 
@@ -711,12 +770,18 @@
         if (pane) pane.classList.remove('hidden');
         pdSetActiveThumb(btn);
     }
-    function pdToggleDesc() {
-        const d = document.getElementById('pd-desc');
-        const btn = document.getElementById('pd-desc-toggle');
-        if (d.dataset.open === '1') { d.style.maxHeight = '4.5rem'; d.dataset.open = '0'; btn.textContent = 'আরও পড়ুন ▾'; }
-        else { d.style.maxHeight = d.scrollHeight + 'px'; d.dataset.open = '1'; btn.textContent = 'কম দেখুন ▴'; }
+    // ── Description / Reviews tabs ───────────────────────────────────────
+    function pdShowTab(name) {
+        if (!document.querySelector('[data-pd-panel="' + name + '"]')) name = 'reviews';
+        document.querySelectorAll('[data-pd-panel]').forEach(p => p.classList.toggle('hidden', p.dataset.pdPanel !== name));
+        document.querySelectorAll('.pd-tab').forEach(t => {
+            const on = t.dataset.pdTab === name;
+            t.classList.toggle('active', on);
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
     }
+    // Default: description; #reviews links (review form errors, guest prompt) open reviews.
+    pdShowTab(window.location.hash === '#reviews' || @json($errors->has('comment') || $errors->has('rating')) ? 'reviews' : 'desc');
 
     // ── Variant selection (image swap + carry id into cart/enquiry) ────────
     const pdMainDefaultSrc = (document.getElementById('pd-main-image') || {}).src || '';
@@ -740,6 +805,7 @@
         if (lbl) lbl.textContent = pdSelectedVariantName || '';
         const vid = document.getElementById('pd-variant-id');   if (vid) vid.value = pdSelectedVariantId || '';
         const vnm = document.getElementById('pd-variant-name'); if (vnm) vnm.value = pdSelectedVariantName || '';
+        if (typeof pdRefreshPrice === 'function') pdRefreshPrice();
 
         // Swap the main image to the variant photo (restore product image when none).
         const img = document.getElementById('pd-main-image');
@@ -757,9 +823,42 @@
         document.querySelectorAll('.pd-pack').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         pdSelectedPriceId = parseInt(btn.dataset.priceId, 10);
-        const sp = document.getElementById('pd-sel-price');
-        if (sp) sp.textContent = '৳' + Math.round(parseFloat(btn.dataset.price)).toLocaleString('en-US');
+        pdRefreshPrice();
     }
+
+    // ── Quantity (packs of the selected size) ─────────────────────────────
+    const PD_MAX_QTY = {{ \App\Services\CheckoutService::MAX_PACKS_PER_LINE }};
+    let pdQty = 1;
+    const pdTaka = n => '৳' + Math.round(n).toLocaleString('en-US');
+    function pdSetPackQty(q) {
+        pdQty = Math.min(PD_MAX_QTY, Math.max(1, parseInt(q, 10) || 1));
+        const inp = document.getElementById('pd-qty'); if (inp) inp.value = pdQty;
+        const minus = document.getElementById('pd-qty-minus'); if (minus) minus.disabled = pdQty <= 1;
+        pdRefreshPrice();
+    }
+    function pdChangeQty(d) { pdSetPackQty(pdQty + d); }
+
+    // Big price = pack price × quantity; keeps the WhatsApp order text in sync.
+    function pdRefreshPrice() {
+        const active = document.querySelector('.pd-pack.active');
+        if (!active) return;
+        const unit  = parseFloat(active.dataset.price) || 0;
+        const label = (active.querySelector('.pd-pack-lbl') || {}).textContent || '';
+        const sp = document.getElementById('pd-sel-price');
+        if (sp) sp.textContent = pdTaka(unit * pdQty);
+        const note = document.getElementById('pd-unit-note');
+        if (note) { note.textContent = '(' + label.trim() + ' ' + pdTaka(unit) + ' × ' + pdQty + ')'; note.classList.toggle('hidden', pdQty <= 1); }
+        const wa = document.getElementById('pd-wa-order');
+        if (wa) {
+            const base = wa.href.split('?')[0];
+            const variant = pdSelectedVariantName ? ' (' + pdSelectedVariantName + ')' : '';
+            wa.href = base + '?text=' + encodeURIComponent(
+                'আসসালামু আলাইকুম, আমি অর্ডার করতে চাই:\n' +
+                @json($product->name_bn ?: $product->name_en) + variant + ' — ' + label.trim() + ' × ' + pdQty + ' = ' + pdTaka(unit * pdQty) +
+                '\n' + @json(url()->current()));
+        }
+    }
+    document.addEventListener('DOMContentLoaded', pdRefreshPrice);
 
     // ── Add to cart / Buy now ─────────────────────────────────────────────
     // Add straight into the shared persistent cart and open the drawer (no full
@@ -779,10 +878,11 @@
                 sellType:    'retail',
                 nameBn:      @json($product->name),
                 label:       lblEl ? lblEl.textContent.trim() : '',
-                price:       active ? parseFloat(active.dataset.price) : 0
+                price:       active ? parseFloat(active.dataset.price) : 0,
+                qty:         pdQty
             });
             if (buyNow) { msCartCheckout(); return; }
-            msToast('🛒 কার্টে যোগ হয়েছে');
+            msToast('🛒 কার্টে যোগ হয়েছে' + (pdQty > 1 ? ' (' + pdQty + 'টি)' : ''));
             msCartOpen('retail');
             return;
         }
