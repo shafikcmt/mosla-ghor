@@ -82,6 +82,7 @@
             'label' => 'Orders & Sales', 'icon' => $icons['clip'],
             'items' => [
                 ['label' => 'অর্ডার',   'route' => 'admin.orders.index',    'active' => ['admin.orders.index', 'admin.orders.show', 'admin.orders.invoice']],
+                ['label' => '+ ফোন / WhatsApp অর্ডার', 'route' => 'admin.orders.manual.create', 'active' => ['admin.orders.manual.create', 'admin.orders.manual.share']],
                 ['label' => 'মুছে ফেলা অর্ডার', 'route' => 'admin.orders.trash', 'active' => 'admin.orders.trash'],
                 ['label' => 'কাস্টমার', 'route' => 'admin.customers.index', 'active' => 'admin.customers.*'],
             ],

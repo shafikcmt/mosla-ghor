@@ -52,10 +52,14 @@
 {{-- Top bar --}}
 <div class="no-print flex items-center justify-between mb-5">
     <a href="{{ route('admin.orders.index') }}" class="text-sm text-gray-500 hover:text-gray-800">← অর্ডার তালিকায় ফিরুন</a>
-    <a href="{{ route('admin.orders.invoice', $order) }}" target="_blank"
-       class="bg-gray-800 text-white text-sm px-4 py-2 rounded hover:bg-gray-700 transition-colors">
-        🖨️ Print Invoice
-    </a>
+    <div class="flex gap-2">
+        <a href="{{ route('admin.orders.manual.share', $order) }}"
+           class="bg-[#25D366] text-white text-sm px-4 py-2 rounded hover:bg-[#1ebe5b] transition-colors">📤 ভাউচার শেয়ার</a>
+        <a href="{{ route('admin.orders.invoice', $order) }}" target="_blank"
+           class="bg-gray-800 text-white text-sm px-4 py-2 rounded hover:bg-gray-700 transition-colors">
+            🖨️ Print Invoice
+        </a>
+    </div>
 </div>
 
 <div class="print-shadow bg-white rounded shadow divide-y divide-gray-100">

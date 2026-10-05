@@ -5,8 +5,10 @@
 @php
     $paymentBadge = ['paid' => ['পরিশোধিত', 'bg-green-100 text-green-700'], 'partial' => ['আংশিক', 'bg-amber-100 text-amber-700']][$order->payment_status] ?? ['বাকি', 'bg-red-100 text-red-700'];
     $shopWa = null;
-    if ($vendor?->phone) {
-        $shopWa = preg_replace('/\D/', '', $vendor->phone);
+    // Vendor POS orders → the vendor's phone; admin orders → the site's WhatsApp number.
+    $shopPhone = $vendor?->phone ?: ($vendor ? null : \App\Models\WebsiteSetting::get('whatsapp_number'));
+    if ($shopPhone) {
+        $shopWa = preg_replace('/\D/', '', $shopPhone);
         if (\Illuminate\Support\Str::startsWith($shopWa, '0')) { $shopWa = '88' . $shopWa; }
     }
 @endphp

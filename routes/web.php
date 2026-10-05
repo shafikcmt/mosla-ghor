@@ -447,11 +447,18 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('customers', [AdminCustomerController::class, 'index'])->name('customers.index');
     Route::get('customers/{customer}', [AdminCustomerController::class, 'show'])->name('customers.show');
     Route::put('customers/{customer}', [AdminCustomerController::class, 'update'])->name('customers.update');
+    Route::delete('customers/{customer}', [AdminCustomerController::class, 'destroy'])->name('customers.destroy');
+    Route::post('customers/bulk-delete', [AdminCustomerController::class, 'bulkDestroy'])->name('customers.bulk-destroy');
 
     Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
     // Trash / soft-delete management — declared before {order} so "trash" isn't
     // captured as an order id by route-model binding.
     Route::get('orders/trash', [AdminOrderController::class, 'trash'])->name('orders.trash');
+    // ── Phone / WhatsApp orders (POS-style, with voucher sharing) ─────────
+    Route::get('orders/manual/create', [\App\Http\Controllers\Admin\ManualOrderController::class, 'create'])->name('orders.manual.create');
+    Route::post('orders/manual', [\App\Http\Controllers\Admin\ManualOrderController::class, 'store'])->name('orders.manual.store');
+    Route::get('orders/{order}/voucher', [\App\Http\Controllers\Admin\ManualOrderController::class, 'share'])->name('orders.manual.share');
+    Route::post('orders/{order}/voucher/email', [\App\Http\Controllers\Admin\ManualOrderController::class, 'email'])->name('orders.manual.email');
     Route::delete('orders/bulk-destroy', [AdminOrderController::class, 'bulkDestroy'])->name('orders.bulkDestroy');
     Route::post('orders/{id}/restore', [AdminOrderController::class, 'restore'])->name('orders.restore');
     Route::delete('orders/{id}/force-delete', [AdminOrderController::class, 'forceDelete'])->name('orders.forceDelete');

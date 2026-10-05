@@ -54,6 +54,7 @@ class CustomerAuthController extends Controller
             'email'    => $data['email'] ?? null,
             'phone'    => $data['mobile_number'],
             'password' => Hash::make($data['password']),
+            'password_set_at' => now(), // chose their own password — no "set password" link needed
             'role'     => 'customer',
             'is_admin' => false,
         ]);

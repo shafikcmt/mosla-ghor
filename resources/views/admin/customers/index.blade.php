@@ -54,10 +54,23 @@
     </div>
 </form>
 
+{{-- Bulk delete (dummy/test customers). Customers with orders are skipped server-side. --}}
+<form id="cust-bulk" method="POST" action="{{ route('admin.customers.bulk-destroy') }}"
+      onsubmit="return confirm('নির্বাচিত কাস্টমারদের (তাদের enquiry ও লগইনসহ) স্থায়ীভাবে মুছে ফেলবেন?');">
+    @csrf
+</form>
+<div class="flex items-center gap-3 mb-3">
+    <button type="submit" form="cust-bulk" id="cust-bulk-btn" disabled
+            class="text-xs bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1.5 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+        🗑 নির্বাচিতদের মুছুন (<span id="cust-bulk-count">0</span>)
+    </button>
+    <span class="text-xs text-gray-400">যাদের অর্ডার আছে তাদের মুছা যায় না।</span>
+</div>
 <div class="bg-white rounded shadow overflow-x-auto">
     <table class="min-w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
+                <th class="pl-4 py-3 w-8"><input type="checkbox" id="cust-all" aria-label="সব নির্বাচন" class="rounded border-gray-300"></th>
                 <th class="px-4 py-3 text-left font-semibold text-gray-600">নাম</th>
                 <th class="px-4 py-3 text-left font-semibold text-gray-600">মোবাইল</th>
                 <th class="px-4 py-3 text-center font-semibold text-gray-600">অর্ডার</th>
@@ -71,6 +84,11 @@
         <tbody class="divide-y divide-gray-100">
             @forelse($customers as $customer)
             <tr class="hover:bg-gray-50">
+                <td class="pl-4 py-3">
+                    @if((int) $customer->total_orders === 0)
+                    <input type="checkbox" name="ids[]" value="{{ $customer->id }}" form="cust-bulk" class="cust-pick rounded border-gray-300" aria-label="{{ $customer->name }} নির্বাচন">
+                    @endif
+                </td>
                 <td class="px-4 py-3 text-gray-800 font-medium">{{ $customer->name }}</td>
                 <td class="px-4 py-3 text-gray-600 font-mono text-xs">{{ $customer->mobile_number }}</td>
                 <td class="px-4 py-3 text-center text-gray-700">{{ $customer->total_orders }}</td>
@@ -93,20 +111,45 @@
                     @endif
                 </td>
                 <td class="px-4 py-3">
-                    <a href="{{ route('admin.customers.show', $customer) }}"
-                       class="inline-block bg-gray-800 text-white text-xs px-3 py-1 rounded hover:bg-gray-700 transition-colors">
-                        দেখুন
-                    </a>
+                    <div class="flex items-center gap-1.5">
+                        <a href="{{ route('admin.customers.show', $customer) }}"
+                           class="inline-block bg-gray-800 text-white text-xs px-3 py-1 rounded hover:bg-gray-700 transition-colors">
+                            দেখুন
+                        </a>
+                        @if((int) $customer->total_orders === 0)
+                        <form method="POST" action="{{ route('admin.customers.destroy', $customer) }}"
+                              onsubmit="return confirm('{{ addslashes($customer->name) }} — কাস্টমারকে (enquiry ও লগইনসহ) স্থায়ীভাবে মুছে ফেলবেন?');">
+                            @csrf @method('DELETE')
+                            <button type="submit" title="মুছুন" aria-label="{{ $customer->name }} মুছুন"
+                                    class="text-xs border border-red-200 text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors">🗑</button>
+                        </form>
+                        @endif
+                    </div>
                 </td>
             </tr>
             @empty
             <tr>
-                <td colspan="8" class="px-4 py-8 text-center text-gray-400">কোনো কাস্টমার নেই।</td>
+                <td colspan="9" class="px-4 py-8 text-center text-gray-400">কোনো কাস্টমার নেই।</td>
             </tr>
             @endforelse
         </tbody>
     </table>
 </div>
+
+<script>
+(function () {
+    const all = document.getElementById('cust-all');
+    const picks = () => [...document.querySelectorAll('.cust-pick')];
+    const btn = document.getElementById('cust-bulk-btn'), count = document.getElementById('cust-bulk-count');
+    function sync() {
+        const n = picks().filter(c => c.checked).length;
+        count.textContent = n; btn.disabled = n === 0;
+        all.checked = n > 0 && n === picks().length;
+    }
+    all.addEventListener('change', () => { picks().forEach(c => c.checked = all.checked); sync(); });
+    picks().forEach(c => c.addEventListener('change', sync));
+})();
+</script>
 
 @if($customers->hasPages())
 <div class="mt-5">
