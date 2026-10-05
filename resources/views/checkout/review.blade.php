@@ -167,13 +167,11 @@
 <script>
 const BD_DIVISIONS = @json($bdDivisions);
 const BD_DISTRICTS = @json($bdDistricts);
-const BD_UPAZILAS  = @json($bdUpazilas);
 const CHECKOUT_ZONES = @json($zonesForJs);
 @php
     $oldAddr = [
         'division' => old('bd_division_id'),
         'district' => old('bd_district_id'),
-        'upazila'  => old('bd_upazila_id'),
         'zone'     => old('delivery_zone_id'),
         'location' => old('delivery_location_id'),
     ];
@@ -195,7 +193,6 @@ function msAddrNew() {
 (function () {
     const divSel = document.getElementById('ca-division');
     const disSel = document.getElementById('ca-district');
-    const upaSel = document.getElementById('ca-upazila');
     if (!divSel) return; // no form on this page
 
     function fill(sel, rows, labelKey, placeholder) {
@@ -212,11 +209,6 @@ function msAddrNew() {
     divSel.addEventListener('change', function () {
         const rows = BD_DISTRICTS.filter(d => String(d.division_id) === String(this.value));
         fill(disSel, rows, 'bn_name', 'জেলা বেছে নিন');
-        fill(upaSel, [], 'bn_name', 'উপজেলা বেছে নিন');
-    });
-    disSel.addEventListener('change', function () {
-        const rows = BD_UPAZILAS.filter(u => String(u.district_id) === String(this.value));
-        fill(upaSel, rows, 'bn_name', 'উপজেলা বেছে নিন');
     });
 
     // Zone → location
@@ -243,7 +235,6 @@ function msAddrNew() {
     if (OLD_ADDR.division) {
         divSel.value = OLD_ADDR.division; divSel.dispatchEvent(new Event('change'));
         if (OLD_ADDR.district) { disSel.value = OLD_ADDR.district; disSel.dispatchEvent(new Event('change')); }
-        if (OLD_ADDR.upazila) upaSel.value = OLD_ADDR.upazila;
     }
     if (OLD_ADDR.zone) {
         const zr = document.querySelector('.ca-zone[value="' + OLD_ADDR.zone + '"]');

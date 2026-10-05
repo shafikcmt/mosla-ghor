@@ -38,6 +38,10 @@ class ProductEditor
                     'meta_title', 'meta_description', 'meta_keywords',
                     'main_image_alt', 'og_image_alt',
                 ]);
+                // Wholesale cover inputs only arrive while the পাইকারি section is enabled.
+                if (array_key_exists('wholesale_main_image_alt', $data)) {
+                    $fields['wholesale_main_image_alt'] = $data['wholesale_main_image_alt'];
+                }
                 // Canonical/robots can deindex or redirect ranking — admin only.
                 if ($admin) {
                     $fields += Arr::only($data, ['canonical_url', 'meta_robots']);
@@ -56,7 +60,10 @@ class ProductEditor
                     $fields['retail_price_1kg'] = 0;
                 }
                 if ($wholesale) {
-                    $fields += Arr::only($data, ['wholesale_enquiry_enabled', 'min_order_quantity', 'min_order_unit', 'delivery_time', 'payment_terms']);
+                    $fields += Arr::only($data, ['wholesale_enquiry_enabled', 'min_order_quantity', 'min_order_unit', 'delivery_time', 'payment_terms', 'wholesale_price_1kg']);
+                    if (array_key_exists('unit_conversions', $data)) {
+                        $fields['unit_conversions'] = $this->cleanConversions($data['unit_conversions']) ?: null;
+                    }
                     if (array_key_exists('min_order_unit', $fields)) { $fields['min_order_unit'] ??= 'kg'; }
                 }
                 if ($admin && $product->vendor_id && isset($data['approval_status'])) {
@@ -94,6 +101,17 @@ class ProductEditor
                     if ($fields['main_image'] !== $product->main_image) {
                         $media->retire($product->main_image);
                     }
+                }
+                // Separate পাইকারি cover photo (optional; falls back to the main image).
+                if ($adopted = $adopt('wholesale_main_image_token', 'wholesale_main', 'products/images')) {
+                    $fields['wholesale_main_image'] = $adopted;
+                    $media->retire($product->wholesale_main_image);
+                } elseif ($request->hasFile('wholesale_main_image_file')) {
+                    $fields['wholesale_main_image'] = $media->store($request->file('wholesale_main_image_file'), 'products/images', 'wholesale_main_image_file');
+                    $media->retire($product->wholesale_main_image);
+                } elseif ($request->boolean('remove_wholesale_main_image')) {
+                    $fields['wholesale_main_image'] = null;
+                    $media->retire($product->wholesale_main_image);
                 }
                 if ($adopted = $adopt('og_image_token', 'og', 'products/images')) {
                     $fields['og_image'] = $adopted;
@@ -218,6 +236,8 @@ class ProductEditor
             'retail_price_1kg' => $retail ? 'required|numeric|min:0.01|max:99999999.99' : 'exclude',
             'main_image' => ['nullable', 'string', 'max:255', 'url:http,https'],
             'main_image_file' => $image, 'remove_main_image' => 'sometimes|boolean',
+            'wholesale_main_image_file' => $image, 'remove_wholesale_main_image' => 'sometimes|boolean',
+            'wholesale_main_image_alt' => ['nullable', 'string', 'max:255', 'not_regex:/[<>]/'],
             'gallery_images' => 'sometimes|array|max:20', 'gallery_images.*' => array_merge(['required'], array_diff($image, ['nullable'])),
             'remove_gallery' => 'sometimes|array|max:100', 'remove_gallery.*' => 'string|size:64',
             'video_url' => 'nullable|url:http,https|max:255',
@@ -233,6 +253,12 @@ class ProductEditor
             'min_order_unit' => $wholesale ? ['nullable', Rule::in(array_unique([...Product::UNITS, 'piece']))] : 'exclude',
             'delivery_time' => $wholesale ? 'nullable|string|max:255' : 'exclude',
             'payment_terms' => $wholesale ? 'nullable|string|max:255' : 'exclude',
+            'wholesale_price_1kg' => $wholesale ? 'nullable|numeric|min:0|max:99999999.99' : 'exclude',
+            'unit_conversions' => $wholesale ? 'sometimes|nullable|array|max:10' : 'exclude',
+            'unit_conversions.*' => $wholesale ? 'array' : 'exclude',
+            'unit_conversions.*.unit' => $wholesale ? ['nullable', Rule::in(array_keys(Product::UNIT_LABELS))] : 'exclude',
+            'unit_conversions.*.qty' => $wholesale ? 'nullable|numeric|gt:0|max:99999999' : 'exclude',
+            'unit_conversions.*.base' => $wholesale ? ['nullable', Rule::in(array_keys(Product::UNIT_LABELS))] : 'exclude',
             'prices' => $retail ? 'sometimes|array|max:100' : 'exclude',
             'approval_status' => $admin && $product?->vendor_id ? 'sometimes|in:pending,approved,rejected' : 'exclude',
             'default_variant' => ['nullable', 'regex:/^(existing|new):[0-9]+$/'],
@@ -250,6 +276,7 @@ class ProductEditor
             'gallery_alts.*' => ['nullable', 'string', 'max:255', 'not_regex:/[<>]/'],
             // One-image-per-request uploads (see TempUpload).
             'main_image_token' => 'nullable|string|max:2000',
+            'wholesale_main_image_token' => 'nullable|string|max:2000',
             'og_image_token' => 'nullable|string|max:2000',
             'gallery_tokens' => 'sometimes|nullable|array|max:20',
             'gallery_tokens.*' => 'nullable|string|max:2000',
@@ -268,6 +295,13 @@ class ProductEditor
             'canonical_url.url' => 'Canonical URL একটি সঠিক http/https লিংক হতে হবে।',
             'canonical_url.max' => 'Canonical URL সর্বোচ্চ ২৫৫ অক্ষর হতে পারবে।',
             'meta_robots.in' => 'Robots-এর একটি সঠিক অপশন বেছে নিন।',
+            'wholesale_price_1kg.numeric' => 'পাইকারি দাম একটি সংখ্যা হতে হবে।',
+            'wholesale_price_1kg.min' => 'পাইকারি দাম ০ বা তার বেশি হতে হবে।',
+            'wholesale_price_1kg.max' => 'পাইকারি দাম অনেক বেশি।',
+            'unit_conversions.*.qty.numeric' => 'ইউনিট কনভার্শনের পরিমাণ একটি সংখ্যা হতে হবে।',
+            'unit_conversions.*.qty.gt' => 'ইউনিট কনভার্শনের পরিমাণ ০-এর বেশি হতে হবে।',
+            'unit_conversions.*.unit.in' => 'ইউনিট কনভার্শনের একক সঠিক নয়।',
+            'unit_conversions.*.base.in' => 'ইউনিট কনভার্শনের একক সঠিক নয়।',
         ];
         if ($retail) {
             $rules += ['prices.*' => 'array', 'prices.*.manual_price' => 'nullable|numeric|min:0.01|max:99999999.99',
@@ -289,14 +323,14 @@ class ProductEditor
             $rules[$group.'.*.image_token'] = 'nullable|string|max:2000';
             $rules[$group.'.*.image_alt'] = ['nullable', 'string', 'max:255', 'not_regex:/[<>]/'];
         }
-        $messages += UploadErrors::imageMessages(['main_image_file', 'og_image_file', 'gallery_images.*', 'variants.*.image_file', 'new_variants.*.image_file']);
-        foreach (['main_image_alt' => 'মূল ছবির বিবরণ (alt)', 'og_image_alt' => 'শেয়ার ছবির বিবরণ (alt)', 'gallery_alts.*' => 'গ্যালারির ছবির বিবরণ (alt)',
+        $messages += UploadErrors::imageMessages(['main_image_file', 'wholesale_main_image_file', 'og_image_file', 'gallery_images.*', 'variants.*.image_file', 'new_variants.*.image_file']);
+        foreach (['main_image_alt' => 'মূল ছবির বিবরণ (alt)', 'wholesale_main_image_alt' => 'পাইকারি কভার ছবির বিবরণ (alt)', 'og_image_alt' => 'শেয়ার ছবির বিবরণ (alt)', 'gallery_alts.*' => 'গ্যালারির ছবির বিবরণ (alt)',
             'variants.*.image_alt' => 'ভ্যারিয়েন্ট ছবির বিবরণ (alt)', 'new_variants.*.image_alt' => 'ভ্যারিয়েন্ট ছবির বিবরণ (alt)'] as $key => $label) {
             $messages["$key.max"] = "{$label} সর্বোচ্চ ২৫৫ অক্ষর হতে পারবে।";
             $messages["$key.not_regex"] = "{$label}-এ < বা > চিহ্ন দেওয়া যাবে না।";
         }
         // Human Bangla field names (gallery/variant keys by their actual index).
-        $attributes = ['main_image_file' => 'মূল ছবি', 'og_image_file' => 'শেয়ার ছবি', 'video_file' => 'ভিডিও'];
+        $attributes = ['main_image_file' => 'মূল ছবি', 'wholesale_main_image_file' => 'পাইকারি কভার ছবি', 'og_image_file' => 'শেয়ার ছবি', 'video_file' => 'ভিডিও'];
         foreach (array_keys((array) ($input['gallery_images'] ?? [])) as $i) {
             $attributes["gallery_images.$i"] = UploadErrors::label("gallery_images.$i");
         }
@@ -320,6 +354,7 @@ class ProductEditor
                 }
             };
             $check('main_image_token', $input['main_image_token'] ?? null, 'main', 'মূল ছবি');
+            $check('wholesale_main_image_token', $input['wholesale_main_image_token'] ?? null, 'wholesale_main', 'পাইকারি কভার ছবি');
             $check('og_image_token', $input['og_image_token'] ?? null, 'og', 'শেয়ার ছবি');
             foreach ((array) ($input['gallery_tokens'] ?? []) as $i => $token) {
                 $check("gallery_tokens.$i", $token, 'gallery', 'গ্যালারির ছবি');
@@ -334,6 +369,21 @@ class ProductEditor
             if ($v->errors()->isNotEmpty()) { return; }
             if (! $retail && ! $wholesale) {
                 $v->errors()->add('show_in_retail', 'অন্তত একটি বিক্রয় মাধ্যম বেছে নিন।');
+            }
+            if ($wholesale) {
+                $seen = [];
+                foreach ((array) ($input['unit_conversions'] ?? []) as $i => $row) {
+                    $unit = $row['unit'] ?? null; $qty = $row['qty'] ?? null; $base = $row['base'] ?? null;
+                    if (blank($unit) && blank($qty)) { continue; }
+                    if (blank($unit) || blank($qty) || blank($base)) {
+                        $v->errors()->add("unit_conversions.$i", 'ইউনিট কনভার্শনের একক, পরিমাণ ও মূল একক তিনটিই দিন।');
+                    } elseif ($unit === $base) {
+                        $v->errors()->add("unit_conversions.$i", 'একই এককে কনভার্শন করা যাবে না (যেমন: ১ কার্টন = ২০ কেজি)।');
+                    } elseif (in_array($unit, $seen, true)) {
+                        $v->errors()->add("unit_conversions.$i", Product::unitLabel($unit).'-এর কনভার্শন একবারই দিন।');
+                    }
+                    if (! blank($unit)) { $seen[] = $unit; }
+                }
             }
             foreach ($retail ? ($input['prices'] ?? []) : [] as $id => $row) {
                 if (! $product || ! $product->prices()->whereNull('product_variant_id')->where('sell_type', 'retail')->whereKey($id)->exists()) {
@@ -375,6 +425,17 @@ class ProductEditor
             }
         });
         return $validator->validate();
+    }
+
+    /** Drop blank conversion rows and normalise the rest to {unit, qty, base}. */
+    private function cleanConversions(?array $rows): array
+    {
+        $out = [];
+        foreach ((array) $rows as $row) {
+            if (! is_array($row) || blank($row['unit'] ?? null) || blank($row['qty'] ?? null) || blank($row['base'] ?? null)) { continue; }
+            $out[] = ['unit' => $row['unit'], 'qty' => (float) $row['qty'], 'base' => $row['base']];
+        }
+        return $out;
     }
 
     private function newSlug(string $name): string

@@ -144,6 +144,7 @@ class ProductController extends Controller
     {
         $media = new ProductMedia();
         $media->retire($product->main_image);
+        $media->retire($product->wholesale_main_image);
         $media->retire($product->video_path);
         $media->retire($product->og_image);
         foreach ($product->gallery_images ?? [] as $path) { $media->retire($path); }

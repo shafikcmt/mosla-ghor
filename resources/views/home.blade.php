@@ -25,6 +25,7 @@ $productsForJs = $products->map(function ($p) {
         'short_description' => $p->short_description,
         'description'       => $p->description,
         'main_image'        => \App\Support\ProductMedia::url($p->main_image),
+        'wholesale_main_image' => \App\Support\ProductMedia::url($p->wholesale_main_image),
         'min_order_quantity'=> $p->min_order_quantity ? (float) $p->min_order_quantity : null,
         'min_order_unit'    => $p->min_order_unit ?: null,
         'gallery_images'    => collect($p->gallery_images ?? [])->map(fn($img) => \App\Support\ProductMedia::url($img))->values()->all(),
@@ -1267,45 +1268,9 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                             <p id="err-bd_district_id" class="text-red-500 text-xs mt-1 hidden"></p>
                         </div>
 
-                        {{-- Upazila --}}
-                        <div class="mb-3" id="upazila-wrap" style="display:none">
-                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">উপজেলা <span class="text-red-400">*</span></label>
-                            <button type="button" id="upazila-btn" onclick="toggleAddrSection('upazila')"
-                                    class="w-full flex justify-between items-center border border-green-200 rounded-xl px-4 py-2.5 bg-white text-sm hover:border-[#14532d] transition-colors">
-                                <span id="upazila-display" class="text-gray-400">উপজেলা বেছে নিন</span>
-                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                            </button>
-                            <div id="upazila-section" class="hidden mt-2">
-                                <input type="text" id="upazila-search" placeholder="উপজেলা খুঁজুন..."
-                                       oninput="searchAddr('upazila', this.value)"
-                                       class="w-full border border-green-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#14532d] bg-white mb-1">
-                                <div id="upazila-list" class="border border-green-100 rounded-xl max-h-40 overflow-y-auto bg-white"></div>
-                            </div>
-                            <p id="err-bd_upazila_id" class="text-red-500 text-xs mt-1 hidden"></p>
-                        </div>
-
-                        {{-- Union --}}
-                        <div class="mb-0" id="union-wrap" style="display:none">
-                            <label class="block text-[#14532d] text-xs font-semibold uppercase tracking-wider mb-1.5">ইউনিয়ন / এলাকা</label>
-                            <button type="button" id="union-btn" onclick="toggleAddrSection('union')"
-                                    class="w-full flex justify-between items-center border border-green-200 rounded-xl px-4 py-2.5 bg-white text-sm hover:border-[#14532d] transition-colors">
-                                <span id="union-display" class="text-gray-400">ইউনিয়ন / এলাকা বেছে নিন</span>
-                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                            </button>
-                            <div id="union-section" class="hidden mt-2">
-                                <input type="text" id="union-search" placeholder="ইউনিয়ন / এলাকা খুঁজুন..."
-                                       oninput="searchAddr('union', this.value)"
-                                       class="w-full border border-green-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#14532d] bg-white mb-1">
-                                <div id="union-list" class="border border-green-100 rounded-xl max-h-40 overflow-y-auto bg-white"></div>
-                            </div>
-                            <p id="err-bd_union_id" class="text-red-500 text-xs mt-1 hidden"></p>
-                        </div>
-
                         {{-- Hidden address IDs --}}
                         <input type="hidden" name="bd_division_id" id="f-bd_division_id">
                         <input type="hidden" name="bd_district_id" id="f-bd_district_id">
-                        <input type="hidden" name="bd_upazila_id" id="f-bd_upazila_id">
-                        <input type="hidden" name="bd_union_id" id="f-bd_union_id">
                     </div>
 
                     {{-- full_address --}}
@@ -1650,7 +1615,6 @@ const DELIVERY_ZONES = @json($zonesForJs);
 const FIXED_COMBOS   = @json($fixedCombosForJs);
 const BD_DIVISIONS   = @json($bdDivisions);
 const BD_DISTRICTS   = @json($bdDistricts);
-const BD_UPAZILAS    = @json($bdUpazilas);
 
 let currentId      = null;
 let fixedComboData = null;
@@ -1784,6 +1748,14 @@ function filterCardsByMode() {
         document
             .querySelectorAll('[data-card-product="' + p.id + '"], [data-list-product="' + p.id + '"]')
             .forEach(function (el) { el.style.display = show ? '' : 'none'; });
+    });
+    // Separate পাইকারি cover photo: swap card/list covers to match the active channel.
+    document.querySelectorAll('img[data-cover-wholesale]').forEach(function (img) {
+        const ch = isWholesale ? 'wholesale' : 'retail';
+        const src = img.getAttribute('data-cover-' + ch);
+        if (src && img.getAttribute('src') !== src) img.setAttribute('src', src);
+        const alt = img.getAttribute('data-alt-' + ch);
+        if (alt) img.setAttribute('alt', alt);
     });
 
     const emptyEl = document.getElementById('ms-wholesale-empty');
@@ -2139,7 +2111,7 @@ function addToPaykari(productId) {
     const ex = items.find(function (x) { return x.product_id === p.id && (x.variant_id || null) === variantId; });
     if (ex) { ex.quantity = qty; ex.unit = unit; }
     else {
-        items.push({ product_id: p.id, slug: p.slug, name: p.name_bn, image: p.main_image,
+        items.push({ product_id: p.id, slug: p.slug, name: p.name_bn, image: p.wholesale_main_image || p.main_image,
                      quantity: qty, unit: unit,
                      variant_id: variantId, variant_name: variantName,
                      min_qty: p.min_order_quantity || null, min_unit: p.min_order_unit || null });
@@ -2342,7 +2314,8 @@ function fillModal(p) {
     } else {
         // Build slides: images first, then local video if any
         modalSlides = [];
-        if (p.main_image) modalSlides.push({ type: 'image', src: p.main_image });
+        const cover = (activeTab === 'wholesale' && p.wholesale_main_image) ? p.wholesale_main_image : p.main_image;
+        if (cover) modalSlides.push({ type: 'image', src: cover });
         (p.gallery_images || []).forEach(img => modalSlides.push({ type: 'image', src: img }));
         if (p.video_path)  modalSlides.push({ type: 'video', src: p.video_path });
 
@@ -3034,7 +3007,7 @@ function closeOrderForm() {
 
 function clearOrderErrors() {
     ['full_name','mobile_number','alternative_number',
-     'bd_division_id','bd_district_id','bd_upazila_id','bd_union_id',
+     'bd_division_id','bd_district_id',
      'full_address',
      'delivery_zone_id','delivery_location_id',
      'items','payment_method','sender_number','transaction_id','paid_amount','payment_screenshot'].forEach(f => {
@@ -3058,22 +3031,16 @@ const LOC_CARD_SELECTED  = 'border border-[#14532d] rounded-xl px-4 py-2.5 flex 
 // ── BD Address Autofill ───────────────────────────────────────────────────
 let bdDivisionId        = null;
 let bdDistrictId        = null;
-let bdUpazilaId         = null;
-let bdUnionId           = null;
-let bdUnionsForUpazila  = [];
 
 const ADDR_PLACEHOLDERS = {
     division: 'বিভাগ বেছে নিন',
     district: 'জেলা বেছে নিন',
-    upazila:  'উপজেলা বেছে নিন',
-    union:    'ইউনিয়ন / এলাকা বেছে নিন',
 };
 
 function resetBdAddress() {
-    bdDivisionId = bdDistrictId = bdUpazilaId = bdUnionId = null;
-    bdUnionsForUpazila = [];
+    bdDivisionId = bdDistrictId = null;
 
-    ['division', 'district', 'upazila', 'union'].forEach(t => {
+    ['division', 'district'].forEach(t => {
         const display = document.getElementById(t + '-display');
         const hidden  = document.getElementById('f-bd_' + t + '_id');
         const section = document.getElementById(t + '-section');
@@ -3092,7 +3059,7 @@ function resetBdAddress() {
 
 function openAddrSection(type) {
     // Close all sections
-    ['division', 'district', 'upazila', 'union'].forEach(t => {
+    ['division', 'district'].forEach(t => {
         const s = document.getElementById(t + '-section');
         if (s) s.classList.add('hidden');
     });
@@ -3136,15 +3103,6 @@ function renderAddrList(type, query) {
         items = q ? all.filter(d =>
             d.name.toLowerCase().includes(q) || d.bn_name.includes(query.trim())
         ) : all;
-    } else if (type === 'upazila') {
-        const all = BD_UPAZILAS.filter(u => u.district_id == bdDistrictId);
-        items = q ? all.filter(u =>
-            u.name.toLowerCase().includes(q) || u.bn_name.includes(query.trim())
-        ) : all;
-    } else if (type === 'union') {
-        items = q ? bdUnionsForUpazila.filter(u =>
-            u.name.toLowerCase().includes(q) || u.bn_name.includes(query.trim())
-        ) : bdUnionsForUpazila;
     }
 
     if (items.length === 0) {
@@ -3186,9 +3144,8 @@ function selectAddr(type, id, displayName) {
     if (type === 'division') {
         bdDivisionId = id;
         // Reset downstream
-        bdDistrictId = bdUpazilaId = bdUnionId = null;
-        bdUnionsForUpazila = [];
-        ['district', 'upazila', 'union'].forEach(t => {
+        bdDistrictId = null;
+        ['district'].forEach(t => {
             const d = document.getElementById(t + '-display');
             const h = document.getElementById('f-bd_' + t + '_id');
             const s = document.getElementById(t + '-section');
@@ -3209,67 +3166,6 @@ function selectAddr(type, id, displayName) {
 
     } else if (type === 'district') {
         bdDistrictId = id;
-        bdUpazilaId = bdUnionId = null;
-        bdUnionsForUpazila = [];
-        ['upazila', 'union'].forEach(t => {
-            const d = document.getElementById(t + '-display');
-            const h = document.getElementById('f-bd_' + t + '_id');
-            const s = document.getElementById(t + '-section');
-            const sr = document.getElementById(t + '-search');
-            const l = document.getElementById(t + '-list');
-            const w = document.getElementById(t + '-wrap');
-            if (d) { d.textContent = ADDR_PLACEHOLDERS[t]; d.className = 'text-gray-400'; }
-            if (h) h.value = '';
-            if (s) s.classList.add('hidden');
-            if (sr) sr.value = '';
-            if (l) l.innerHTML = '';
-            if (w) w.style.display = 'none';
-        });
-        const uw = document.getElementById('upazila-wrap');
-        if (uw) uw.style.display = 'block';
-        openAddrSection('upazila');
-
-    } else if (type === 'upazila') {
-        bdUpazilaId = id;
-        bdUnionId = null;
-        bdUnionsForUpazila = [];
-        const uniDisplay = document.getElementById('union-display');
-        const uniHidden  = document.getElementById('f-bd_union_id');
-        const uniSection = document.getElementById('union-section');
-        const uniSearch  = document.getElementById('union-search');
-        const uniList    = document.getElementById('union-list');
-        if (uniDisplay) { uniDisplay.textContent = ADDR_PLACEHOLDERS.union; uniDisplay.className = 'text-gray-400'; }
-        if (uniHidden)  uniHidden.value = '';
-        if (uniSection) uniSection.classList.add('hidden');
-        if (uniSearch)  uniSearch.value = '';
-        if (uniList)    uniList.innerHTML = '';
-        const uw = document.getElementById('union-wrap');
-        if (uw) uw.style.display = 'block';
-        loadUnions(id); // AJAX + auto-open
-
-    } else if (type === 'union') {
-        bdUnionId = id;
-    }
-}
-
-async function loadUnions(upazilaId) {
-    bdUnionsForUpazila = [];
-    const section = document.getElementById('union-section');
-    const list    = document.getElementById('union-list');
-    const search  = document.getElementById('union-search');
-
-    if (section) section.classList.remove('hidden');
-    if (search)  { search.value = ''; }
-    if (list)    list.innerHTML = '<div class="text-gray-400 text-sm text-center py-4">লোড হচ্ছে...</div>';
-
-    try {
-        const res  = await fetch('/address/unions/' + upazilaId, { headers: { 'Accept': 'application/json' } });
-        if (!res.ok) throw new Error('http-error');
-        bdUnionsForUpazila = await res.json();
-        renderAddrList('union', '');
-        if (search) search.focus();
-    } catch (_) {
-        if (list) list.innerHTML = '<div class="text-red-400 text-sm text-center py-3">লোড করতে সমস্যা। আবার চেষ্টা করুন।</div>';
     }
 }
 
@@ -3541,11 +3437,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!bdDistrictId) {
             const el = document.getElementById('err-bd_district_id');
             if (el) { el.textContent = 'জেলা বেছে নিন।'; el.classList.remove('hidden'); }
-            return;
-        }
-        if (!bdUpazilaId) {
-            const el = document.getElementById('err-bd_upazila_id');
-            if (el) { el.textContent = 'উপজেলা বেছে নিন।'; el.classList.remove('hidden'); }
             return;
         }
 

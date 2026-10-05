@@ -33,7 +33,7 @@ class CourierController extends Controller
             'notes'          => 'nullable|string|max:1000',
         ]);
 
-        $data['slug']           = $data['slug'] ?: Str::slug($data['name']);
+        $data['slug']           = ($data['slug'] ?? null) ?: Str::slug($data['name']);
         $data['is_default']     = $request->boolean('is_default');
         $data['vendor_allowed'] = $request->boolean('vendor_allowed');
 
@@ -65,7 +65,7 @@ class CourierController extends Controller
             'notes'          => 'nullable|string|max:1000',
         ]);
 
-        $data['slug']           = $data['slug'] ?: Str::slug($data['name']);
+        $data['slug']           = ($data['slug'] ?? null) ?: Str::slug($data['name']);
         $data['is_default']     = $request->boolean('is_default');
         $data['vendor_allowed'] = $request->boolean('vendor_allowed');
 
@@ -75,7 +75,7 @@ class CourierController extends Controller
 
         $courier->update($data);
 
-        return redirect()->route('admin.couriers.index')->with('success', 'কুরিয়ার আপডেট হয়েছে।');
+        return redirect()->route('admin.courier-api-settings.index', ['courier' => $courier->id])->with('success', 'কুরিয়ার আপডেট হয়েছে।');
     }
 
     public function destroy(Courier $courier)

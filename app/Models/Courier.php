@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\CourierDriverFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -15,8 +16,10 @@ class Courier extends Model
     ];
 
     protected $casts = [
-        'api_enabled'    => 'boolean',
-        'is_default'     => 'boolean',
+        'api_key' => 'encrypted',
+        'api_secret' => 'encrypted',
+        'api_enabled' => 'boolean',
+        'is_default' => 'boolean',
         'vendor_allowed' => 'boolean',
         'courier_api_last_checked_at' => 'datetime',
     ];
@@ -32,12 +35,6 @@ class Courier extends Model
         'api_key', 'api_secret',
     ];
 
-    /**
-     * Slugs for which a real API integration exists in the codebase.
-     * Other couriers are treated as manual booking even if api_enabled is on.
-     */
-    public const API_SUPPORTED_SLUGS = ['steadfast'];
-
     public function rates(): HasMany
     {
         return $this->hasMany(DeliveryRate::class);
@@ -52,6 +49,7 @@ class Courier extends Model
     {
         if ($value === null) {
             $this->attributes['base_url'] = null;
+
             return;
         }
 
@@ -91,7 +89,7 @@ class Courier extends Model
         }
 
         if (! preg_match('~^https?://~i', $clean)) {
-            $clean = 'https://' . $clean;
+            $clean = 'https://'.$clean;
         }
 
         return rtrim($clean, '/');
@@ -118,7 +116,7 @@ class Courier extends Model
      */
     public function supportsApi(): bool
     {
-        return in_array($this->slug, self::API_SUPPORTED_SLUGS, true);
+        return app(CourierDriverFactory::class)->configuration($this) !== null;
     }
 
     /**
@@ -133,12 +131,13 @@ class Courier extends Model
     }
 
     /**
-     * Credentials present. Steadfast needs key + secret; others may only need a base_url.
+     * Required configuration is defined by the registered API provider.
      */
     public function isConfigured(): bool
     {
-        if ($this->supportsApi()) {
-            return ! empty($this->api_key) && ! empty($this->api_secret);
+        $configuration = app(CourierDriverFactory::class)->configuration($this);
+        if ($configuration !== null) {
+            return $configuration->isConfigured($this);
         }
 
         return ! empty($this->base_url);
@@ -159,15 +158,6 @@ class Courier extends Model
 
     protected function mask(?string $value): string
     {
-        if (empty($value)) {
-            return '';
-        }
-
-        $len = strlen($value);
-        if ($len <= 4) {
-            return str_repeat('•', $len);
-        }
-
-        return str_repeat('•', max(4, $len - 4)) . substr($value, -4);
+        return filled($value) ? '••••••••' : '';
     }
 }

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'vendor'        => \App\Http\Middleware\VendorMiddleware::class,
             'customer-auth' => \App\Http\Middleware\CustomerMiddleware::class,
             'guest.allowed' => \App\Http\Middleware\GuestAllowed::class,
+            'bot.token'     => \App\Http\Middleware\AuthenticateBotToken::class,
 
         ]);
         // Meta's first-party cookies are set by fbevents.js, not Laravel — never try to decrypt them.
@@ -26,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [\App\Http\Middleware\MaintenanceMode::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->dontFlash(['api_key', 'api_secret']);
         // Whole request bigger than PHP's post_max_size (thrown before sessions/controllers run).
         $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, $request) {
             $limit = \App\Support\ServerLimits::human(\App\Support\ServerLimits::postMax());
@@ -46,7 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json(['message' => 'Session expired. Please try again.'], 419);
             }
             return redirect()->back()
-                ->withInput($request->except('password', 'password_confirmation'))
+                ->withInput($request->except('password', 'password_confirmation', 'api_key', 'api_secret'))
                 ->with('error', 'Session expired. Please try again. (পেজটি refresh করে আবার চেষ্টা করুন।)');
         });
     })->create();

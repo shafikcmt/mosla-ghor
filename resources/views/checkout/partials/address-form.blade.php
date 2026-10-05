@@ -58,7 +58,7 @@
     </script>
     @endguest
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
             <label class="block text-[#14532d] text-xs font-semibold mb-1">বিভাগ <span class="text-red-400">*</span></label>
             <select name="bd_division_id" id="ca-division" required
@@ -73,21 +73,12 @@
                 <option value="">জেলা বেছে নিন</option>
             </select>
         </div>
-        <div>
-            <label class="block text-[#14532d] text-xs font-semibold mb-1">উপজেলা <span class="text-red-400">*</span></label>
-            <select name="bd_upazila_id" id="ca-upazila" required
-                    class="w-full border border-green-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#14532d]">
-                <option value="">উপজেলা বেছে নিন</option>
-            </select>
-        </div>
     </div>
-
-    <input type="hidden" name="bd_union_id" id="ca-union">
 
     <div>
         <label class="block text-[#14532d] text-xs font-semibold mb-1">বাড়ি / রোড / গ্রাম <span class="text-red-400">*</span></label>
         <textarea name="full_address" rows="2" required
-                  placeholder="বাড়ি/ফ্ল্যাট নম্বর, রোড, মহল্লা/গ্রাম..."
+                  placeholder="গ্রাম/এলাকা, বাজার, রোড, বাড়ি নম্বর লিখুন"
                   class="w-full border border-green-200 rounded-xl px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#14532d]">{{ old('full_address', $prefill['full_address'] ?? '') }}</textarea>
     </div>
 

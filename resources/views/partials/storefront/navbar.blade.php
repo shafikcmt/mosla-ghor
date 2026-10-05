@@ -2,9 +2,9 @@
     MoslaMart customer storefront header — responsive, app-like.
     ──────────────────────────────────────────────────────────────
     Layout:  [ brand ]  [ desktop links ] ──flex spacer── [ search ] [ icons ]
-    • Mobile  (<768px): brand left, icon group (search · cart · hamburger) right.
+    • Mobile/tablet (<1024px): brand left, icon group (search · cart · hamburger) right.
                         Hamburger opens a right slide-in drawer with overlay.
-    • Desktop (≥768px): hamburger hidden, full menu + search + account visible.
+    • Desktop (≥1024px): hamburger hidden, full menu visible; search box appears at 1280px.
     • Self-contained: computes $ws if the parent view didn't pass it, uses plain
       Tailwind classes (no custom CSS), and inlines its own null-safe drawer JS,
       so it works in BOTH home.blade.php and storefront/layout.blade.php.
@@ -43,20 +43,20 @@
 @include('partials.storefront.announcement', ['ws' => $ws])
 
 <style>
-.ms-site-brand{min-width:0;max-width:190px;flex-shrink:1}.ms-site-brand>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ms-drawer-brand{min-width:0;overflow-wrap:anywhere}
+.ms-site-brand{min-width:0;max-width:190px;flex-shrink:1}.ms-site-brand>span{line-height:1.4;padding-block:1px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ms-drawer-brand{min-width:0;overflow-wrap:anywhere}
 @media(max-width:767px){.ms-site-brand{max-width:calc(100vw - 165px)}}
 </style>
 <header class="bg-[#0f3d22]/95 backdrop-blur sticky top-0 z-50 shadow-md border-b border-green-900/60">
     <div class="max-w-7xl mx-auto px-3 sm:px-5 h-16 flex items-center gap-2">
 
         {{-- ── Brand (left) ── --}}
-        <a href="/" class="ms-site-brand group flex flex-col leading-none shrink-0" title="{{ $siteName }}">
+        <a href="/" class="ms-site-brand group flex flex-col shrink-0" title="{{ $siteName }}">
             <span class="font-serif-bn text-[#c9a227] text-xl sm:text-2xl font-bold group-hover:text-[#e2bb45] transition-colors">{{ $siteName }}</span>
-            <span class="hidden sm:block text-green-400 text-[10px] tracking-[.2em] uppercase mt-0.5">{{ $siteTagline }}</span>
+            <span class="block text-green-400 text-[10px] tracking-[.2em] uppercase mt-0.5">{{ $siteTagline }}</span>
         </a>
 
         {{-- ── Desktop nav links ── --}}
-        <nav class="hidden md:flex items-center gap-0.5 ml-3">
+        <nav class="hidden lg:flex items-center gap-0.5 ml-3">
             <a href="/"                     class="{{ $navIsHome && ! $navWholesale && ! $navIsTrack ? $dActive : $dLink }}">হোম</a>
             <a href="{{ url('/') }}#products" class="{{ $dLink }}">ক্যাটাগরি</a>
             <a href="{{ $retailHref }}"       class="{{ $dLink }}">খুচরা পণ্য</a>
@@ -70,7 +70,7 @@
 
         {{-- ── Desktop search entry (jumps to the product grid) ── --}}
         <a href="{{ url('/') }}#products"
-           class="hidden lg:flex items-center gap-2 w-56 xl:w-72 bg-white/10 hover:bg-white/15 border border-white/15 rounded-full px-4 py-2 text-green-200 text-sm transition-colors shrink-0">
+           class="hidden xl:flex items-center gap-2 w-56 xl:w-72 bg-white/10 hover:bg-white/15 border border-white/15 rounded-full px-4 py-2 text-green-200 text-sm transition-colors shrink-0">
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.3-4.3M11 19a8 8 0 110-16 8 8 0 010 16z"/></svg>
             <span class="truncate">মসলা, চাল, ডাল খুঁজুন…</span>
         </a>
@@ -78,9 +78,9 @@
         {{-- ── Right icon group (cart · account · search · hamburger) ── --}}
         <div class="flex items-center gap-0.5 sm:gap-1 ml-1 lg:ml-2 shrink-0">
 
-            {{-- Search icon (mobile + tablet, below the lg search box) --}}
+            {{-- Search icon (mobile + tablet, below the xl search box) --}}
             <a href="{{ url('/') }}#products"
-               class="lg:hidden w-10 h-10 flex items-center justify-center rounded-full text-green-100 hover:text-white hover:bg-white/10 transition-colors"
+               class="xl:hidden w-10 h-10 flex items-center justify-center rounded-full text-green-100 hover:text-white hover:bg-white/10 transition-colors"
                title="খুঁজুন" aria-label="খুঁজুন">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.3-4.3M11 19a8 8 0 110-16 8 8 0 010 16z"/></svg>
             </a>
@@ -134,7 +134,7 @@
 
             {{-- Hamburger (mobile + tablet only) --}}
             <button type="button" data-drawer-open
-                    class="md:hidden w-10 h-10 flex items-center justify-center rounded-full text-green-100 hover:text-white hover:bg-white/10 transition-colors"
+                    class="lg:hidden w-10 h-10 flex items-center justify-center rounded-full text-green-100 hover:text-white hover:bg-white/10 transition-colors"
                     aria-label="মেনু খুলুন">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
@@ -143,7 +143,7 @@
 </header>
 
 {{-- ── Mobile / tablet slide-in drawer (right) ── --}}
-<div data-drawer class="md:hidden fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true" aria-label="মেনু">
+<div data-drawer class="lg:hidden fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true" aria-label="মেনু">
     <div data-drawer-overlay class="absolute inset-0 bg-black/50 opacity-0 transition-opacity duration-300"></div>
     <aside data-drawer-panel
            class="absolute top-0 right-0 h-full w-72 max-w-[82%] bg-white shadow-2xl translate-x-full transition-transform duration-300 ease-out flex flex-col">

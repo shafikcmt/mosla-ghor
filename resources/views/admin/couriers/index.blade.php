@@ -85,21 +85,8 @@
                     </td>
                     <td class="px-4 py-3">
                         <div class="flex items-center justify-end gap-1.5">
-                            <button @click='openEdit({!! json_encode([
-                                        "id" => $courier->id,
-                                        "name" => $courier->name,
-                                        "slug" => $courier->slug,
-                                        "status" => $courier->status,
-                                        "vendor_allowed" => (bool) $courier->vendor_allowed,
-                                        "is_default" => (bool) $courier->is_default,
-                                        "notes" => $courier->notes,
-                                        "update_url" => route("admin.couriers.update", $courier),
-                                    ], JSON_HEX_APOS) !!})'
-                                    class="text-xs px-2 py-1 rounded border border-gray-200 text-blue-600 hover:bg-blue-50">সম্পাদনা</button>
-                            @if($courier->supportsApi())
-                            <a href="{{ route('admin.courier-api-settings.index') }}"
-                               class="text-xs px-2 py-1 rounded border border-gray-200 text-indigo-600 hover:bg-indigo-50">API</a>
-                            @endif
+                            <a href="{{ route('admin.courier-api-settings.index', ['courier' => $courier->id]) }}"
+                               class="text-xs px-2 py-1 rounded border border-gray-200 text-indigo-600 hover:bg-indigo-50">Manage</a>
                             <form method="POST" action="{{ route('admin.couriers.toggle', $courier) }}">
                                 @csrf
                                 <button class="text-xs px-2 py-1 rounded border border-gray-200 {{ $courier->status === 'active' ? 'text-orange-600 hover:bg-orange-50' : 'text-green-600 hover:bg-green-50' }}">

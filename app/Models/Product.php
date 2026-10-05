@@ -22,6 +22,7 @@ class Product extends Model
         'brand',
         'unit',
         'main_image',
+        'wholesale_main_image',
         'gallery_images',
         'video_url',
         'video_path',
@@ -42,6 +43,7 @@ class Product extends Model
         'wholesale_enquiry_enabled',
         'min_order_quantity',
         'min_order_unit',
+        'unit_conversions',
         'delivery_time',
         'payment_terms',
         'meta_title',
@@ -51,6 +53,7 @@ class Product extends Model
         'canonical_url',
         'meta_robots',
         'main_image_alt',
+        'wholesale_main_image_alt',
         'og_image_alt',
         'gallery_alts',
     ];
@@ -61,6 +64,7 @@ class Product extends Model
     protected $casts = [
         'gallery_images'            => 'array',
         'gallery_alts'              => 'array',
+        'unit_conversions'          => 'array',
         'retail_price_1kg'          => 'decimal:2',
         'wholesale_price_1kg'       => 'decimal:2',
         'purchase_price'            => 'decimal:2',
@@ -79,6 +83,14 @@ class Product extends Model
 
     /** Units a vendor can pick for unit-managed products. */
     public const UNITS = ['kg', 'gram', 'pcs', 'bag', 'carton', 'packet'];
+
+    /** Bangla unit names (includes the legacy MOQ unit 'piece'). */
+    public const UNIT_LABELS = ['kg' => 'কেজি', 'gram' => 'গ্রাম', 'pcs' => 'পিস', 'piece' => 'পিস', 'bag' => 'ব্যাগ', 'carton' => 'কার্টন', 'packet' => 'প্যাকেট'];
+
+    public static function unitLabel(?string $unit): string
+    {
+        return self::UNIT_LABELS[$unit] ?? (string) $unit;
+    }
 
     public function vendor(): BelongsTo
     {
@@ -248,6 +260,25 @@ class Product extends Model
         return trim((string) $this->main_image_alt) ?: $this->display_name;
     }
 
+    /**
+     * Cover photo for a showcase channel. পাইকারি uses its own cover when one is
+     * uploaded, otherwise the normal main image. The gallery is shared by both.
+     */
+    public function coverImage(string $channel = 'retail'): ?string
+    {
+        return ($channel === 'wholesale' && filled($this->wholesale_main_image))
+            ? $this->wholesale_main_image
+            : $this->main_image;
+    }
+
+    public function coverImageAlt(string $channel = 'retail'): string
+    {
+        if ($channel === 'wholesale' && filled($this->wholesale_main_image)) {
+            return trim((string) $this->wholesale_main_image_alt) ?: $this->mainImageAlt();
+        }
+        return $this->mainImageAlt();
+    }
+
     public function ogImageAlt(): string
     {
         return trim((string) $this->og_image_alt) ?: $this->mainImageAlt();
@@ -258,6 +289,9 @@ class Product extends Model
     {
         if ($path !== null && $path === $this->main_image) {
             return $this->mainImageAlt();
+        }
+        if ($path !== null && $path === $this->wholesale_main_image) {
+            return $this->coverImageAlt('wholesale');
         }
         if ($path !== null) {
             $custom = trim((string) (($this->gallery_alts ?? [])[hash('sha256', $path)] ?? ''));
@@ -284,6 +318,73 @@ class Product extends Model
     public function isWholesale(): bool
     {
         return (bool) $this->show_in_wholesale && ! $this->show_in_retail;
+    }
+
+    // ── Unit conversion & per-unit পাইকারি price ─────────────────────────────
+    /** Clean conversion rows: [['unit' => 'carton', 'qty' => 20.0, 'base' => 'kg'], …]. */
+    public function unitConversionRows(): array
+    {
+        $rows = [];
+        foreach ((array) ($this->unit_conversions ?? []) as $row) {
+            if (is_array($row) && ! empty($row['unit']) && ! empty($row['base']) && (float) ($row['qty'] ?? 0) > 0) {
+                $rows[] = ['unit' => (string) $row['unit'], 'qty' => (float) $row['qty'], 'base' => (string) $row['base']];
+            }
+        }
+        return $rows;
+    }
+
+    /**
+     * How many kg one $unit holds, following conversions (e.g. carton → packet → kg).
+     * Null when the unit cannot be traced back to a weight.
+     */
+    public function unitInKg(string $unit, int $depth = 0): ?float
+    {
+        if ($unit === 'kg') { return 1.0; }
+        if ($unit === 'gram') { return 0.001; }
+        if ($depth > 4) { return null; }
+        foreach ($this->unitConversionRows() as $row) {
+            if ($row['unit'] === $unit && ($base = $this->unitInKg($row['base'], $depth + 1)) !== null) {
+                return $row['qty'] * $base;
+            }
+        }
+        return null;
+    }
+
+    public static function formatQty(float $qty): string
+    {
+        return rtrim(rtrim(number_format($qty, 3, '.', ''), '0'), '.');
+    }
+
+    /** "1 কার্টন = 20 কেজি" style labels for every conversion row. */
+    public function unitConversionLabels(): array
+    {
+        return array_map(fn ($r) => '1 '.self::unitLabel($r['unit']).' = '.self::formatQty($r['qty']).' '.self::unitLabel($r['base']),
+            $this->unitConversionRows());
+    }
+
+    /** পাইকারি price per kg — null unless the product sells wholesale and a price is set. */
+    public function wholesalePricePerKg(): ?float
+    {
+        return $this->show_in_wholesale && (float) $this->wholesale_price_1kg > 0 ? (float) $this->wholesale_price_1kg : null;
+    }
+
+    /** পাইকারি price for each converted unit (carton, bag, …) that traces back to kg. */
+    public function wholesaleUnitPrices(): array
+    {
+        $perKg = $this->wholesalePricePerKg();
+        if ($perKg === null) { return []; }
+        $out = [];
+        foreach ($this->unitConversionRows() as $row) {
+            $kg = $this->unitInKg($row['unit']);
+            if ($kg === null || isset($out[$row['unit']])) { continue; }
+            $out[$row['unit']] = [
+                'unit' => $row['unit'],
+                'unit_label' => self::unitLabel($row['unit']),
+                'kg' => round($kg, 3),
+                'price' => round($perKg * $kg, 2),
+            ];
+        }
+        return array_values($out);
     }
 
     /** Human MOQ label, e.g. "৫০ kg" — null when no MOQ is configured. */

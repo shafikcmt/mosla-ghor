@@ -84,11 +84,12 @@ class PaykariComboEnquiryController extends Controller
         }
 
         // Meta Pixel Lead on the next page — platform pixel only (items filtered by scope).
-        \App\Support\MetaPixel::leadForCombo(
-            Product::whereIn('id', array_column($validated['items'], 'product_id'))->pluck('vendor_id', 'id')
-                ->map(fn ($v) => $v ? (int) $v : null)->all(),
-            'lead-combo-'.$enquiry->id
-        );
+        $leadVendors = Product::whereIn('id', array_column($validated['items'], 'product_id'))->pluck('vendor_id', 'id')
+            ->map(fn ($v) => $v ? (int) $v : null)->all();
+        \App\Support\MetaPixel::leadForCombo($leadVendors, 'lead-combo-'.$enquiry->id);
+        \App\Support\MetaCapi::leadForCombo($leadVendors, 'lead-combo-'.$enquiry->id, [
+            'phone' => $validated['customer_phone'], 'name' => $validated['customer_name'], 'external_id' => $customer?->id,
+        ]);
 
         $msg = 'আপনার পাইকারি কম্বো enquiry successfully submit হয়েছে। MoslaMart team / supplier quote পাঠাবে।';
 

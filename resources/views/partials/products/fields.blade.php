@@ -47,7 +47,7 @@
     <div class="pe-section-title"><span>04</span><div><h2>খুচরা প্যাক সাইজ ও দাম</h2><p>বিক্রয় মাধ্যম বদলালেও আগের প্যাক ও ম্যানুয়াল দাম মুছে যাবে না।</p></div></div>
     @include('partials.products.retail-packs')
 </fieldset>
-<fieldset class="pe-card" data-channel-section="wholesale" @if(!$wholesale) hidden disabled @endif>
+<fieldset class="pe-card" id="pe-wholesale" data-channel-section="wholesale" @if(!$wholesale) hidden disabled @endif>
     <div class="pe-section-title"><span>05</span><div><h2>পাইকারি সেটিং</h2><p>ক্রেতার enquiry ও কোটেশনের জন্য প্রয়োজনীয় তথ্য।</p></div></div>
     <label class="pe-check"><input type="hidden" name="wholesale_enquiry_enabled" value="0"><input type="checkbox" name="wholesale_enquiry_enabled" value="1" @checked(old('wholesale_enquiry_enabled', $product?->wholesale_enquiry_enabled ?? true))> পাইকারি enquiry গ্রহণ করুন</label>
     <div class="pe-grid">
@@ -55,7 +55,9 @@
         <label>MOQ একক<select name="min_order_unit">@foreach(['kg'=>'কেজি', 'gram'=>'গ্রাম', 'pcs'=>'পিস', 'piece'=>'পিস (পুরোনো)', 'bag'=>'ব্যাগ', 'carton'=>'কার্টন', 'packet'=>'প্যাকেট'] as $unit=>$label)<option value="{{ $unit }}" @selected(old('min_order_unit', $product?->min_order_unit ?? 'kg') === $unit)>{{ $label }}</option>@endforeach</select></label>
         <label>ডেলিভারির সময়<input name="delivery_time" value="{{ old('delivery_time', $product?->delivery_time) }}" maxlength="255" placeholder="যেমন: ৩–৫ দিন"></label>
         <label>পেমেন্টের শর্ত<input name="payment_terms" value="{{ old('payment_terms', $product?->payment_terms) }}" maxlength="255" placeholder="যেমন: ৩০% অগ্রিম"></label>
+        <label>পাইকারি দাম (৳ / কেজি) <span class="pe-hint">ঐচ্ছিক</span><input type="number" name="wholesale_price_1kg" value="{{ old('wholesale_price_1kg', $product?->wholesale_price_1kg) }}" min="0" step="0.01" max="99999999.99"><small>ওয়েবসাইটে দেখায় না (পাইকারি enquiry-ভিত্তিক থাকে)। প্রাইস বোর্ড, কোটেশন ও Facebook বটের উত্তরে ব্যবহার হয়।</small></label>
     </div>
+    @include('partials.products.unit-conversions')
 </fieldset>
 <section class="pe-card" id="pe-media">
     <div class="pe-section-title"><span>06</span><div><h2>পণ্যের ছবি ও ভিডিও</h2><p>নতুন ফাইল না দিলে আগের ছবিই থাকবে। মুছতে হলে আলাদাভাবে নির্বাচন করুন।</p></div></div>

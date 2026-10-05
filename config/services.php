@@ -65,4 +65,9 @@ return [
         'redirect'      => env('FACEBOOK_REDIRECT_URI', '/auth/facebook/callback'),
     ],
 
+    // ── Meta Conversions API (token + switches live in admin → Marketing) ──
+    'meta' => [
+        'graph_version' => env('META_GRAPH_VERSION', 'v23.0'),
+    ],
+
 ];

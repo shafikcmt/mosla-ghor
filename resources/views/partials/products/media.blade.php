@@ -1,6 +1,7 @@
+@php $bothChannels = (bool) old('show_in_retail', $product?->show_in_retail ?? true) && (bool) old('show_in_wholesale', $product?->show_in_wholesale ?? false); @endphp
 <div class="pe-grid">
     <div data-media-preview>
-        <h3>মূল ছবি</h3>
+        <h3>মূল ছবি <span class="pe-hint" data-channel-section="both" @if(!$bothChannels) hidden @endif>— খুচরা কভার</span></h3>
         @php $mainUrl = \App\Support\ProductMedia::url($product?->main_image); @endphp
         <img data-preview src="{{ $mainUrl }}" alt="বর্তমান মূল ছবি" class="pe-main-preview" @if(!$mainUrl) hidden @endif>
         @if($mainUrl)
@@ -15,8 +16,22 @@
             <label>ছবির URL<input type="url" name="main_image" value="{{ old('main_image', preg_match('~^https?://~i', $product?->main_image ?? '') ? $product->main_image : '') }}" placeholder="https://…" maxlength="255"><small>খালি রাখলে বর্তমান ছবি মুছবে না। ফাইল আপলোড করলে সেটি অগ্রাধিকার পাবে।</small></label>
         </details>
     </div>
-    <div>
-        <h3>গ্যালারি</h3>
+    {{-- Separate পাইকারি cover — only meaningful when the product sells in BOTH channels. --}}
+    <fieldset data-channel-section="both" data-media-preview class="pe-note" @if(!$bothChannels) hidden disabled @endif>
+        <h3>পাইকারি কভার ছবি <span class="pe-hint">ঐচ্ছিক</span></h3>
+        @php $wsUrl = \App\Support\ProductMedia::url($product?->wholesale_main_image); @endphp
+        <small>পাইকারি তালিকা ও পাইকারি পেজে এই ছবি কভার হিসেবে দেখাবে। খালি রাখলে মূল ছবিই দেখাবে। গ্যালারি দুই জায়গাতেই একই থাকবে।</small>
+        <img data-preview src="{{ $wsUrl }}" alt="বর্তমান পাইকারি কভার ছবি" class="pe-main-preview" @if(!$wsUrl) hidden @endif>
+        @if($wsUrl)
+        <label class="pe-check pe-remove"><input type="checkbox" name="remove_wholesale_main_image" value="1" @checked(old('remove_wholesale_main_image'))> পাইকারি কভার ছবি মুছুন</label>
+        @endif
+        <label>পাইকারি কভার {{ $wsUrl ? 'বদলান' : 'যোগ করুন' }}<input type="file" name="wholesale_main_image_file" accept="image/jpeg,image/png,image/webp" data-preview-input data-async-upload="wholesale_main" data-token-name="wholesale_main_image_token" {{ \App\Support\ImageOptimizer::inputAttributes('product') }}></label>
+@include('partials.products.upload-tokens', ['name' => 'wholesale_main_image_token', 'oldKey' => 'wholesale_main_image_token', 'kind' => 'wholesale_main'])
+        <small>JPG / PNG / WebP · সর্বোচ্চ ১০ MB</small>
+        <label>পাইকারি কভারের বিবরণ (alt) <span class="pe-hint">ঐচ্ছিক</span><input name="wholesale_main_image_alt" maxlength="255" value="{{ old('wholesale_main_image_alt', $product?->wholesale_main_image_alt) }}" placeholder="খালি রাখলে মূল ছবির বিবরণ"></label>
+    </fieldset>
+    <div class="pe-wide">
+        <h3>গ্যালারি <span class="pe-hint" data-channel-section="both" @if(!$bothChannels) hidden @endif>— খুচরা ও পাইকারি দুই জায়গাতেই একই</span></h3>
         <div class="pe-gallery">
             @foreach($product?->gallery_images ?? [] as $path)
             @php $token = hash('sha256', $path); @endphp
