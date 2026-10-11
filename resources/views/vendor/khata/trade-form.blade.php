@@ -19,13 +19,9 @@
 <form method="POST" action="{{ route('vendor.khata.trade.store', $type) }}" id="kh-trade" class="space-y-3 max-w-3xl">
     @csrf
     <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 grid grid-cols-2 gap-3">
-        <div>
-            <p class="text-xs text-gray-500">{{ $isSale ? 'চালান নম্বর' : 'ক্রয় নম্বর' }}</p>
-            <p class="text-xl font-bold num">#{{ $number }}</p>
-        </div>
-        <div>
-            <label class="text-xs text-gray-500 block">তারিখ</label>
-            <input type="date" name="date" value="{{ old('date', now()->toDateString()) }}" required class="border border-gray-200 rounded-lg px-2 py-1.5 w-full">
+        <div class="col-span-2 flex items-center justify-between gap-3">
+            <p class="text-sm text-gray-500">{{ $isSale ? 'চালান' : 'ক্রয়' }} <b class="text-gray-900 num">#{{ $number }}</b></p>
+            <input type="date" name="date" value="{{ old('date', now()->toDateString()) }}" required aria-label="তারিখ" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm">
         </div>
         <div class="col-span-2">
             <div class="flex items-center justify-between mb-1">
@@ -77,33 +73,49 @@
         <button type="button" id="kh-add" class="mt-2 w-full border-2 border-dashed border-green-300 text-[#0f7a3e] font-semibold py-2.5 rounded-xl">+ পণ্য যোগ করুন</button>
     </div>
 
-    {{-- Totals --}}
-    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-2.5 text-sm">
+    {{-- Totals: optional extras open on demand --}}
+    @php $hasDisc = (float) old('discount') > 0; $hasExtra = (float) old('extra_charge') > 0; $hasNote = filled(old('note')); @endphp
+    <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-3">
         <div class="flex justify-between"><span class="text-gray-500">উপমোট</span><span id="kh-sub" class="font-semibold num">৳0</span></div>
-        <div class="flex items-center justify-between gap-2">
+
+        <div id="kh-disc-row" class="flex items-center justify-between gap-2 {{ $hasDisc ? '' : 'hidden' }}">
             <span class="text-gray-500">ডিসকাউন্ট</span>
-            <input type="number" name="discount" id="kh-disc" value="{{ old('discount') }}" step="0.01" min="0" placeholder="0" class="w-32 border border-gray-200 rounded-lg px-2 py-1.5 text-right">
+            <input type="number" name="discount" id="kh-disc" value="{{ old('discount') }}" step="0.01" min="0" placeholder="৳ 0" class="w-32 border border-gray-200 rounded-lg px-2 py-2 text-right">
         </div>
-        <div class="flex items-center justify-between gap-2">
-            <input name="extra_label" value="{{ old('extra_label') }}" maxlength="60" placeholder="অতিরিক্ত চার্জ (যেমন: লেবার ভাড়া)" class="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-1.5">
-            <input type="number" name="extra_charge" id="kh-extra" value="{{ old('extra_charge') }}" step="0.01" min="0" placeholder="0" class="w-32 border border-gray-200 rounded-lg px-2 py-1.5 text-right">
+        <div id="kh-extra-row" class="flex items-center justify-between gap-2 {{ $hasExtra ? '' : 'hidden' }}">
+            <input name="extra_label" value="{{ old('extra_label') }}" maxlength="60" placeholder="যেমন: লেবার ভাড়া" class="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-2">
+            <input type="number" name="extra_charge" id="kh-extra" value="{{ old('extra_charge') }}" step="0.01" min="0" placeholder="৳ 0" class="w-32 border border-gray-200 rounded-lg px-2 py-2 text-right">
         </div>
-        <div class="flex justify-between border-t pt-2.5 text-lg"><span class="font-bold">মোট</span><span id="kh-grand" class="font-bold num">৳0</span></div>
+        <div class="flex flex-wrap gap-2 text-sm">
+            <button type="button" data-show="kh-disc-row" class="kh-chip {{ $hasDisc ? 'hidden' : '' }} text-[#0f7a3e] font-semibold">+ ডিসকাউন্ট</button>
+            <button type="button" data-show="kh-extra-row" class="kh-chip {{ $hasExtra ? 'hidden' : '' }} text-[#0f7a3e] font-semibold">+ অতিরিক্ত চার্জ</button>
+            <button type="button" data-show="kh-note-row" class="kh-chip {{ $hasNote ? 'hidden' : '' }} text-[#0f7a3e] font-semibold">+ নোট</button>
+        </div>
+
+        <div class="flex justify-between border-t pt-3 text-lg"><span class="font-bold">মোট</span><span id="kh-grand" class="font-bold num">৳0</span></div>
+
         <div class="flex items-center justify-between gap-2">
-            <span class="font-semibold">{{ $isSale ? 'প্রাপ্ত টাকা' : 'পরিশোধিত টাকা' }}</span>
+            <span class="font-semibold">{{ $isSale ? 'টাকা পেয়েছি' : 'টাকা দিয়েছি' }}</span>
             <div class="flex items-center gap-2">
-                <button type="button" id="kh-full" class="text-xs font-semibold text-[#0f7a3e] border border-green-200 rounded-lg px-2 py-1.5">পুরো টাকা</button>
-                <input type="number" name="paid" id="kh-paid" value="{{ old('paid') }}" step="0.01" min="0" placeholder="0" class="w-32 border border-gray-200 rounded-lg px-2 py-1.5 text-right">
+                <button type="button" id="kh-full" class="text-xs font-semibold text-[#0f7a3e] border border-green-200 rounded-lg px-2.5 py-2">পুরো টাকা</button>
+                <input type="number" name="paid" id="kh-paid" value="{{ old('paid') }}" step="0.01" min="0" placeholder="৳ 0" inputmode="decimal" class="w-32 border border-gray-200 rounded-lg px-2 py-2 text-right">
             </div>
         </div>
-        <div class="flex items-center justify-between gap-2">
-            <span class="text-gray-500">পেমেন্ট মাধ্যম</span>
-            <select name="payment_mode" class="border border-gray-200 rounded-lg px-2 py-1.5">
-                @foreach(['cash' => 'নগদ', 'bkash' => 'bKash', 'nagad' => 'Nagad', 'bank' => 'ব্যাংক'] as $k => $l)<option value="{{ $k }}" @selected(old('payment_mode', 'cash') === $k)>{{ $l }}</option>@endforeach
-            </select>
+        <div id="kh-mode-row" class="flex items-center justify-between gap-2 hidden">
+            <span class="text-gray-500">কীভাবে</span>
+            <div class="flex gap-1 text-xs">
+                @foreach(['cash' => 'নগদ', 'bkash' => 'bKash', 'nagad' => 'Nagad', 'bank' => 'ব্যাংক'] as $k => $l)
+                <label class="cursor-pointer">
+                    <input type="radio" name="payment_mode" value="{{ $k }}" class="peer sr-only" @checked(old('payment_mode', 'cash') === $k)>
+                    <span class="block px-2.5 py-1.5 rounded-lg border border-gray-200 font-semibold peer-checked:bg-gray-800 peer-checked:text-white peer-checked:border-gray-800">{{ $l }}</span>
+                </label>
+                @endforeach
+            </div>
         </div>
         <div class="flex justify-between"><span class="font-semibold">বাকি</span><span id="kh-due" class="font-bold text-red-600 num">৳0</span></div>
-        <input name="note" value="{{ old('note') }}" maxlength="500" placeholder="নোট (ঐচ্ছিক)" class="w-full border border-gray-200 rounded-lg px-3 py-2">
+        <div id="kh-note-row" class="{{ $hasNote ? '' : 'hidden' }}">
+            <input name="note" value="{{ old('note') }}" maxlength="500" placeholder="নোট" class="w-full border border-gray-200 rounded-lg px-3 py-2">
+        </div>
     </div>
 
     <button class="w-full bg-[#0f7a3e] hover:bg-[#0c6533] text-white font-bold py-3.5 rounded-xl text-lg shadow">সেভ করুন</button>
@@ -190,9 +202,18 @@
     document.getElementById('kh-trade').addEventListener('input', recalc);
     document.getElementById('kh-full').addEventListener('click', () => { document.getElementById('kh-paid').value = Math.round(recalc() * 100) / 100; recalc(); });
     document.getElementById('kh-party').addEventListener('change', partyInfo);
+    document.querySelectorAll('.kh-chip').forEach(c => c.addEventListener('click', () => {
+        const row = document.getElementById(c.dataset.show);
+        row.classList.remove('hidden'); c.classList.add('hidden');
+        const f = row.querySelector('input:not([name=extra_label])') || row.querySelector('input'); if (f) f.focus();
+    }));
+    const modeRow = document.getElementById('kh-mode-row');
+    const syncMode = () => modeRow.classList.toggle('hidden', !(num(document.getElementById('kh-paid')) > 0));
+    document.getElementById('kh-paid').addEventListener('input', syncMode);
+    document.getElementById('kh-full').addEventListener('click', syncMode);
 
     box.querySelectorAll('.kh-line').forEach(l => fill(l, false));
-    recalc(); partyInfo();
+    recalc(); partyInfo(); syncMode();
 })();
 </script>
 @endpush

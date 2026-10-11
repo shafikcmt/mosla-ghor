@@ -23,7 +23,8 @@ class HomeController extends KhataBaseController
             'month'   => $month,
             'today'   => $today,
             'cash'    => $this->book->cashBalance($vendor),
-            'recent'  => KhataTransaction::where('vendor_id', $vendor->id)->with('party')->latest('date')->latest('id')->limit(8)->get(),
+            'recent'  => KhataTransaction::where('vendor_id', $vendor->id)->whereNotIn('type', ['stock_in', 'stock_out'])
+                ->with('party')->latest('date')->latest('id')->limit(8)->get(),
             'lowStock'=> KhataItem::where('vendor_id', $vendor->id)->whereNotNull('low_stock_alert')
                 ->whereColumn('stock', '<=', 'low_stock_alert')->orderBy('stock')->limit(5)->get(),
             'counts'  => [

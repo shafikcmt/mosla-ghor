@@ -3,65 +3,101 @@
 @section('subheading', 'দোকানের খাতা')
 
 @section('content')
-@php $tk = fn ($n) => ((float) $n < 0 ? '−' : '').'৳'.number_format(abs((float) $n), 0); @endphp
+@php
+    $tk = fn ($n) => ((float) $n < 0 ? '−' : '').'৳'.number_format(abs((float) $n), 0);
+    $q3 = fn ($n) => rtrim(rtrim(number_format((float) $n, 3, '.', ''), '0'), '.');
+    $isEmpty = $counts['items'] === 0 && $counts['parties'] === 0 && $recent->isEmpty();
+    $hasToday = $today['sales'] > 0 || $today['cash_in'] > 0 || $today['expense'] > 0;
+@endphp
 
-<div class="grid grid-cols-2 gap-3">
-    <a href="{{ route('vendor.khata.parties.index', ['balance' => 'receivable']) }}" class="rounded-2xl bg-green-50 border border-green-200 p-4">
-        <p class="text-2xl sm:text-3xl font-bold text-green-700 num">{{ $tk($dues['receivable']) }}</p>
-        <p class="text-sm text-green-800 mt-1">পাওনা ↓ <span class="text-xs text-green-600">(পার্টির কাছে)</span></p>
-    </a>
-    <a href="{{ route('vendor.khata.parties.index', ['balance' => 'payable']) }}" class="rounded-2xl bg-red-50 border border-red-200 p-4">
-        <p class="text-2xl sm:text-3xl font-bold text-red-600 num">{{ $tk($dues['payable']) }}</p>
-        <p class="text-sm text-red-700 mt-1">বকেয়া ↑ <span class="text-xs text-red-500">(আপনার দেনা)</span></p>
-    </a>
-</div>
-
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-    @foreach([
-        ['বিক্রয় ('.now()->format('F').')', $month['sales'], 'text-blue-700', route('vendor.khata.transactions', ['type' => 'sale'])],
-        ['ক্রয় ('.now()->format('F').')', $month['purchase'], 'text-orange-600', route('vendor.khata.transactions', ['type' => 'purchase'])],
-        ['খরচ ('.now()->format('F').')', $month['expense'], 'text-amber-600', route('vendor.khata.transactions', ['type' => 'expense'])],
-        ['ক্যাশ ও ব্যাংক ব্যালেন্স', $cash, 'text-gray-900', route('vendor.khata.report')],
-    ] as [$label, $value, $cls, $href])
-    <a href="{{ $href }}" class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-        <p class="text-xl font-bold num {{ $cls }}">{{ $tk($value) }}</p>
-        <p class="text-xs text-gray-500 mt-1">{{ $label }}</p>
-    </a>
-    @endforeach
-</div>
-
-<div class="mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4 flex flex-wrap items-center justify-between gap-2 text-sm">
-    <span class="text-gray-500">আজ:</span>
-    <span>বিক্রি <b class="num">{{ $tk($today['sales']) }}</b></span>
-    <span>লাভ <b class="num {{ $today['net_profit'] >= 0 ? 'text-green-700' : 'text-red-600' }}">{{ $tk($today['net_profit']) }}</b></span>
-    <span>ক্যাশ ইন <b class="num">{{ $tk($today['cash_in']) }}</b></span>
-    <span>এই মাসের লাভ <b class="num {{ $month['net_profit'] >= 0 ? 'text-green-700' : 'text-red-600' }}">{{ $tk($month['net_profit']) }}</b></span>
+{{-- Balance --}}
+<div class="rounded-3xl bg-gradient-to-br from-[#0f7a3e] to-[#15994f] text-white p-5 shadow-md">
+    <div class="grid grid-cols-2 divide-x divide-white/25">
+        <a href="{{ route('vendor.khata.parties.index', ['balance' => 'receivable']) }}" class="pr-4">
+            <p class="text-sm text-green-100">পাওনা <span class="text-xs">(পাবো)</span></p>
+            <p class="text-2xl sm:text-3xl font-bold num mt-0.5">{{ $tk($dues['receivable']) }}</p>
+        </a>
+        <a href="{{ route('vendor.khata.parties.index', ['balance' => 'payable']) }}" class="pl-4">
+            <p class="text-sm text-green-100">বকেয়া <span class="text-xs">(দেবো)</span></p>
+            <p class="text-2xl sm:text-3xl font-bold num mt-0.5">{{ $tk($dues['payable']) }}</p>
+        </a>
+    </div>
+    <div class="mt-4 pt-3 border-t border-white/20 flex items-center justify-between text-sm">
+        <span class="text-green-100">ক্যাশ ও ব্যাংক</span>
+        <span class="font-bold num">{{ $tk($cash) }}</span>
+    </div>
 </div>
 
 {{-- Quick actions --}}
-<div class="mt-4 grid grid-cols-4 gap-2 text-center text-xs sm:text-sm">
+<div class="mt-4 grid grid-cols-4 gap-2 text-center text-xs font-semibold text-gray-700">
     @foreach([
-        [route('vendor.khata.trade.create', 'sale'), 'বিক্রি', '🧾', 'bg-blue-600'],
-        [route('vendor.khata.trade.create', 'purchase'), 'ক্রয়', '🛒', 'bg-orange-500'],
-        [route('vendor.khata.amount.create', 'payment_in'), 'পেমেন্ট ইন', '⬇️', 'bg-green-600'],
-        [route('vendor.khata.amount.create', 'expense'), 'খরচ', '💸', 'bg-amber-500'],
-    ] as [$href, $label, $icon, $cls])
-    <a href="{{ $href }}" class="rounded-2xl {{ $cls }} text-white font-semibold py-3 shadow-sm hover:brightness-95">
-        <span class="block text-xl">{{ $icon }}</span>{{ $label }}
+        [route('vendor.khata.trade.create', 'sale'), 'বিক্রি', 'M9 14l2 2 4-4M7 3h10a2 2 0 012 2v16l-3-2-3 2-3-2-3 2V5a2 2 0 012-2z', 'bg-blue-600'],
+        [route('vendor.khata.trade.create', 'purchase'), 'ক্রয়', 'M3 3h2l2.4 12.2a2 2 0 002 1.8h8.2a2 2 0 002-1.6L21 8H6M9 21a1 1 0 100-2 1 1 0 000 2zm9 0a1 1 0 100-2 1 1 0 000 2z', 'bg-orange-500'],
+        [route('vendor.khata.amount.create', 'payment_in'), 'টাকা পেলাম', 'M12 4v12m0 0l-4-4m4 4l4-4M5 20h14', 'bg-green-600'],
+        [route('vendor.khata.amount.create', 'expense'), 'খরচ', 'M12 8c-2 0-3 .9-3 2s1 2 3 2 3 .9 3 2-1 2-3 2m0-8V6m0 10v2M4 6h16v12H4z', 'bg-amber-500'],
+    ] as [$href, $label, $path, $cls])
+    <a href="{{ $href }}" class="flex flex-col items-center gap-1.5">
+        <span class="w-14 h-14 rounded-2xl {{ $cls }} text-white flex items-center justify-center shadow-sm hover:brightness-110">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $path }}"/></svg>
+        </span>
+        {{ $label }}
     </a>
     @endforeach
 </div>
 
 @if($counts['items'] === 0 || $counts['parties'] === 0)
-<div class="mt-4 rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
-    <p class="font-bold mb-1">শুরু করুন 👋</p>
-    <ol class="list-decimal pl-5 space-y-0.5">
-        <li @class(['line-through text-amber-600' => $counts['items'] > 0])><a class="underline" href="{{ route('vendor.khata.items.create') }}">আপনার পণ্যগুলো (আইটেম) যোগ করুন</a> — দাম ও বর্তমান স্টকসহ।</li>
-        <li @class(['line-through text-amber-600' => $counts['parties'] > 0])><a class="underline" href="{{ route('vendor.khata.parties.create') }}">গ্রাহক / সরবরাহকারী যোগ করুন</a> — আগের পাওনা/বকেয়া থাকলে সেটাও।</li>
-        <li>তারপর “বিক্রি” বা “ক্রয়” দিয়ে লেনদেন লিখুন — স্টক ও হিসাব নিজে থেকে মিলবে।</li>
-    </ol>
+{{-- Getting started: two clear steps --}}
+<div class="mt-5 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+    <p class="font-bold">শুরু করুন 👋</p>
+    <p class="text-sm text-gray-500 mt-0.5">দুইটা কাজ করলেই খাতা তৈরি — তারপর বিক্রি লিখলে স্টক ও বাকি নিজে থেকে হিসাব হবে।</p>
+    <div class="mt-3 space-y-2">
+        @foreach([
+            [$counts['items'] > 0, route('vendor.khata.items.create'), '১', 'পণ্য যোগ করুন', 'নাম, দাম আর এখন কত স্টক আছে'],
+            [$counts['parties'] > 0, route('vendor.khata.parties.create'), '২', 'গ্রাহক / সরবরাহকারী যোগ করুন', 'নাম আর ফোন — আগের বাকি থাকলে সেটাও'],
+        ] as [$done, $href, $n, $label, $hint])
+        <a href="{{ $href }}" class="flex items-center gap-3 rounded-xl border {{ $done ? 'border-green-200 bg-green-50' : 'border-gray-200 hover:border-[#0f7a3e]' }} p-3">
+            <span class="shrink-0 w-9 h-9 rounded-full {{ $done ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600' }} font-bold flex items-center justify-center">{{ $done ? '✓' : $n }}</span>
+            <span class="flex-1 min-w-0">
+                <span class="block font-semibold {{ $done ? 'text-green-700' : 'text-gray-800' }}">{{ $label }}</span>
+                <span class="block text-xs text-gray-500">{{ $hint }}</span>
+            </span>
+            @unless($done)<span class="text-[#0f7a3e] text-xl">›</span>@endunless
+        </a>
+        @endforeach
+    </div>
 </div>
 @endif
+
+@unless($isEmpty)
+{{-- This month --}}
+<div class="mt-5 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+    <div class="flex items-center justify-between">
+        <p class="font-bold">এই মাস</p>
+        <a href="{{ route('vendor.khata.report') }}" class="text-sm font-semibold text-[#0f7a3e]">রিপোর্ট →</a>
+    </div>
+    <div class="grid grid-cols-3 gap-2 mt-3 text-center">
+        <a href="{{ route('vendor.khata.transactions', ['type' => 'sale']) }}" class="rounded-xl bg-blue-50 py-2.5">
+            <p class="text-xs text-blue-700">বিক্রি</p><p class="font-bold num text-blue-800">{{ $tk($month['sales']) }}</p>
+        </a>
+        <a href="{{ route('vendor.khata.transactions', ['type' => 'purchase']) }}" class="rounded-xl bg-orange-50 py-2.5">
+            <p class="text-xs text-orange-700">ক্রয়</p><p class="font-bold num text-orange-800">{{ $tk($month['purchase']) }}</p>
+        </a>
+        <a href="{{ route('vendor.khata.transactions', ['type' => 'expense']) }}" class="rounded-xl bg-amber-50 py-2.5">
+            <p class="text-xs text-amber-700">খরচ</p><p class="font-bold num text-amber-800">{{ $tk($month['expense']) }}</p>
+        </a>
+    </div>
+    <div class="flex items-center justify-between mt-3 text-sm">
+        <span class="text-gray-500">লাভ (এই মাস)</span>
+        <span class="font-bold num {{ $month['net_profit'] >= 0 ? 'text-green-700' : 'text-red-600' }}">{{ $tk($month['net_profit']) }}</span>
+    </div>
+    @if($hasToday)
+    <div class="flex items-center justify-between mt-1 text-sm">
+        <span class="text-gray-500">আজকের বিক্রি</span>
+        <span class="font-semibold num">{{ $tk($today['sales']) }}</span>
+    </div>
+    @endif
+</div>
+@endunless
 
 @if($lowStock->isNotEmpty())
 <div class="mt-4 rounded-2xl bg-white border border-red-100 shadow-sm">
@@ -69,23 +105,23 @@
     @foreach($lowStock as $item)
     <a href="{{ route('vendor.khata.items.show', $item) }}" class="flex justify-between px-4 py-2 text-sm hover:bg-gray-50">
         <span>{{ $item->name }}</span>
-        <span class="font-semibold text-red-600 num">{{ rtrim(rtrim(number_format((float) $item->stock, 3, '.', ''), '0'), '.') }} {{ $item->unitLabel() }}</span>
+        <span class="font-semibold text-red-600 num">{{ $q3($item->stock) }} {{ $item->unitLabel() }}</span>
     </a>
     @endforeach
 </div>
 @endif
 
+@if($recent->isNotEmpty())
 <div class="mt-4 rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
     <div class="flex items-center justify-between px-4 pt-3 pb-1">
         <p class="font-bold">সাম্প্রতিক লেনদেন</p>
         <a href="{{ route('vendor.khata.transactions') }}" class="text-sm text-[#0f7a3e] font-semibold">সব দেখুন →</a>
     </div>
     <div class="divide-y divide-gray-50">
-        @forelse($recent as $tx)
+        @foreach($recent as $tx)
             @include('vendor.khata._tx-row')
-        @empty
-            <p class="px-4 py-8 text-center text-gray-400 text-sm">এখনো কোনো লেনদেন নেই। নিচের ➕ বাটন থেকে শুরু করুন।</p>
-        @endforelse
+        @endforeach
     </div>
 </div>
+@endif
 @endsection

@@ -30,7 +30,7 @@
 
 {{-- Top bar --}}
 <header class="no-print sticky top-0 z-30 bg-[#0f7a3e] text-white shadow">
-    <div class="max-w-5xl mx-auto px-4 h-14 flex items-center gap-3">
+    <div class="max-w-3xl mx-auto px-4 h-14 flex items-center gap-3">
         @hasSection('back')
             <a href="@yield('back')" class="-ml-1 p-1.5 rounded-full hover:bg-white/10" aria-label="পেছনে">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
@@ -53,7 +53,7 @@
     </div>
 </header>
 
-<main class="max-w-5xl mx-auto px-3 sm:px-4 pt-4 pb-28">
+<main class="max-w-3xl mx-auto px-3 sm:px-4 pt-4 pb-28">
     @if(session('success'))
         <div class="no-print mb-3 flex items-start gap-2 bg-green-600 text-white text-sm font-medium rounded-xl px-4 py-3 shadow" role="status">
             <span>✓</span><span>{{ session('success') }}</span>
@@ -74,21 +74,24 @@
 {{-- Quick actions sheet --}}
 <div id="kh-sheet" class="no-print fixed inset-0 z-40 hidden" aria-hidden="true">
     <div class="absolute inset-0 bg-black/40" onclick="khSheet(false)"></div>
-    <div class="absolute inset-x-0 bottom-0 bg-white rounded-t-3xl p-5 pb-8 max-w-5xl mx-auto">
+    <div class="absolute inset-x-0 bottom-0 bg-white rounded-t-3xl p-5 pb-8 max-w-3xl mx-auto">
         <div class="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div>
-        <p class="font-bold text-gray-800 mb-3">নতুন এন্ট্রি</p>
-        <div class="grid grid-cols-3 sm:grid-cols-4 gap-3 text-center text-sm">
+        <p class="font-bold text-gray-800 mb-4">কী লিখবেন?</p>
+        <div class="grid grid-cols-4 gap-3 text-center text-[13px]">
             @foreach([
-                [route('vendor.khata.trade.create', 'sale'), 'বিক্রি', '🧾', 'bg-blue-50 text-blue-700'],
-                [route('vendor.khata.trade.create', 'purchase'), 'ক্রয়', '🛒', 'bg-orange-50 text-orange-700'],
-                [route('vendor.khata.amount.create', 'payment_in'), 'পেমেন্ট ইন', '⬇️', 'bg-green-50 text-green-700'],
-                [route('vendor.khata.amount.create', 'payment_out'), 'পেমেন্ট আউট', '⬆️', 'bg-red-50 text-red-700'],
-                [route('vendor.khata.amount.create', 'expense'), 'খরচ', '💸', 'bg-amber-50 text-amber-700'],
-                [route('vendor.khata.items.create'), 'নতুন আইটেম', '📦', 'bg-purple-50 text-purple-700'],
-                [route('vendor.khata.parties.create'), 'নতুন পার্টি', '👤', 'bg-teal-50 text-teal-700'],
-            ] as [$href, $label, $icon, $cls])
-            <a href="{{ $href }}" class="rounded-2xl {{ $cls }} py-3.5 font-semibold hover:brightness-95">
-                <span class="block text-2xl mb-1">{{ $icon }}</span>{{ $label }}
+                [route('vendor.khata.trade.create', 'sale'), 'বিক্রি', 'M9 14l2 2 4-4M7 3h10a2 2 0 012 2v16l-3-2-3 2-3-2-3 2V5a2 2 0 012-2z', 'bg-blue-600'],
+                [route('vendor.khata.trade.create', 'purchase'), 'ক্রয়', 'M3 3h2l2.4 12.2a2 2 0 002 1.8h8.2a2 2 0 002-1.6L21 8H6M9 21a1 1 0 100-2 1 1 0 000 2zm9 0a1 1 0 100-2 1 1 0 000 2z', 'bg-orange-500'],
+                [route('vendor.khata.amount.create', 'payment_in'), 'টাকা পেলাম', 'M12 4v12m0 0l-4-4m4 4l4-4M5 20h14', 'bg-green-600'],
+                [route('vendor.khata.amount.create', 'payment_out'), 'টাকা দিলাম', 'M12 20V8m0 0l-4 4m4-4l4 4M5 4h14', 'bg-red-500'],
+                [route('vendor.khata.amount.create', 'expense'), 'খরচ', 'M12 8c-2 0-3 .9-3 2s1 2 3 2 3 .9 3 2-1 2-3 2m0-8V6m0 10v2M4 6h16v12H4z', 'bg-amber-500'],
+                [route('vendor.khata.items.create'), 'নতুন আইটেম', 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', 'bg-purple-600'],
+                [route('vendor.khata.parties.create'), 'নতুন পার্টি', 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zm10-3v6m3-3h-6', 'bg-teal-600'],
+            ] as [$href, $label, $path, $cls])
+            <a href="{{ $href }}" class="group flex flex-col items-center gap-1.5 font-semibold text-gray-700">
+                <span class="w-14 h-14 rounded-2xl {{ $cls }} text-white flex items-center justify-center shadow-sm group-hover:brightness-110">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $path }}"/></svg>
+                </span>
+                {{ $label }}
             </a>
             @endforeach
         </div>
@@ -97,7 +100,7 @@
 
 {{-- Bottom nav --}}
 <nav class="no-print fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-2px_12px_rgba(0,0,0,.06)]" style="padding-bottom: env(safe-area-inset-bottom);">
-    <div class="max-w-5xl mx-auto grid grid-cols-6 relative">
+    <div class="max-w-3xl mx-auto grid grid-cols-6 relative">
         @foreach($khNav as $i => [$route, $label, $path])
             @if($i === 2)
             <div class="flex items-start justify-center">
