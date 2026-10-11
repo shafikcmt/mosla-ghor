@@ -46,8 +46,8 @@
 </div>
 <div class="mt-3">{{ $txs->links() }}</div>
 
-<div class="no-print fixed inset-x-0 bottom-20 z-20 px-4">
-    <div class="max-w-5xl mx-auto flex gap-2 justify-end">
+<div class="no-print fixed inset-x-0 bottom-20 lg:bottom-8 lg:left-64 z-20 px-4 lg:px-8">
+    <div class="max-w-5xl lg:max-w-6xl mx-auto flex gap-2 justify-end">
         @if($party->type === 'supplier')
             <a href="{{ route('vendor.khata.amount.create', ['type' => 'payment_out', 'party' => $party->id]) }}" class="bg-red-600 text-white font-semibold px-4 py-3 rounded-full shadow-lg">পেমেন্ট আউট</a>
             <a href="{{ route('vendor.khata.trade.create', ['type' => 'purchase', 'party' => $party->id]) }}" class="bg-orange-500 text-white font-semibold px-4 py-3 rounded-full shadow-lg">নতুন ক্রয়</a>

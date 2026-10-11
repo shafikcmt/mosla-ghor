@@ -16,8 +16,9 @@
 @section('back', $selParty ? route('vendor.khata.parties.show', $selParty) : route('vendor.khata.home'))
 
 @section('content')
-<form method="POST" action="{{ route('vendor.khata.trade.store', $type) }}" id="kh-trade" class="space-y-3 max-w-3xl">
+<form method="POST" action="{{ route('vendor.khata.trade.store', $type) }}" id="kh-trade" class="space-y-3 max-w-3xl lg:max-w-none lg:grid lg:grid-cols-5 lg:gap-6 lg:space-y-0 lg:items-start">
     @csrf
+    <div class="space-y-3 lg:col-span-3">
     <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 grid grid-cols-2 gap-3">
         <div class="col-span-2 flex items-center justify-between gap-3">
             <p class="text-sm text-gray-500">{{ $isSale ? 'চালান' : 'ক্রয়' }} <b class="text-gray-900 num">#{{ $number }}</b></p>
@@ -73,6 +74,9 @@
         <button type="button" id="kh-add" class="mt-2 w-full border-2 border-dashed border-green-300 text-[#0f7a3e] font-semibold py-2.5 rounded-xl">+ পণ্য যোগ করুন</button>
     </div>
 
+    </div>
+
+    <div class="space-y-3 lg:col-span-2 lg:sticky lg:top-20">
     {{-- Totals: optional extras open on demand --}}
     @php $hasDisc = (float) old('discount') > 0; $hasExtra = (float) old('extra_charge') > 0; $hasNote = filled(old('note')); @endphp
     <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-3">
@@ -119,6 +123,7 @@
     </div>
 
     <button class="w-full bg-[#0f7a3e] hover:bg-[#0c6533] text-white font-bold py-3.5 rounded-xl text-lg shadow">সেভ করুন</button>
+    </div>
 </form>
 
 <template id="kh-line-tpl">

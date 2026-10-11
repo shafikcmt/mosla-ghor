@@ -10,6 +10,8 @@
     $hasToday = $today['sales'] > 0 || $today['cash_in'] > 0 || $today['expense'] > 0;
 @endphp
 
+<div class="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
+<div>
 {{-- Balance --}}
 <div class="rounded-3xl bg-gradient-to-br from-[#0f7a3e] to-[#15994f] text-white p-5 shadow-md">
     <div class="grid grid-cols-2 divide-x divide-white/25">
@@ -98,9 +100,11 @@
     @endif
 </div>
 @endunless
+</div>
 
+<div class="lg:space-y-4">
 @if($lowStock->isNotEmpty())
-<div class="mt-4 rounded-2xl bg-white border border-red-100 shadow-sm">
+<div class="mt-4 lg:mt-0 rounded-2xl bg-white border border-red-100 shadow-sm">
     <p class="px-4 pt-3 font-bold text-red-700 text-sm">⚠ স্টক কম</p>
     @foreach($lowStock as $item)
     <a href="{{ route('vendor.khata.items.show', $item) }}" class="flex justify-between px-4 py-2 text-sm hover:bg-gray-50">
@@ -112,7 +116,7 @@
 @endif
 
 @if($recent->isNotEmpty())
-<div class="mt-4 rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+<div class="mt-4 lg:mt-0 rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
     <div class="flex items-center justify-between px-4 pt-3 pb-1">
         <p class="font-bold">সাম্প্রতিক লেনদেন</p>
         <a href="{{ route('vendor.khata.transactions') }}" class="text-sm text-[#0f7a3e] font-semibold">সব দেখুন →</a>
@@ -124,4 +128,6 @@
     </div>
 </div>
 @endif
+</div>
+</div>
 @endsection
