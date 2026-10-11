@@ -23,7 +23,6 @@
         ['vendor.khata.transactions', 'লেনদেন', 'M4 6h16M4 12h16M4 18h10'],
         ['vendor.khata.parties.index', 'পার্টি', 'M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87m6-4.13a4 4 0 11-8 0 4 4 0 018 0zm6 2a3 3 0 11-6 0 3 3 0 016 0z'],
         ['vendor.khata.items.index', 'ইনভেন্টরি', 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'],
-        ['vendor.khata.report', 'রিপোর্ট', 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6m6 0h6m-6 0V9a2 2 0 012-2h2a2 2 0 012 2v10m6 0v-3a2 2 0 00-2-2h-2a2 2 0 00-2 2v3'],
     ];
     $khActive = fn ($r) => request()->routeIs(str_replace('.index', '.*', $r)) || request()->routeIs($r);
 @endphp
@@ -43,6 +42,10 @@
         @unless($vendor->isInventoryOnly())
             <a href="{{ route('vendor.dashboard') }}" class="hidden sm:inline text-xs bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-full">মূল প্যানেল</a>
         @endunless
+        <a href="{{ route('vendor.khata.report') }}" class="flex items-center gap-1 px-2.5 py-1.5 rounded-full {{ request()->routeIs('vendor.khata.report') ? 'bg-white text-[#0f7a3e]' : 'hover:bg-white/10' }}" aria-label="রিপোর্ট">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6m6 0h6m-6 0V9a2 2 0 012-2h2a2 2 0 012 2v10m6 0v-3a2 2 0 00-2-2h-2a2 2 0 00-2 2v3"/></svg>
+            <span class="text-sm font-semibold hidden sm:inline">রিপোর্ট</span>
+        </a>
         <a href="{{ route('vendor.khata.settings') }}" class="p-1.5 rounded-full hover:bg-white/10" aria-label="সেটিং">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 4.3c.4-1.7 2.9-1.7 3.4 0a1.7 1.7 0 002.6 1.1c1.5-.9 3.3.8 2.4 2.4a1.7 1.7 0 001 2.5c1.8.5 1.8 3 0 3.4a1.7 1.7 0 00-1 2.6c.9 1.5-.9 3.3-2.4 2.4a1.7 1.7 0 00-2.6 1c-.4 1.8-2.9 1.8-3.4 0a1.7 1.7 0 00-2.5-1c-1.6.9-3.3-.9-2.4-2.4a1.7 1.7 0 00-1.1-2.6c-1.7-.4-1.7-2.9 0-3.4a1.7 1.7 0 001.1-2.5c-.9-1.6.8-3.3 2.4-2.4 1 .6 2.3.1 2.5-1.1z"/><circle cx="12" cy="12" r="3"/></svg>
         </a>
@@ -100,12 +103,14 @@
 
 {{-- Bottom nav --}}
 <nav class="no-print fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-2px_12px_rgba(0,0,0,.06)]" style="padding-bottom: env(safe-area-inset-bottom);">
-    <div class="max-w-3xl mx-auto grid grid-cols-6 relative">
+    <div class="max-w-3xl mx-auto grid grid-cols-5 relative">
         @foreach($khNav as $i => [$route, $label, $path])
             @if($i === 2)
             <div class="flex items-start justify-center">
                 <button type="button" onclick="khSheet(true)" aria-label="নতুন এন্ট্রি"
-                        class="-mt-6 w-14 h-14 rounded-full bg-[#0f7a3e] text-white shadow-lg text-3xl leading-none flex items-center justify-center ring-4 ring-white">+</button>
+                        class="-mt-6 w-14 h-14 rounded-full bg-[#0f7a3e] hover:bg-[#0c6533] text-white shadow-lg flex items-center justify-center ring-4 ring-white">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+                </button>
             </div>
             @endif
             <a href="{{ route($route) }}" class="flex flex-col items-center justify-center gap-0.5 py-2 min-h-[58px] text-[11px] font-semibold {{ $khActive($route) ? 'text-[#0f7a3e]' : 'text-gray-500' }}">
