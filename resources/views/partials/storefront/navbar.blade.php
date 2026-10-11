@@ -56,13 +56,11 @@
         </a>
 
         {{-- ── Desktop nav links ── --}}
-        <nav class="hidden lg:flex items-center gap-0.5 ml-3">
-            <a href="/"                     class="{{ $navIsHome && ! $navWholesale && ! $navIsTrack ? $dActive : $dLink }}">হোম</a>
-            <a href="{{ url('/') }}#products" class="{{ $dLink }}">ক্যাটাগরি</a>
-            <a href="{{ $retailHref }}"       class="{{ $dLink }}">খুচরা পণ্য</a>
+        <nav class="hidden lg:flex items-center gap-0.5 ml-3" aria-label="প্রধান মেনু">
+            <a href="/"                       class="{{ $navIsHome && ! $navWholesale && ! $navIsTrack ? $dActive : $dLink }}">হোম</a>
+            <a href="{{ $retailHref }}"       class="{{ $dLink }}">সব পণ্য</a>
             <a href="{{ $wholesaleHref }}"    class="{{ $navWholesale ? $dActive : $dLink }}">পাইকারি</a>
-            <button type="button" onclick="msCartOpen()" class="{{ $dLink }}">কম্বো/ব্যাগ</button>
-            <a href="{{ route('track-order') }}" class="{{ $navIsTrack ? $dActive : $dLink }}">ট্র্যাক অর্ডার</a>
+            <a href="{{ route('track-order') }}" class="{{ $navIsTrack ? $dActive : $dLink }}">অর্ডার ট্র্যাক</a>
         </nav>
 
         {{-- ── Flexible spacer ── --}}
@@ -160,22 +158,14 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3v-6h6v6h3a1 1 0 001-1V10"/></svg>
                 হোম
             </a>
-            <a href="{{ url('/') }}#products" class="{{ $mLink }}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 5a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM13 5a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1h-5a1 1 0 01-1-1V5zM4 14a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5zM13 14a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1h-5a1 1 0 01-1-1v-5z"/></svg>
-                ক্যাটাগরি
-            </a>
             <a href="{{ $retailHref }}" class="{{ $mLink }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                খুচরা পণ্য
+                সব পণ্য (খুচরা)
             </a>
             <a href="{{ $wholesaleHref }}" class="{{ $navWholesale ? $mActive : $mLink }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7h18M3 7l1.5 12.5A1 1 0 005.5 21h13a1 1 0 001-.5L21 7M3 7l2-4h14l2 4M9 11v6m6-6v6"/></svg>
                 পাইকারি পণ্য
             </a>
-            <button type="button" onclick="msCartOpen()" class="{{ $mLink }} w-full text-left">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 4.6A1 1 0 005.6 19H19"/></svg>
-                কম্বো / ব্যাগ
-            </button>
             <a href="{{ $navCustomer ? route('customer.orders.index') : route('track-order') }}" class="{{ $navIsTrack ? $mActive : $mLink }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
                 আমার অর্ডার

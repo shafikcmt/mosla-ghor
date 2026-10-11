@@ -93,6 +93,30 @@ Route::get('/products', function (\Illuminate\Http\Request $request) {
     return redirect('/' . $q . '#products');
 })->name('products.index');
 
+// ── SEO: sitemap + robots (dynamic so the absolute URLs always match the live domain) ──
+Route::get('/sitemap.xml', function () {
+    $urls = [
+        ['loc' => url('/').'/',                      'priority' => '1.0', 'freq' => 'daily'],
+        ['loc' => url('/').'/?mode=wholesale',      'priority' => '0.8', 'freq' => 'daily'],
+        ['loc' => route('faq'),                    'priority' => '0.5', 'freq' => 'monthly'],
+        ['loc' => route('track-order'),            'priority' => '0.3', 'freq' => 'yearly'],
+    ];
+    \App\Models\Product::active()->orderBy('id')->get(['slug', 'updated_at'])->each(function ($p) use (&$urls) {
+        $urls[] = ['loc' => route('products.show', $p->slug), 'priority' => '0.7', 'freq' => 'weekly', 'mod' => optional($p->updated_at)->toAtomString()];
+    });
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
+    foreach ($urls as $u) {
+        $xml .= '<url><loc>'.e($u['loc']).'</loc>'.(! empty($u['mod']) ? '<lastmod>'.$u['mod'].'</lastmod>' : '')
+            .'<changefreq>'.$u['freq'].'</changefreq><priority>'.$u['priority']."</priority></url>\n";
+    }
+    return response($xml.'</urlset>', 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
+})->name('sitemap');
+
+Route::get('/robots.txt', function () {
+    $body = "User-agent: *\nDisallow: /admin\nDisallow: /vendor\nDisallow: /customer\nDisallow: /checkout\nDisallow: /order\nDisallow: /invoice\nDisallow: /v/\nAllow: /\n\nSitemap: ".url('/sitemap.xml')."\n";
+    return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
+});
+
 // ── Public product detail (SEO-friendly) ───────────────────────────────────
 Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
 Route::post('/products/{product:slug}/reviews', [ProductController::class, 'storeReview'])->middleware('guest.allowed:review')->name('products.reviews.store');
