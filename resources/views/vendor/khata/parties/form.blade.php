@@ -11,7 +11,7 @@
     $more = old('opening_amount', $ob) || old('address', $party->address) || old('note', $party->note);
 @endphp
 <form method="POST" action="{{ $party->exists ? route('vendor.khata.parties.update', $party) : route('vendor.khata.parties.store') }}"
-      class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-4">
+      class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-4 lg:max-w-2xl">
     @csrf
     @if($party->exists) @method('PUT') @endif
     @if($back)<input type="hidden" name="back" value="{{ $back }}">@endif
@@ -70,7 +70,7 @@
 </form>
 
 @if($party->exists)
-<form method="POST" action="{{ route('vendor.khata.parties.destroy', $party) }}" class="mt-4 text-center" onsubmit="return confirm('পার্টি মুছবেন?');">
+<form method="POST" action="{{ route('vendor.khata.parties.destroy', $party) }}" class="mt-4 text-center lg:max-w-2xl" onsubmit="return confirm('পার্টি মুছবেন?');">
     @csrf @method('DELETE')
     <button class="text-sm text-red-600 hover:underline">পার্টি মুছুন</button>
 </form>

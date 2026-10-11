@@ -9,7 +9,7 @@
     $more = old('category', $item->category) || old('low_stock_alert', $item->low_stock_alert) || old('note', $item->note);
 @endphp
 <form method="POST" action="{{ $item->exists ? route('vendor.khata.items.update', $item) : route('vendor.khata.items.store') }}"
-      class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-4">
+      class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-4 lg:max-w-2xl">
     @csrf
     @if($item->exists) @method('PUT') @endif
 
@@ -73,7 +73,7 @@
 </form>
 
 @if($item->exists)
-<form method="POST" action="{{ route('vendor.khata.items.destroy', $item) }}" class="mt-4 text-center" onsubmit="return confirm('আইটেমটি মুছবেন?');">
+<form method="POST" action="{{ route('vendor.khata.items.destroy', $item) }}" class="mt-4 text-center lg:max-w-2xl" onsubmit="return confirm('আইটেমটি মুছবেন?');">
     @csrf @method('DELETE')
     <button class="text-sm text-red-600 hover:underline">আইটেম মুছুন</button>
 </form>

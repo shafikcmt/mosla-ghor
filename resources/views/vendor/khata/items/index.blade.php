@@ -20,7 +20,42 @@
     </select>
 </form>
 
-<div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+@if($items->isNotEmpty())
+<div class="hidden lg:block mt-4 rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-500 text-xs">
+            <tr>
+                <th class="text-left font-semibold px-4 py-3">আইটেম</th>
+                <th class="text-left font-semibold px-4 py-3">শ্রেণী</th>
+                <th class="text-right font-semibold px-4 py-3">বিক্রয় মূল্য</th>
+                <th class="text-right font-semibold px-4 py-3">ক্রয় মূল্য</th>
+                <th class="text-right font-semibold px-4 py-3">মোট বিক্রি</th>
+                <th class="text-right font-semibold px-4 py-3">স্টক</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+            @foreach($items as $item)
+            @php $s = $sales[$item->id] ?? collect(); @endphp
+            <tr onclick="location.href='{{ route('vendor.khata.items.show', $item) }}'" class="cursor-pointer hover:bg-green-50/50 {{ $item->is_active ? '' : 'opacity-60' }}">
+                <td class="px-4 py-3">
+                    <a href="{{ route('vendor.khata.items.show', $item) }}" class="flex items-center gap-3 font-semibold">
+                        <span class="shrink-0 w-8 h-8 rounded-lg bg-green-50 text-[#0f7a3e] font-bold flex items-center justify-center">{{ mb_strtoupper(mb_substr($item->name, 0, 1)) }}</span>
+                        {{ $item->name }}
+                    </a>
+                </td>
+                <td class="px-4 py-3 text-gray-500">{{ $item->category ?: '—' }}</td>
+                <td class="px-4 py-3 text-right num">৳{{ number_format((float) $item->sale_price, 0) }}</td>
+                <td class="px-4 py-3 text-right num text-gray-500">৳{{ number_format((float) $item->purchase_price, 0) }}</td>
+                <td class="px-4 py-3 text-right num">৳{{ number_format((float) ($s->firstWhere('type', 'sale')->amount ?? 0), 0) }}</td>
+                <td class="px-4 py-3 text-right font-bold num {{ (float) $item->stock <= 0 ? 'text-red-600' : ($item->isLow() ? 'text-amber-600' : 'text-gray-800') }}">{{ $q3($item->stock) }} {{ $item->unitLabel() }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+</div>
+@endif
+
+<div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 {{ $items->isNotEmpty() ? 'lg:hidden' : '' }}">
     @forelse($items as $item)
     @php $s = $sales[$item->id] ?? collect(); @endphp
     <a href="{{ route('vendor.khata.items.show', $item) }}" class="rounded-2xl bg-white border border-gray-100 shadow-sm p-3 flex gap-3 hover:border-green-300 {{ $item->is_active ? '' : 'opacity-60' }}">
@@ -47,5 +82,5 @@
     @endforelse
 </div>
 
-<a href="{{ route('vendor.khata.items.create') }}" class="no-print fixed right-4 bottom-24 z-20 bg-[#0f7a3e] text-white font-semibold px-5 py-3 rounded-full shadow-lg">+ নতুন আইটেম</a>
+<a href="{{ route('vendor.khata.items.create') }}" class="no-print fixed right-4 bottom-24 lg:right-8 lg:bottom-8 z-20 bg-[#0f7a3e] text-white font-semibold px-5 py-3 rounded-full shadow-lg">+ নতুন আইটেম</a>
 @endsection

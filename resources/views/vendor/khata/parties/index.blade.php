@@ -18,7 +18,40 @@
     </select>
 </form>
 
-<div class="mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
+@if($parties->isNotEmpty())
+<div class="hidden lg:block mt-4 rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-500 text-xs">
+            <tr>
+                <th class="text-left font-semibold px-4 py-3">পার্টি</th>
+                <th class="text-left font-semibold px-4 py-3">ফোন</th>
+                <th class="text-left font-semibold px-4 py-3">ধরন</th>
+                <th class="text-right font-semibold px-4 py-3">ব্যালেন্স</th>
+                <th class="text-right font-semibold px-4 py-3">অবস্থা</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+            @foreach($parties as $party)
+            @php $b = $party->balance(); $bc = $b > 0 ? 'text-green-700' : ($b < 0 ? 'text-red-600' : 'text-gray-400'); @endphp
+            <tr onclick="location.href='{{ route('vendor.khata.parties.show', $party) }}'" class="cursor-pointer hover:bg-green-50/50">
+                <td class="px-4 py-3">
+                    <a href="{{ route('vendor.khata.parties.show', $party) }}" class="flex items-center gap-3 font-semibold">
+                        <span class="shrink-0 w-9 h-9 rounded-full {{ $party->type === 'supplier' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-[#0f7a3e]' }} font-bold flex items-center justify-center text-xs">{{ $party->initials() }}</span>
+                        {{ $party->name }}
+                    </a>
+                </td>
+                <td class="px-4 py-3 text-gray-500 num">{{ $party->phone ?: '—' }}</td>
+                <td class="px-4 py-3 text-gray-500">{{ \App\Models\Khata\KhataParty::TYPES[$party->type] ?? '' }}</td>
+                <td class="px-4 py-3 text-right font-bold num {{ $bc }}">৳{{ number_format(abs($b), 0) }}</td>
+                <td class="px-4 py-3 text-right"><span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ $b > 0 ? 'bg-green-50' : ($b < 0 ? 'bg-red-50' : 'bg-gray-100') }} {{ $bc }}">{{ $b > 0 ? 'পাওনা' : ($b < 0 ? 'বকেয়া' : 'নিষ্পত্তি') }}</span></td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+</div>
+@endif
+
+<div class="mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50 {{ $parties->isNotEmpty() ? 'lg:hidden' : '' }}">
     @forelse($parties as $party)
     @php $b = $party->balance(); @endphp
     <a href="{{ route('vendor.khata.parties.show', $party) }}" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
@@ -40,5 +73,5 @@
     @endforelse
 </div>
 
-<a href="{{ route('vendor.khata.parties.create') }}" class="no-print fixed right-4 bottom-24 z-20 bg-[#0f7a3e] text-white font-semibold px-5 py-3 rounded-full shadow-lg">+ নতুন পার্টি</a>
+<a href="{{ route('vendor.khata.parties.create') }}" class="no-print fixed right-4 bottom-24 lg:right-8 lg:bottom-8 z-20 bg-[#0f7a3e] text-white font-semibold px-5 py-3 rounded-full shadow-lg">+ নতুন পার্টি</a>
 @endsection
