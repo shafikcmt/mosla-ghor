@@ -150,3 +150,11 @@
 .market-home .product-card [id^=card-retail-btns]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .market-home .product-card [id^=card-retail-btns]>*{min-width:0;display:flex;align-items:center;justify-content:center}
 }
+
+html{scroll-behavior:smooth}
+@media(max-width:767px){.market-home .hm-view-toggle{display:none}.market-home .hm-search button{display:none}}
+.ms-wa-fab{position:fixed;right:14px;bottom:88px;z-index:45;display:flex;align-items:center;gap:8px;background:#25d366;color:#fff;font-weight:700;font-size:14px;padding:12px 16px;border-radius:999px;box-shadow:0 8px 22px rgba(0,0,0,.25);text-decoration:none}
+.ms-wa-fab svg{width:22px;height:22px;flex:none}
+@media(min-width:1024px){.ms-wa-fab{bottom:24px;right:24px}}
+@media(max-width:380px){.ms-wa-fab span{display:none}.ms-wa-fab{padding:13px}}
+@media(max-width:767px){.ms-wa-fab span{display:none}.ms-wa-fab{padding:13px;right:12px;bottom:86px}}

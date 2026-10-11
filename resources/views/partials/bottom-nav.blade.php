@@ -41,7 +41,7 @@
         </a>
 
         {{-- Categories (jumps to the product grid / category chips) --}}
-        <a href="/#products" class="flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] {{ $bnInactive }} transition-colors">
+        <a href="/#categories" class="flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] {{ $bnInactive }} transition-colors">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 5a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM13 5a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1h-5a1 1 0 01-1-1V5zM4 14a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5zM13 14a1 1 0 011-1h5a1 1 0 011 1v5a1 1 0 01-1 1h-5a1 1 0 01-1-1v-5z"/></svg>
             <span class="text-[10px] font-semibold leading-none">ক্যাটাগরি</span>
         </a>

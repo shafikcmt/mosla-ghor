@@ -14,7 +14,6 @@
             <a class="hm-button" href="{{ $retailHref }}" onclick="return msHeroClick(event, 'retail')">{{ trim($ws['primary_cta_text'] ?? '') ?: 'পণ্য দেখুন' }}</a>
             <a class="hm-button hm-button-outline" href="{{ $wholesaleHref }}" onclick="return msHeroClick(event, 'wholesale')">পাইকারি দেখুন</a>
         </div>
-        <div class="hm-hero-chips"><span>খুচরা প্যাক</span><span>পাইকারি অর্ডার</span><a href="{{ route('track-order') }}">অর্ডার ট্র্যাকিং</a></div>
     </div>
     @if($heroProducts->isNotEmpty())
     <div class="hm-hero-display hm-hero-products" data-hero-count="{{ $heroProducts->count() }}">
