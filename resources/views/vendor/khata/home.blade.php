@@ -127,6 +127,32 @@
         @endforeach
     </div>
 </div>
+@else
+{{-- Desktop only: fill the right column until the first transaction exists --}}
+<div class="hidden lg:block rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-4 pt-3 pb-1">
+        <p class="font-bold">সাম্প্রতিক লেনদেন</p>
+        <a href="{{ route('vendor.khata.transactions') }}" class="text-sm text-[#0f7a3e] font-semibold">সব দেখুন →</a>
+    </div>
+    <div class="px-6 py-10 text-center">
+        <p class="text-4xl">🧾</p>
+        <p class="mt-2 font-semibold text-gray-700">এখনো কোনো লেনদেন নেই</p>
+        <p class="mt-1 text-sm text-gray-500">প্রথম বিক্রি বা ক্রয় লিখলে এখানে দেখাবে।</p>
+        <div class="mt-4 flex justify-center gap-2">
+            <a href="{{ route('vendor.khata.trade.create', 'sale') }}" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">+ প্রথম বিক্রি</a>
+            <a href="{{ route('vendor.khata.trade.create', 'purchase') }}" class="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">+ প্রথম ক্রয়</a>
+        </div>
+    </div>
+    <div class="border-t border-gray-100 bg-gray-50 px-5 py-4">
+        <p class="text-sm font-bold text-gray-700">খাতা যেভাবে কাজ করে</p>
+        <ul class="mt-2 space-y-1.5 text-sm text-gray-600">
+            <li>📦 <b>বিক্রি</b> লিখলে স্টক কমে, <b>ক্রয়</b> লিখলে স্টক বাড়ে।</li>
+            <li>💰 পুরো টাকা না পেলে বাকিটা পার্টির <b>পাওনা</b> হিসেবে জমা থাকে।</li>
+            <li>📲 প্রতিটি চালান WhatsApp-এ পাঠাতে বা প্রিন্ট করতে পারবেন।</li>
+            <li>📊 দৈনিক, মাসিক ও বাৎসরিক লাভ-ক্ষতি <b>রিপোর্ট</b>-এ দেখুন।</li>
+        </ul>
+    </div>
+</div>
 @endif
 </div>
 </div>
