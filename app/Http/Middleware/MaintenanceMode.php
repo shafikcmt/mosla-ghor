@@ -21,7 +21,8 @@ class MaintenanceMode
     /** Fallback when config('maintenance') is missing. Keep in sync with config/maintenance.php. */
     public const DEFAULT_RULES = [
         'always_allowed' => ['admin', 'admin/*', 'up', 'storage/*', 'build/*', 'css/*', 'js/*', 'images/*', 'icons/*',
-            'manifest.json', 'sw.js', 'favicon.ico', 'robots.txt'],
+            'manifest.json', 'sw.js', 'favicon.ico', 'robots.txt',
+            'privacy-policy', 'terms', 'data-deletion'],
         'vendor' => ['vendor', 'vendor/*'],
         'vendor_always_allowed' => ['vendor/login', 'vendor/login/*', 'vendor/logout'],
         'full_read_only' => ['GET' => ['track-order', 'invoice/*', 'wholesale-invoice/*'], 'POST' => ['track-order', 'logout']],

@@ -10,6 +10,8 @@
 @endphp
 <title>{{ $seoTitle }}</title>
 <meta name="description" content="{{ $seoDescription }}">
+<link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+<link rel="icon" type="image/png" href="{{ asset('icons/favicon-32.png') }}" sizes="32x32">
 
 @if(trim($pageTitle ?? '') === '' && trim($fullTitle ?? '') === '')
 @php

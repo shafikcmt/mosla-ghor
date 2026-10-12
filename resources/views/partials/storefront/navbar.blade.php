@@ -43,16 +43,20 @@
 @include('partials.storefront.announcement', ['ws' => $ws])
 
 <style>
-.ms-site-brand{min-width:0;max-width:190px;flex-shrink:1}.ms-site-brand>span{line-height:1.4;padding-block:1px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ms-drawer-brand{min-width:0;overflow-wrap:anywhere}
-@media(max-width:767px){.ms-site-brand{max-width:calc(100vw - 165px)}}
+.ms-site-brand{min-width:0;max-width:240px;flex-shrink:1}.ms-site-logo{width:44px;height:44px;flex-shrink:0}.ms-site-brand>span>span{line-height:1.4;padding-block:1px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ms-drawer-brand{min-width:0;overflow-wrap:anywhere}
+@media(max-width:767px){.ms-site-brand{max-width:calc(100vw - 165px)}.ms-site-logo{width:38px;height:38px}}
 </style>
 <header class="bg-[#0f3d22]/95 backdrop-blur sticky top-0 z-50 shadow-md border-b border-green-900/60">
     <div class="max-w-7xl mx-auto px-3 sm:px-5 h-16 flex items-center gap-2">
 
         {{-- ── Brand (left) ── --}}
-        <a href="/" class="ms-site-brand group flex flex-col shrink-0" title="{{ $siteName }}">
-            <span class="font-serif-bn text-[#c9a227] text-xl sm:text-2xl font-bold group-hover:text-[#e2bb45] transition-colors">{{ $siteName }}</span>
-            <span class="block text-green-400 text-[10px] tracking-[.2em] uppercase mt-0.5">{{ $siteTagline }}</span>
+        <a href="/" class="ms-site-brand group flex items-center gap-2 shrink-0" title="{{ $siteName }}">
+            <img src="{{ asset('images/logo-96.webp') }}" srcset="{{ asset('images/logo-96.webp') }} 1x, {{ asset('images/logo-192.webp') }} 2x"
+                 alt="{{ $siteName }} logo" width="44" height="44" class="ms-site-logo rounded-full ring-1 ring-[#c9a227]/50 bg-[#fef9ee]">
+            <span class="flex flex-col min-w-0">
+                <span class="font-serif-bn text-[#c9a227] text-xl sm:text-2xl font-bold group-hover:text-[#e2bb45] transition-colors">{{ $siteName }}</span>
+                <span class="block text-green-400 text-[10px] tracking-[.2em] uppercase mt-0.5">{{ $siteTagline }}</span>
+            </span>
         </a>
 
         {{-- ── Desktop nav links ── --}}

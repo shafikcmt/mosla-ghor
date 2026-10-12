@@ -100,6 +100,9 @@ Route::get('/sitemap.xml', function () {
         ['loc' => url('/').'/?mode=wholesale',      'priority' => '0.8', 'freq' => 'daily'],
         ['loc' => route('faq'),                    'priority' => '0.5', 'freq' => 'monthly'],
         ['loc' => route('track-order'),            'priority' => '0.3', 'freq' => 'yearly'],
+        ['loc' => route('legal.privacy'),          'priority' => '0.2', 'freq' => 'yearly'],
+        ['loc' => route('legal.terms'),            'priority' => '0.2', 'freq' => 'yearly'],
+        ['loc' => route('legal.data-deletion'),    'priority' => '0.1', 'freq' => 'yearly'],
     ];
     \App\Models\Product::active()->orderBy('id')->get(['slug', 'updated_at'])->each(function ($p) use (&$urls) {
         $urls[] = ['loc' => route('products.show', $p->slug), 'priority' => '0.7', 'freq' => 'weekly', 'mod' => optional($p->updated_at)->toAtomString()];
@@ -145,6 +148,11 @@ Route::get('/faq', function () {
     $faqs = \App\Models\Faq::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
     return view('faq', compact('faqs'));
 })->name('faq');
+
+// Legal pages (linked from the footer and from the Meta app settings).
+Route::view('/privacy-policy', 'legal.privacy')->name('legal.privacy');
+Route::view('/terms', 'legal.terms')->name('legal.terms');
+Route::view('/data-deletion', 'legal.data-deletion')->name('legal.data-deletion');
 
 // ── Customer / User auth ───────────────────────────────────────────────────
 Route::name('customer.')->group(function () {

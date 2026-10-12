@@ -27,6 +27,7 @@ return [
         'storage/*',                   // product images (also used by admin/vendor pages)
         'build/*', 'css/*', 'js/*', 'images/*', 'icons/*',
         'manifest.json', 'sw.js', 'favicon.ico', 'robots.txt',
+        'privacy-policy', 'terms', 'data-deletion',   // Meta app review must always reach these
         // Payment callbacks / IPN / courier webhooks go here, e.g. 'payment/bkash/callback'.
     ],
 
