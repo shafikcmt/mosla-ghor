@@ -76,6 +76,8 @@
             <a href="/#products" class="hover:text-[#c9a227] transition-colors">পণ্য</a>
             <a href="{{ route('faq') }}" class="hover:text-[#c9a227] transition-colors">সাধারণ প্রশ্নোত্তর</a>
             <a href="/#contact" class="hover:text-[#c9a227] transition-colors">যোগাযোগ</a>
+            <a href="{{ route('legal.privacy') }}" class="hover:text-[#c9a227] transition-colors">গোপনীয়তা নীতি</a>
+            <a href="{{ route('legal.terms') }}" class="hover:text-[#c9a227] transition-colors">শর্তাবলি</a>
         </div>
         <div>© {{ date('Y') }} {{ $siteName }} — খাঁটি মশলার আস্থার দোকান।</div>
     </div>

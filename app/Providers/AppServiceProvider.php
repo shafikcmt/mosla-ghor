@@ -30,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         \Illuminate\Support\Facades\View::composer(
-            ['home', 'storefront.*', 'partials.*', 'customer.*', 'auth.unavailable', 'faq'],
+            ['home', 'storefront.*', 'partials.*', 'customer.*', 'auth.unavailable', 'faq', 'legal.*'],
             function ($view) {
                 $view->with('siteName', \App\Models\WebsiteSetting::siteName());
                 $view->with('siteTagline', \App\Models\WebsiteSetting::get('site_tagline', 'Authentic Spice Store'));

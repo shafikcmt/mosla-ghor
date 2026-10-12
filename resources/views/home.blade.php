@@ -837,6 +837,8 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                 <a href="#why-us"   class="hover:text-[#c9a227] transition-colors">আমাদের সম্পর্কে</a>
                 <a href="{{ route('faq') }}" class="hover:text-[#c9a227] transition-colors">সাধারণ প্রশ্নোত্তর</a>
                 <a href="#contact"  class="hover:text-[#c9a227] transition-colors">যোগাযোগ</a>
+                <a href="{{ route('legal.privacy') }}" class="hover:text-[#c9a227] transition-colors">গোপনীয়তা নীতি</a>
+                <a href="{{ route('legal.terms') }}" class="hover:text-[#c9a227] transition-colors">শর্তাবলি</a>
                 @if(($ws['show_vendor_links_in_footer'] ?? '1') === '1')
                     @if(($ws['vendor_login_enabled'] ?? '1') === '1' || ($ws['vendor_registration_enabled'] ?? '0') === '1')
                     <span class="text-green-800">|</span>
