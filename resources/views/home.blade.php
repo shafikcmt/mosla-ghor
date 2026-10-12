@@ -62,7 +62,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
     {{-- Installable "MoslaMart App" (manifest + home-screen install) --}}
     <link rel="manifest" href="{{ asset('manifest.json') }}">
     <meta name="theme-color" content="#14532d">
-    <link rel="apple-touch-icon" href="{{ asset('icons/icon-192.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('icons/apple-touch-icon.png') }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="{{ $siteName }}">
     <script>
