@@ -10,7 +10,7 @@ class MarketingSetting extends Model
     protected $fillable = [
         'pixel_enabled', 'pixel_ids', 'test_event_code', 'platform_pixel_scope',
         'track_admin_users', 'vendor_pixels_enabled', 'vendor_capi_allowed',
-        'capi_enabled', 'capi_access_token',
+        'capi_enabled', 'capi_access_token', 'test_event_code_expires_at',
     ];
 
     protected $hidden = ['capi_access_token'];
@@ -23,6 +23,7 @@ class MarketingSetting extends Model
         'vendor_capi_allowed'   => 'boolean',
         'capi_enabled'          => 'boolean',
         'capi_access_token'     => 'encrypted',
+        'test_event_code_expires_at' => 'datetime',
         'capi_last_success_at'  => 'datetime',
         'capi_last_error_at'    => 'datetime',
     ];

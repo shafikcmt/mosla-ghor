@@ -55,7 +55,7 @@ class MarketingSettingController extends Controller
 
         $ids = self::splitIds($data['pixel_ids'] ?? '');
         if ($request->boolean('pixel_enabled') && ! $ids) {
-            return back()->withInput()->withErrors(['pixel_ids' => 'পিক্সেল চালু করতে অন্তত একটি Pixel ID দিন।']);
+            return back()->withInput($request->except('capi_access_token'))->withErrors(['pixel_ids' => 'পিক্সেল চালু করতে অন্তত একটি Pixel ID দিন।']);
         }
 
         $settings = MarketingSetting::current();
@@ -63,16 +63,18 @@ class MarketingSettingController extends Controller
         $clearToken = $request->boolean('capi_token_clear') && ! $newToken;
         $hasToken = $newToken || (! $clearToken && MetaCapi::token($settings));
         if ($request->boolean('capi_enabled') && ! $hasToken) {
-            return back()->withInput()->withErrors(['capi_access_token' => 'Conversions API চালু করতে Access token দিন।']);
+            return back()->withInput($request->except('capi_access_token'))->withErrors(['capi_access_token' => 'Conversions API চালু করতে Access token দিন।']);
         }
         if ($request->boolean('capi_enabled') && ! ($request->boolean('pixel_enabled') && $ids)) {
-            return back()->withInput()->withErrors(['capi_enabled' => 'Conversions API চালাতে পিক্সেল চালু ও Pixel ID দেওয়া থাকতে হবে।']);
+            return back()->withInput($request->except('capi_access_token'))->withErrors(['capi_enabled' => 'Conversions API চালাতে পিক্সেল চালু ও Pixel ID দেওয়া থাকতে হবে।']);
         }
 
         $update = [
             'pixel_enabled'         => $request->boolean('pixel_enabled'),
             'pixel_ids'             => $ids,
             'test_event_code'       => $data['test_event_code'] ?? null,
+            // A Test Events code only works for 2 hours after it is saved, so it can't be left on by accident.
+            'test_event_code_expires_at' => ! empty($data['test_event_code']) ? self::testCodeExpiry($settings, $data['test_event_code']) : null,
             'platform_pixel_scope'  => $data['platform_pixel_scope'],
             'track_admin_users'     => $request->boolean('track_admin_users'),
             'vendor_pixels_enabled' => $request->boolean('vendor_pixels_enabled'),
@@ -98,8 +100,8 @@ class MarketingSettingController extends Controller
     public function testCapi(Request $request)
     {
         $settings = MarketingSetting::current();
-        if (! $settings->test_event_code) {
-            return back()->with('error', 'আগে Test event code দিয়ে সংরক্ষণ করুন (Events Manager → Test Events থেকে পাবেন)।');
+        if (! MetaCapi::activeTestCode($settings)) {
+            return back()->with('error', 'আগে (বা নতুন করে) Test event code দিয়ে সংরক্ষণ করুন — কোডটি সংরক্ষণের ২ ঘণ্টা পর্যন্ত কাজ করে (Events Manager → Test Events থেকে পাবেন)।');
         }
         if (! MetaCapi::token($settings) || ! MetaPixel::platformIds()) {
             return back()->with('error', 'পিক্সেল চালু, Pixel ID ও Access token দিয়ে আগে সংরক্ষণ করুন।');
@@ -125,6 +127,15 @@ class MarketingSettingController extends Controller
         return back()->with('success', $vendorSetting->admin_blocked
             ? 'ভেন্ডরের পিক্সেল বন্ধ করা হয়েছে।'
             : 'ভেন্ডরের পিক্সেল আবার চালু করা হয়েছে।');
+    }
+
+    /** Same code re-saved keeps its running window; a new/changed code starts a fresh 2-hour window. */
+    private static function testCodeExpiry(MarketingSetting $settings, string $code)
+    {
+        if ($settings->test_event_code === $code && $settings->test_event_code_expires_at?->isFuture()) {
+            return $settings->test_event_code_expires_at;
+        }
+        return now()->addHours(2);
     }
 
     /** @return string[] */

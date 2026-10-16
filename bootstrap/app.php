@@ -12,7 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-         // Trust Cloudflare Tunnel / reverse proxy so HTTPS URLs are generated correctly
+         // Trust Cloudflare Tunnel / reverse proxy so HTTPS URLs are generated correctly.
+         // '*' is the safe-for-compatibility default; AppServiceProvider narrows it from the
+         // TRUSTED_PROXIES env value (config app.trusted_proxies) once config is loaded.
         $middleware->trustProxies(at: '*');
         $middleware->alias([
             'admin'         => \App\Http\Middleware\AdminMiddleware::class,
@@ -28,7 +30,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [\App\Http\Middleware\MaintenanceMode::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->dontFlash(['api_key', 'api_secret']);
+        // The Meta Conversions API token must never be flashed back into the session after a failed validation.
+        $exceptions->dontFlash(['api_key', 'api_secret', 'capi_access_token']);
         // Whole request bigger than PHP's post_max_size (thrown before sessions/controllers run).
         $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, $request) {
             $limit = \App\Support\ServerLimits::human(\App\Support\ServerLimits::postMax());
@@ -49,7 +52,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json(['message' => 'Session expired. Please try again.'], 419);
             }
             return redirect()->back()
-                ->withInput($request->except('password', 'password_confirmation', 'api_key', 'api_secret'))
+                ->withInput($request->except('password', 'password_confirmation', 'api_key', 'api_secret', 'capi_access_token'))
                 ->with('error', 'Session expired. Please try again. (পেজটি refresh করে আবার চেষ্টা করুন।)');
         });
     })->create();

@@ -20,10 +20,15 @@ class CustomerWishlistController extends CustomerBaseController
 
     public function store(Product $product)
     {
-        Wishlist::firstOrCreate([
+        $wish = Wishlist::firstOrCreate([
             'user_id'    => Auth::id(),
             'product_id' => $product->id,
         ]);
+
+        // Meta AddToWishlist only for a real new addition (not a repeat click, not a failed write).
+        if ($wish->wasRecentlyCreated) {
+            \App\Support\MetaPixel::addToWishlist($product);
+        }
 
         return back()->with('success', 'উইশলিস্টে যোগ হয়েছে।');
     }

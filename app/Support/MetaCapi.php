@@ -26,14 +26,24 @@ class MetaCapi
     public const GRAPH_URL = 'https://graph.facebook.com';
 
     /** CAPI is configured and this visitor may be tracked (same admin exclusion as the pixel). */
-    public static function enabled(): bool
+    public static function enabled(bool $humanOnly = false): bool
     {
+        if ($humanOnly && self::looksLikeBot()) {
+            return false;
+        }
         $settings = MetaPixel::settings();
         return $settings
             && $settings->capi_enabled
             && self::token($settings) !== null
             && MetaPixel::platformIds() !== []
             && MetaPixel::trackingAllowed();
+    }
+
+    /** Crawlers / link-preview fetchers render pages but are not customers: never send them as events. */
+    public static function looksLikeBot(): bool
+    {
+        $ua = (string) request()->userAgent();
+        return $ua === '' || preg_match('/bot|crawl|spider|slurp|facebookexternalhit|facebot|preview|headless|lighthouse|pingdom|monitor/i', $ua) === 1;
     }
 
     /** Decrypted token, or null (missing, or unreadable after an APP_KEY change). */
@@ -68,6 +78,50 @@ class MetaCapi
         });
     }
 
+    /** ViewContent — same event_id as the browser copy; humans only. */
+    public static function viewContent(Product $product, array $params, string $eventId): void
+    {
+        self::safely(function () use ($product, $params, $eventId) {
+            if (! self::enabled(true) || ! MetaPixel::platformAllowsProduct($product->vendor_id)) {
+                return;
+            }
+            self::queue([self::event('ViewContent', $eventId, $params, self::userData([]), route('products.show', $product->slug))]);
+        });
+    }
+
+    /** AddToWishlist — same event_id as the browser copy fired on the next page. */
+    public static function addToWishlist(Product $product, array $params, string $eventId): void
+    {
+        self::safely(function () use ($product, $params, $eventId) {
+            if (! self::enabled() || ! MetaPixel::platformAllowsProduct($product->vendor_id)) {
+                return;
+            }
+            self::queue([self::event('AddToWishlist', $eventId, $params, self::userData([]), route('products.show', $product->slug))]);
+        });
+    }
+
+    /** Cart-shaped platform event (InitiateCheckout, AddToCart): params come from MetaPixel::cartParamsFor(). */
+    public static function cartEvent(string $name, string $eventId, array $params): void
+    {
+        self::safely(function () use ($name, $eventId, $params) {
+            if (! self::enabled(true)) {
+                return;
+            }
+            self::queue([self::event($name, $eventId, $params, self::userData([]))]);
+        });
+    }
+
+    /** Contact (WhatsApp / phone click reported by the browser) — same event_id as the browser copy. */
+    public static function contact(string $method, string $eventId): void
+    {
+        self::safely(function () use ($method, $eventId) {
+            if (! self::enabled(true)) {
+                return;
+            }
+            self::queue([self::event('Contact', $eventId, ['contact_method' => $method], self::userData([]))]);
+        });
+    }
+
     public static function leadForProduct(Product $product, string $eventId, array $contact): void
     {
         self::safely(function () use ($product, $eventId, $contact) {
@@ -87,7 +141,7 @@ class MetaCapi
                 return;
             }
             self::queue([self::event('Lead', $eventId,
-                ['content_ids' => $ids, 'content_type' => 'product_group', 'currency' => MetaPixel::CURRENCY],
+                ['content_ids' => $ids, 'content_type' => 'product', 'currency' => MetaPixel::CURRENCY],
                 self::userData($contact))]);
         });
     }
@@ -149,6 +203,9 @@ class MetaCapi
     public static function userData(array $contact, bool $withRequest = true): array
     {
         $data = ['country' => [self::hash('bd')]];
+        if ($withRequest) {
+            $contact += self::signedInContact(); // fills only what the caller did not supply
+        }
 
         if (($phone = Phone::normalize($contact['phone'] ?? null)) && Phone::isValidBd($phone)) {
             $data['ph'] = [self::hash(Phone::toWa($phone))];
@@ -184,6 +241,26 @@ class MetaCapi
         return array_filter($data, fn ($v) => $v !== '' && $v !== null);
     }
 
+    /** Identifiers of the signed-in customer (never admins), for events that carry no form data. */
+    private static function signedInContact(): array
+    {
+        try {
+            $user = auth()->user();
+            if (! $user || $user->is_admin || $user->role !== 'customer') {
+                return [];
+            }
+            $customer = $user->customer;
+            return array_filter([
+                'phone' => $customer?->mobile_number ?? $user->phone,
+                'email' => $customer?->email ?? $user->email,
+                'name' => $customer?->name ?? $user->name,
+                'external_id' => $customer?->id, // same id the order / registration events use
+            ]);
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
     public static function hash(string $value): string
     {
         return hash('sha256', $value);
@@ -214,7 +291,7 @@ class MetaCapi
         $payload = array_filter([
             'data' => json_encode(array_values($events), JSON_UNESCAPED_UNICODE),
             'access_token' => $token,
-            'test_event_code' => $includeTestCode ? $settings->test_event_code : null,
+            'test_event_code' => $includeTestCode ? self::activeTestCode($settings) : null,
         ]);
 
         $ok = true;
@@ -247,6 +324,20 @@ class MetaCapi
         }
 
         return [$ok, $message];
+    }
+
+    /**
+     * The Test Events code is honoured only while it has not expired (set to 2 hours when saved),
+     * so a forgotten code can never swallow production events for long.
+     */
+    public static function activeTestCode(?MarketingSetting $settings): ?string
+    {
+        $code = $settings?->test_event_code;
+        if (! $code) {
+            return null;
+        }
+        $expires = $settings->test_event_code_expires_at;
+        return ($expires && $expires->isFuture()) ? $code : null;
     }
 
     /** Tracking must never break the business action around it. */

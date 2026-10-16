@@ -421,6 +421,7 @@ class OrderController extends Controller
 
         // One-time flag: the success page fires the Meta Purchase event only for this browser, once.
         $request->session()->put(\App\Support\MetaPixel::PURCHASE_KEY, $order->order_number);
+        $request->session()->forget(\App\Support\MetaPixel::CHECKOUT_KEY); // next cart may fire InitiateCheckout again
         // Server-side copy (Conversions API), same event id — Meta de-duplicates the pair.
         \App\Support\MetaCapi::purchase($order, $validated['customer_email'] ?? null);
 

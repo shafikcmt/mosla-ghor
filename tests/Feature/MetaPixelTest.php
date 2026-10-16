@@ -246,8 +246,10 @@ JS;
         $this->assertSame([$this->productA->id => $this->vendorA->id], $cfg['productVendors']);
         $platform = $this->eventsFor($cfg, self::PLATFORM, 'ViewContent');
         $this->assertCount(1, $platform);
-        $this->assertSame([(string) $this->productA->id], $platform[0]['params']['content_ids']);
-        $this->assertSame('product_group', $platform[0]['params']['content_type']);
+        $lowest = $this->productA->prices()->where('is_active', true)->whereNull('product_variant_id')->where('sell_type', 'retail')->orderBy('final_price')->orderBy('id')->first();
+        $this->assertSame([$this->productA->id.'-'.$lowest->id], $platform[0]['params']['content_ids']);
+        $this->assertSame('product', $platform[0]['params']['content_type']);
+        $this->assertSame($platform[0]['eventID'].'-v'.$this->vendorA->id, $this->eventsFor($cfg, self::VENDOR_A, 'ViewContent')[0]['eventID']);
         $this->assertCount(1, $this->eventsFor($cfg, self::VENDOR_A, 'ViewContent'));
         $this->assertSame([], $this->eventsFor($cfg, self::VENDOR_B), 'Vendor B must not receive vendor A product events.');
 

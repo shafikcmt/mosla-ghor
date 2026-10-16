@@ -122,6 +122,10 @@ Route::get('/robots.txt', function () {
 
 // ── Public product detail (SEO-friendly) ───────────────────────────────────
 Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
+
+// Meta Conversions API copies of browser-only actions (AddToCart, Contact). Server re-derives all values.
+Route::post('/meta/add-to-cart', [\App\Http\Controllers\MetaEventController::class, 'addToCart'])->middleware('throttle:60,1')->name('meta.add-to-cart');
+Route::post('/meta/contact', [\App\Http\Controllers\MetaEventController::class, 'contact'])->middleware('throttle:30,1')->name('meta.contact');
 Route::post('/products/{product:slug}/reviews', [ProductController::class, 'storeReview'])->middleware('guest.allowed:review')->name('products.reviews.store');
 
 // Public wholesale enquiry (guest or logged-in). Rate-limited for abuse safety.

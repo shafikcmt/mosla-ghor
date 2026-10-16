@@ -36,7 +36,7 @@
                 <label class="block text-xs font-medium text-gray-600 mb-1" for="test_event_code">Test event code (ঐচ্ছিক)</label>
                 <input id="test_event_code" name="test_event_code" maxlength="30" value="{{ old('test_event_code', $settings->test_event_code) }}" placeholder="TEST12345"
                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gray-400">
-                <p class="text-gray-400 text-xs mt-1">সার্ভার-সাইড (Conversions API) টেস্টে ব্যবহার হবে — দেওয়া থাকলে সব সার্ভার ইভেন্ট শুধু Test Events-এ যায়, তাই টেস্ট শেষে মুছে দিন। ব্রাউজার ইভেন্ট দেখতে Events Manager → Test Events-এ ওয়েবসাইটের লিংক দিয়ে সাইট খুলুন।</p>
+                <p class="text-gray-400 text-xs mt-1">Events Manager → Test Events থেকে পাওয়া কোড। সংরক্ষণের পর কোডটি <b>২ ঘণ্টা</b> কাজ করে, তারপর নিজে থেকেই বন্ধ হয়ে যায় (সার্ভার ইভেন্ট আবার সাধারণভাবে যায়)। কোড চালু থাকাকালীন সব <b>সার্ভার (Conversions API)</b> ইভেন্ট শুধু Test Events-এ যায়, আসল রিপোর্টে নয়। ব্রাউজার ইভেন্ট এতে প্রভাবিত হয় না। টেস্ট শেষে ঘরটি ফাঁকা করে সংরক্ষণ করুন।</p>
                 @error('test_event_code')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
             </div>
 
@@ -70,7 +70,9 @@
             <h2 class="text-sm font-semibold text-gray-600">Conversions API (সার্ভার-সাইড ইভেন্ট)</h2>
         </div>
         <div class="px-6 py-5 space-y-5">
-            <p class="text-xs text-gray-500">ব্রাউজার পিক্সেল iPhone, ad-blocker বা স্লো নেটের কারণে অনেক অর্ডার মিস করে। চালু করলে Purchase, Lead ও CompleteRegistration সার্ভার থেকেও Meta-তে যাবে (একই event ID, তাই ডাবল গণনা হবে না)। কাস্টমারের ফোন/ইমেইল হ্যাশ করে পাঠানো হয়। শুধু প্ল্যাটফর্ম পিক্সেলে যায়।</p>
+            <p class="text-xs text-gray-500">ব্রাউজার পিক্সেল iPhone, ad-blocker বা স্লো নেটের কারণে অনেক ইভেন্ট মিস করে। চালু করলে নিচের তালিকার ইভেন্টগুলো সার্ভার থেকেও Meta-তে যাবে; ব্রাউজার ও সার্ভার একই <b>event ID</b> ব্যবহার করে, তাই Meta একটিকেই গণনা করে (ডুপ্লিকেট হয় না)। ফোন, ইমেইল, প্রথম নাম, দেশ ও external ID <b>SHA-256 হ্যাশ</b> করে পাঠানো হয়; IP, user-agent, <code>_fbp</code>, <code>_fbc</code> হ্যাশ ছাড়াই (Meta-র নিয়ম)। শুধু প্ল্যাটফর্ম পিক্সেলে যায়; ভেন্ডর পিক্সেলে সার্ভার ইভেন্ট নেই।</p>
+
+            @include('admin.partials.meta-events-table')
 
             <input type="hidden" name="capi_enabled" value="0">
             <label class="flex items-start gap-3 cursor-pointer">
@@ -104,8 +106,10 @@
                 @if($settings->capi_last_error_at)
                 <p>শেষ ত্রুটি ({{ $settings->capi_last_error_at->timezone('Asia/Dhaka')->format('d M Y, h:i A') }}): <span class="text-red-600">{{ $settings->capi_last_error }}</span></p>
                 @endif
-                @if($settings->test_event_code)
-                <p class="text-amber-700">⚠ Test event code দেওয়া আছে — সার্ভার ইভেন্ট শুধু “Test Events”-এ যাচ্ছে। টেস্ট শেষে কোডটি মুছে সংরক্ষণ করুন।</p>
+                @if(\App\Support\MetaCapi::activeTestCode($settings))
+                <p class="text-amber-700">⚠ Test event code চালু আছে (মেয়াদ শেষ: {{ $settings->test_event_code_expires_at->timezone('Asia/Dhaka')->format('d M Y, h:i A') }}) — সার্ভার ইভেন্ট শুধু “Test Events”-এ যাচ্ছে, আসল রিপোর্টে নয়। টেস্ট শেষে কোডটি মুছে সংরক্ষণ করুন।</p>
+                @elseif($settings->test_event_code)
+                <p class="text-gray-500">Test event code-এর মেয়াদ শেষ — সার্ভার ইভেন্ট এখন সাধারণভাবে যাচ্ছে। আবার টেস্ট করতে কোডটি নতুন করে সংরক্ষণ করুন, অথবা ঘরটি ফাঁকা করুন।</p>
                 @endif
             </div>
         </div>

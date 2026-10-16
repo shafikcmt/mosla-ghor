@@ -20,8 +20,8 @@
             <span class="en">Name, phone, email, delivery address, order and payment details.</span></li>
         <li><b>Facebook / Messenger / WhatsApp:</b> আপনি আমাদের পেজে কমেন্ট বা মেসেজ করলে Meta আমাদের সেই লেখা, আপনার পাবলিক প্রোফাইল নাম ও পেজ-ভিত্তিক আইডি পাঠায়; মেসেজে আপনি নিজে যে ফোন নম্বর, ঠিকানা বা পরিমাণ লেখেন সেটিও।
             <span class="en">When you comment on or message our Page, Meta sends us the text, your public name and a Page-scoped ID, plus anything you write (phone, address, quantity).</span></li>
-        <li><b>ওয়েবসাইট ব্যবহার:</b> IP ঠিকানা, ব্রাউজার এবং Meta Pixel-এর কুকি (<code>_fbp</code>, <code>_fbc</code>)।
-            <span class="en">IP address, browser and Meta Pixel cookies.</span></li>
+        <li><b>ওয়েবসাইট ব্যবহার:</b> IP ঠিকানা, ব্রাউজার এবং Meta Pixel-এর কুকি (<code>_fbp</code>, <code>_fbc</code>)। আমরা দেখা পণ্য, কার্টে যোগ করা পণ্য ও পরিমাণ, সার্চ শব্দ, উইশলিস্ট, চেকআউট ও অর্ডার, enquiry, রেজিস্ট্রেশন এবং WhatsApp/ফোন লিংকে ক্লিকের মতো কার্যক্রম Meta-কে জানাই — আপনার ব্রাউজার থেকে (Meta Pixel) এবং আমাদের সার্ভার থেকে (Conversions API)।
+            <span class="en">IP address, browser and Meta Pixel cookies. We report activity such as products viewed, items added to cart (with quantity), search terms, wishlist, checkout and orders, enquiries, registrations and WhatsApp/phone link clicks to Meta — from your browser (Meta Pixel) and from our server (Conversions API).</span></li>
     </ul>
 </section>
 
@@ -34,8 +34,8 @@
             <span class="en">To answer questions about prices, stock and orders. Replies may be automated (AI-assisted); our team steps in when needed.</span></li>
         <li>আপনি ফোন নম্বর দিলে অর্ডার বা যোগাযোগের জন্য সেটি “লিড” হিসেবে সংরক্ষণ।
             <span class="en">To save a follow-up lead when you share your phone number.</span></li>
-        <li>বিজ্ঞাপনের ফলাফল মাপা। Meta Pixel ও Conversions API-তে ফোন/ইমেইল শুধু <b>SHA-256 হ্যাশ</b> করে পাঠানো হয়।
-            <span class="en">To measure ads. Phone and email are sent to Meta only as SHA-256 hashes.</span></li>
+        <li>বিজ্ঞাপনের ফলাফল মাপা। Conversions API-তে ফোন, ইমেইল, প্রথম নাম, দেশ ও অভ্যন্তরীণ গ্রাহক আইডি শুধু <b>SHA-256 হ্যাশ</b> করে পাঠানো হয়; IP ঠিকানা, ব্রাউজার তথ্য ও Meta কুকি Meta-র নিয়ম অনুযায়ী হ্যাশ ছাড়া যায়। অ্যাডমিন/স্টাফ ট্র্যাফিক বাদ দেওয়া হয়।
+            <span class="en">To measure ads. Via the Conversions API, phone, email, first name, country and our internal customer id are sent only as SHA-256 hashes; IP address, browser details and Meta cookies are sent unhashed as Meta requires. Admin/staff traffic is excluded.</span></li>
     </ul>
     <p>আমরা আপনার তথ্য <b>বিক্রি করি না</b>। <span class="en">We do not sell your information.</span></p>
 </section>

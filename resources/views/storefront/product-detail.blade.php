@@ -43,11 +43,12 @@
     // a price-less page and no way to enquire.) Retail products still only show the
     // wholesale block when they actually carry wholesale price rows.
     $showWholesale  = $isWholesale ? true : $hasWholesale;
-    $lowestRetail   = $hasRetail ? (float) $retailPacks->min('final_price') : null;
+    $lowestPack     = $hasRetail ? $retailPacks->sortBy('final_price')->first() : null;
+    $lowestRetail   = $lowestPack ? (float) $lowestPack->final_price : null;
     $moqLabel       = $product->moqLabel();
 
     // Meta Pixel ViewContent → platform (per scope) + this product's vendor only.
-    \App\Support\MetaPixel::viewContent($product, $lowestRetail);
+    \App\Support\MetaPixel::viewContent($product, $lowestRetail, $lowestPack?->id);
 
     // Enquiry is public (guest allowed). Autofill from the logged-in customer profile.
     $isCustomer   = auth()->check() && auth()->user()->role === 'customer';

@@ -9,7 +9,7 @@
     $mpConfig['queue'] = \App\Support\MetaPixel::events();
 @endphp
 <script>window.MoslaPixelConfig = @json($mpConfig);</script>
-<script src="{{ asset('js/mosla-pixel.js') }}?v=20260929" defer></script>
+<script src="{{ asset('js/mosla-pixel.js') }}?v=20261016" defer></script>
 @foreach(\App\Support\MetaPixel::platformIds() as $mpId)
 <noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id={{ $mpId }}&amp;ev=PageView&amp;noscript=1"></noscript>
 @endforeach

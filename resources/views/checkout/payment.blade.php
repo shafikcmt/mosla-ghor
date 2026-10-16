@@ -1,6 +1,6 @@
 @extends('storefront.layout')
 @section('title', 'পেমেন্ট মেথড')
-@php /* Meta Pixel: split per vendor server-side */ \App\Support\MetaPixel::checkoutEvent('AddPaymentInfo', $items); @endphp
+@php /* Meta Pixel: deferred — sent only when the customer submits with a payment method */ \App\Support\MetaPixel::paymentInfo($items); @endphp
 
 @section('content')
 @php
@@ -246,6 +246,9 @@ document.getElementById('place-order-form')?.addEventListener('submit', function
         errBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
+
+    // Meta AddPaymentInfo: the customer confirmed a payment method (once per page; no-op if tracking is off).
+    try { if (window.MoslaPixel) window.MoslaPixel.fire('AddPaymentInfo'); } catch (e) {}
 
     btn.disabled = true; btn.textContent = 'অর্ডার হচ্ছে...';
     fetch(this.action, {

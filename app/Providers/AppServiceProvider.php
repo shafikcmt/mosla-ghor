@@ -20,6 +20,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Proxy trust: '*' (default) or a comma list of proxy IPs/CIDRs from TRUSTED_PROXIES.
+        // Behind Cloudflare Tunnel/cloudflared the proxy is local (127.0.0.1), so narrowing it
+        // to that address stops visitors from spoofing X-Forwarded-For (which feeds Meta's client_ip_address).
+        $trusted = config('app.trusted_proxies', '*');
+        \Illuminate\Http\Middleware\TrustProxies::at(
+            in_array($trusted, ['*', '**'], true) ? $trusted : array_values(array_filter(array_map('trim', explode(',', (string) $trusted))))
+        );
+
         // Apply admin-managed SMTP settings (DB) over .env when enabled.
         MailConfigurator::apply();
 

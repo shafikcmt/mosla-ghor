@@ -54,6 +54,9 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Reverse proxies whose X-Forwarded-* headers are trusted: '*' or comma list of IPs/CIDRs.
+    'trusted_proxies' => env('TRUSTED_PROXIES', '*'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

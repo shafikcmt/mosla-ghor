@@ -72,7 +72,9 @@ class CustomerAuthController extends Controller
 
         Auth::login($user);
 
-        // Meta Pixel CompleteRegistration on the next page (platform pixel only).
+        // Meta CompleteRegistration — only here, after the account really exists. Accounts that are
+        // auto-created for guest checkout / enquiries are intentionally NOT counted as registrations.
+        // Meta Pixel copy fires on the next page (platform pixel only); same event id as the server copy.
         \App\Support\MetaPixel::completeRegistration('reg-'.$user->id);
         \App\Support\MetaCapi::completeRegistration('reg-'.$user->id, [
             'phone' => $data['mobile_number'], 'email' => $data['email'] ?? null, 'name' => $data['name'], 'external_id' => $customer->id,

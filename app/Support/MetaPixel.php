@@ -7,7 +7,9 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\VendorMarketingSetting;
 use Illuminate\Support\Facades\Auth;
+use App\Models\ProductPrice;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Meta (Facebook) Pixel — browser events (Phase A). Server-side copies of the
@@ -20,8 +22,19 @@ use Illuminate\Support\Facades\Log;
  *  - Platform scope 'own' = the platform pixel only receives admin products (vendor_id NULL).
  *  - Nothing is output for logged-in admins unless track_admin_users is on.
  *
- * Content ids match the Phase C catalog feed: packs "{product_id}-{price_id}"
- * (content_type product); the product page uses the product id (product_group).
+ * CONTENT ID SCHEME (one identity for every funnel event — ViewContent, AddToWishlist,
+ * AddToCart, InitiateCheckout, AddPaymentInfo, Purchase):
+ *   content_type = 'product', id = "{product_id}-{product_prices.id}" (see contentId()).
+ *   A product_prices row is the sellable pack (weight / variant), it is unique and stable.
+ *   products.sku / product_variants.sku are NOT used: both are nullable and not unique,
+ *   so they cannot identify a sellable item reliably. A future catalog feed must publish
+ *   the same "{product_id}-{price_id}" as its id (SKU can go in a separate feed column).
+ *   Fallback when no pack is known (wholesale enquiry Lead, products without a priced
+ *   retail pack): the bare "{product_id}".
+ *
+ * QUANTITY: contents[].quantity = packs ordered, contents[].item_price = price of ONE pack,
+ * value = Σ(item_price × quantity), num_items = Σ quantity. Purchase value is the
+ * order grand total instead (what the customer pays, incl. delivery and discount).
  *
  * State lives in request attributes (not a singleton) so nothing leaks between requests.
  */
@@ -31,6 +44,7 @@ class MetaPixel
     public const CURRENCY = 'BDT';
     public const NEXT_PAGE_KEY = 'meta_pixel_next';
     public const PURCHASE_KEY = 'meta_pixel_purchase';
+    public const CHECKOUT_KEY = 'meta_pixel_checkout';
 
     private const ATTR = 'meta_pixel.state';
 
@@ -63,6 +77,11 @@ class MetaPixel
             return false;
         }
         if (Auth::user()?->is_admin && ! $settings->track_admin_users) {
+            return false;
+        }
+        // Office / developer IPs (META_EXCLUDE_IPS) are internal traffic.
+        $excluded = (array) config('services.meta.exclude_ips', []);
+        if ($excluded && in_array((string) request()->ip(), $excluded, true)) {
             return false;
         }
         return true;
@@ -133,7 +152,7 @@ class MetaPixel
     // ── Event queue ─────────────────────────────────────────────────────────
 
     /** Queue one single-pixel event for this page. */
-    public static function add(string $pixelId, string $name, array $params, ?string $eventId = null, bool $vendor = false): void
+    public static function add(string $pixelId, string $name, array $params, ?string $eventId = null, bool $vendor = false, bool $deferred = false): void
     {
         if (! self::validId($pixelId)) {
             return;
@@ -141,6 +160,7 @@ class MetaPixel
         $state = self::state();
         $state['events'][] = array_filter([
             'pixel' => $pixelId, 'name' => $name, 'params' => $params, 'eventID' => $eventId, 'vendor' => $vendor,
+            'deferred' => $deferred ?: null, // held by the browser until the customer acts (AddPaymentInfo)
         ], fn ($v) => $v !== null);
         self::save($state);
     }
@@ -206,7 +226,7 @@ class MetaPixel
         return $order->items->map(fn ($i) => [
             'product_id' => $i->product_id, 'price_id' => $i->price_id,
             'vendor_id' => $i->vendor_id ?: ($owners[$i->product_id] ?? null),
-            'line_total' => $i->line_total, 'quantity' => 1,
+            'line_total' => $i->line_total, 'unit_price' => $i->unit_price, // packs derived in lines()
         ])->all();
     }
 
@@ -249,6 +269,9 @@ class MetaPixel
             'vendors' => (object) $vendors,
             'productVendors' => (object) $productVendors,
             'currency' => self::CURRENCY,
+            // Browser may mirror AddToCart / Contact to the server (Conversions API) — a flag only, never a token.
+            'capi' => MetaCapi::enabled(),
+            'endpoints' => ['cart' => route('meta.add-to-cart'), 'contact' => route('meta.contact')],
         ];
         if ($own && $config['platform']) {
             $config['adminProducts'] = self::adminProductIds();
@@ -259,43 +282,157 @@ class MetaPixel
 
     // ── Event builders ──────────────────────────────────────────────────────
 
-    public static function viewContent(Product $product, ?float $value = null): void
+    /** Unique id for one logical event; the SAME value goes to the browser and to the Conversions API. */
+    public static function newEventId(string $prefix): string
+    {
+        return $prefix.'-'.Str::lower(Str::random(20));
+    }
+
+    /** The single content identity used by every funnel event (see class doc). */
+    public static function contentId(int $productId, ?int $priceId = null): string
+    {
+        return $priceId ? $productId.'-'.$priceId : (string) $productId;
+    }
+
+    /** The pack shown as "from" price on the product page: cheapest active direct retail pack. */
+    public static function defaultPack(Product $product): ?ProductPrice
+    {
+        try {
+            return $product->prices()->where('is_active', true)->whereNull('product_variant_id')
+                ->where('sell_type', 'retail')->orderBy('final_price')->orderBy('id')->first();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** Single-product params (ViewContent, AddToWishlist). Price is for ONE pack; quantity is 1. */
+    public static function productParams(Product $product, ?float $price = null, ?int $priceId = null): array
+    {
+        $id = self::contentId($product->id, $priceId);
+        $content = ['id' => $id, 'quantity' => 1];
+        if ($price !== null) {
+            $content['item_price'] = round($price, 2);
+        }
+        return array_filter([
+            'content_ids' => [$id],
+            'content_type' => 'product',
+            'contents' => [$content],
+            'content_name' => $product->display_name,
+            'value' => $price !== null ? round($price, 2) : null,
+            'currency' => self::CURRENCY,
+        ], fn ($v) => $v !== null);
+    }
+
+    /** ViewContent: one event id shared by the browser pixel(s) and the Conversions API. */
+    public static function viewContent(Product $product, ?float $value = null, ?int $priceId = null): void
     {
         self::registerProduct($product);
         if (! self::active()) {
             return;
         }
-        $params = array_filter([
-            'content_ids' => [(string) $product->id],
-            'content_type' => 'product_group',
-            'content_name' => $product->display_name,
-            'value' => $value !== null ? round($value, 2) : null,
-            'currency' => self::CURRENCY,
-        ], fn ($v) => $v !== null);
+        $state = self::state();
+        if (isset($state['viewed'][$product->id])) {
+            return; // one ViewContent per product per request, however many times the view calls this
+        }
+        $state['viewed'][$product->id] = true;
+        self::save($state);
 
-        self::toProductOwners($product->vendor_id, 'ViewContent', $params);
+        $params = self::productParams($product, $value, $value !== null ? $priceId : null);
+        $eventId = self::newEventId('vc');
+
+        self::toProductOwners($product->vendor_id, 'ViewContent', $params, $eventId);
+        MetaCapi::viewContent($product, $params, $eventId);
+    }
+
+    /** AddToWishlist after a wishlist row was really created; fires on the next page (POST → redirect). */
+    public static function addToWishlist(Product $product): void
+    {
+        $pack = self::defaultPack($product);
+        $params = self::productParams($product, $pack ? (float) $pack->final_price : null, $pack?->id);
+        $eventId = self::newEventId('wl');
+        self::queueNextPage('AddToWishlist', $params, $eventId, $product->vendor_id, true);
+        MetaCapi::addToWishlist($product, $params, $eventId);
+    }
+
+    /** Resolved server-side lines for one pack × quantity (used by the AddToCart server copy). */
+    public static function lineForPack(ProductPrice $price, int $qty): array
+    {
+        return self::lines([[
+            'product_id' => $price->product_id, 'price_id' => $price->id, 'vendor_id' => $price->product?->vendor_id,
+            'quantity' => $qty, 'unit_price' => $price->final_price, 'line_total' => (float) $price->final_price * $qty,
+        ]])[0] ?? [];
+    }
+
+    /** Platform-pixel view of resolved lines (scope 'own' drops vendor lines). */
+    public static function platformLines(array $lines): array
+    {
+        return array_values(self::platformScopeOwn() ? array_filter($lines, fn ($l) => $l['vendor_id'] === null) : $lines);
+    }
+
+    /** Public wrapper so the Conversions API shares the exact browser cart shape. */
+    public static function cartParamsFor(array $lines): array
+    {
+        return self::cartParams($lines);
     }
 
     /**
-     * Cart-shaped events (InitiateCheckout, AddPaymentInfo). $items: arrays/objects with
-     * product_id, price_id, vendor_id, line_total and optional quantity.
+     * InitiateCheckout — the customer reached the order-review step. Browser + Conversions API,
+     * one shared event id. A refresh / back-navigation with an unchanged cart inside 30 minutes
+     * is ignored (session fingerprint), and the fingerprint is cleared when an order is placed.
      */
-    public static function checkoutEvent(string $name, iterable $items): void
+    public static function initiateCheckout(iterable $items): void
     {
+        $items = is_array($items) ? $items : iterator_to_array($items);
         self::registerItems($items);
         if (! self::active()) {
             return;
         }
         $lines = self::lines($items);
+        if (! $lines) {
+            return;
+        }
 
-        $platformLines = self::platformScopeOwn() ? array_filter($lines, fn ($l) => $l['vendor_id'] === null) : $lines;
-        if ($platformLines) {
+        $fingerprint = md5(json_encode(array_map(fn ($l) => [$l['id'], $l['quantity'], $l['line_total']], $lines)));
+        $seen = session(self::CHECKOUT_KEY);
+        if (is_array($seen) && ($seen['fp'] ?? null) === $fingerprint && time() - (int) ($seen['at'] ?? 0) < 1800) {
+            return;
+        }
+        session([self::CHECKOUT_KEY => ['fp' => $fingerprint, 'at' => time()]]);
+
+        $eventId = self::newEventId('ic');
+        self::emitCart('InitiateCheckout', $lines, $eventId, false);
+        if ($platformLines = self::platformLines($lines)) {
+            MetaCapi::cartEvent('InitiateCheckout', $eventId, self::cartParams($platformLines));
+        }
+    }
+
+    /**
+     * AddPaymentInfo — queued as DEFERRED: the browser sends it only when the customer submits the
+     * payment step with a chosen method (MoslaPixel.fire('AddPaymentInfo')), never on page view.
+     * Browser only (no server copy: the server cannot see the intent before the order POST).
+     */
+    public static function paymentInfo(iterable $items): void
+    {
+        $items = is_array($items) ? $items : iterator_to_array($items);
+        self::registerItems($items);
+        if (! self::active()) {
+            return;
+        }
+        if ($lines = self::lines($items)) {
+            self::emitCart('AddPaymentInfo', $lines, self::newEventId('pi'), true);
+        }
+    }
+
+    /** Queue one cart-shaped event per allowed pixel, platform per scope and each vendor with its own lines. */
+    private static function emitCart(string $name, array $lines, string $eventId, bool $deferred): void
+    {
+        if ($platformLines = self::platformLines($lines)) {
             foreach (self::platformIds() as $id) {
-                self::add($id, $name, self::cartParams($platformLines));
+                self::add($id, $name, self::cartParams($platformLines), $eventId, false, $deferred);
             }
         }
         foreach (self::byVendor($lines) as $vendorId => $vendorLines) {
-            self::add(self::vendorPixelId($vendorId), $name, self::cartParams($vendorLines), null, true);
+            self::add(self::vendorPixelId($vendorId), $name, self::cartParams($vendorLines), $eventId.'-v'.$vendorId, true, $deferred);
         }
     }
 
@@ -318,7 +455,7 @@ class MetaPixel
 
         $touched = [];
         foreach (self::byVendor($lines) as $vendorId => $vendorLines) {
-            self::add(self::vendorPixelId($vendorId), 'Purchase', self::cartParams($vendorLines),
+            self::add(self::vendorPixelId($vendorId), 'Purchase', self::cartParams($vendorLines) + ['order_id' => (string) $order->order_number],
                 $order->order_number.'-'.$vendorId, true);
             $touched[] = $vendorId;
         }
@@ -352,15 +489,17 @@ class MetaPixel
         }
         $params = self::cartParams($platformLines);
         if ($platformValue !== null) {
+            // Purchase value = what the customer pays (grand total); contents keep per-pack prices.
             $params['value'] = round($platformValue, 2);
         }
+        $params['order_id'] = (string) $order->order_number; // reference besides the event_id
         return $params;
     }
 
     public static function productLeadParams(Product $product): array
     {
         return [
-            'content_ids' => [(string) $product->id], 'content_type' => 'product_group',
+            'content_ids' => [self::contentId($product->id)], 'content_type' => 'product',
             'content_name' => $product->display_name, 'currency' => self::CURRENCY,
         ];
     }
@@ -377,7 +516,7 @@ class MetaPixel
         $ids = [];
         foreach ($productVendorIds as $productId => $vendorId) {
             if (self::platformAllowsProduct($vendorId)) {
-                $ids[] = (string) $productId;
+                $ids[] = self::contentId((int) $productId);
             }
         }
         return $ids;
@@ -393,7 +532,7 @@ class MetaPixel
     public static function leadForCombo(array $productVendorIds, string $eventId): void
     {
         if ($ids = self::platformComboIds($productVendorIds)) {
-            self::queueNextPage('Lead', ['content_ids' => $ids, 'content_type' => 'product_group', 'currency' => self::CURRENCY], $eventId, null, false);
+            self::queueNextPage('Lead', ['content_ids' => $ids, 'content_type' => 'product', 'currency' => self::CURRENCY], $eventId, null, false);
         }
     }
 
@@ -463,14 +602,20 @@ class MetaPixel
                 continue;
             }
             $priceId = $item['price_id'] ?? null;
-            $qty = max(1, (int) ($item['quantity'] ?? 1));
             $lineTotal = (float) ($item['line_total'] ?? 0);
+            $unit = (float) ($item['unit_price'] ?? 0);
+            // Packs: explicit quantity/qty first; orders only store unit_price + line_total, so derive from those.
+            $qty = (int) ($item['quantity'] ?? $item['qty'] ?? 0);
+            if ($qty < 1) {
+                $qty = ($unit > 0 && $lineTotal > 0) ? (int) round($lineTotal / $unit) : 1;
+            }
+            $qty = max(1, $qty);
             $lines[] = [
-                'id' => $priceId ? $productId.'-'.(int) $priceId : (string) $productId,
+                'id' => self::contentId($productId, $priceId ? (int) $priceId : null),
                 'vendor_id' => ! empty($item['vendor_id']) ? (int) $item['vendor_id'] : null,
                 'quantity' => $qty,
                 'line_total' => $lineTotal,
-                'item_price' => round($lineTotal / $qty, 2),
+                'item_price' => $unit > 0 ? round($unit, 2) : round($lineTotal / $qty, 2),
             ];
         }
         return $lines;

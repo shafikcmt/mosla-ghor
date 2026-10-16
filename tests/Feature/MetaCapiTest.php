@@ -34,6 +34,9 @@ class MetaCapiTest extends TestCase
         $s = MarketingSetting::current();
         $s->update(array_replace(['pixel_enabled' => true, 'pixel_ids' => [self::PLATFORM], 'platform_pixel_scope' => 'all',
             'capi_enabled' => true, 'capi_access_token' => self::TOKEN], $extra));
+        if (! empty($extra['test_event_code']) && ! array_key_exists('test_event_code_expires_at', $extra)) {
+            $s->update(['test_event_code_expires_at' => now()->addHour()]); // codes only work inside their window
+        }
         return $s;
     }
 

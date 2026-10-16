@@ -68,6 +68,8 @@ return [
     // ── Meta Conversions API (token + switches live in admin → Marketing) ──
     'meta' => [
         'graph_version' => env('META_GRAPH_VERSION', 'v23.0'),
+        // Comma-separated visitor IPs (office / developers) that never send Pixel or CAPI events.
+        'exclude_ips'   => array_values(array_filter(array_map('trim', explode(',', (string) env('META_EXCLUDE_IPS', ''))))),
     ],
 
 ];
