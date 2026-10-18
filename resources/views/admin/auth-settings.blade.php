@@ -286,26 +286,88 @@
     {{-- Social login --}}
     <div class="bg-white rounded shadow mb-5" id="social-login">
         <div class="px-6 py-4 border-b border-gray-100">
-            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">সোশ্যাল লগইন (Google / Facebook)</h3>
-            <p class="text-xs text-gray-400 mt-1">কাস্টমার এক ক্লিকে Google বা Facebook দিয়ে লগইন/enquiry করতে পারবে। প্রথমবার শুধু মোবাইল নম্বর চাওয়া হবে। Key গুলো .env-এ সেট করুন।</p>
+            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">সোশ্যাল লগইন ও রেজিস্ট্রেশন (Google / Facebook)</h3>
+            <p class="text-xs text-gray-500 mt-1">কাস্টমার এক ক্লিকে Google বা Facebook দিয়ে অ্যাকাউন্ট খুলতে ও লগইন করতে পারবে — লগইন, রেজিস্ট্রেশন ও চেকআউটের লগইন পেজে বাটন দেখাবে। প্রথমবার শুধু মোবাইল নম্বর চাওয়া হবে। নিচে Key দিন, চালু করুন ও সংরক্ষণ করুন।</p>
         </div>
-        <div class="px-6 py-5 space-y-4">
+        <div class="px-6 py-5 space-y-6">
             @foreach(\App\Support\AuthSettings::SOCIAL_PROVIDERS as $provider => $label)
-            @php $ready = \App\Support\AuthSettings::socialConfigured($provider); @endphp
-            <label class="flex items-center justify-between py-3 border-b border-gray-50">
-                <div>
-                    <p class="text-sm font-medium text-gray-800">{{ $label }} দিয়ে লগইন</p>
-                    @if($ready)
-                        <p class="text-xs text-green-600 mt-0.5">✓ Key সেট করা আছে</p>
+            @php
+                $source = \App\Support\AuthSettings::socialKeySource($provider);
+                $live = \App\Support\AuthSettings::socialEnabled($provider);
+                $hasSecret = filled(\App\Models\WebsiteSetting::get("social_{$provider}_client_secret"));
+                $callback = url('/auth/'.$provider.'/callback');
+            @endphp
+            <div class="rounded-lg border {{ $live ? 'border-green-200' : 'border-gray-200' }}">
+                <label class="flex items-center justify-between gap-4 px-4 py-3 {{ $live ? 'bg-green-50' : 'bg-gray-50' }} rounded-t-lg cursor-pointer">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-800">{{ $label }} দিয়ে লগইন / রেজিস্ট্রেশন</p>
+                        @if($live)
+                            <p class="text-xs text-green-700 mt-0.5">✓ চালু আছে — কাস্টমাররা বাটন দেখছে</p>
+                        @elseif($source)
+                            <p class="text-xs text-amber-700 mt-0.5">Key সেট আছে — চালু করতে ডানের বক্সে টিক দিয়ে সংরক্ষণ করুন</p>
+                        @else
+                            <p class="text-xs text-amber-700 mt-0.5">Key দেওয়া নেই — নিচে Client ID ও Secret দিন। ততক্ষণ বাটন দেখাবে না।</p>
+                        @endif
+                    </div>
+                    <input type="checkbox" name="customer_{{ $provider }}_login"
+                           {{ ($settings['customer_'.$provider.'_login'] ?? '1') === '1' ? 'checked' : '' }}
+                           class="w-5 h-5 rounded text-[#14532d] border-gray-300 focus:ring-[#14532d]">
+                </label>
+                <div class="px-4 py-4 space-y-3">
+                    @if($source === 'env')
+                        <p class="text-xs text-gray-500">Key সার্ভারের .env ফাইল থেকে নেওয়া হচ্ছে। এখানে দেওয়ার দরকার নেই।</p>
                     @else
-                        <p class="text-xs text-amber-600 mt-0.5">Key সেট করা নেই — .env-এ {{ strtoupper($provider) }}_CLIENT_ID ও {{ strtoupper($provider) }}_CLIENT_SECRET দিন। বাটন ততক্ষণ দেখাবে না।</p>
+                    <div class="grid sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1" for="sg-{{ $provider }}-id">{{ $provider === 'facebook' ? 'App ID' : 'Client ID' }}</label>
+                            <input id="sg-{{ $provider }}-id" name="social_{{ $provider }}_client_id" maxlength="255" autocomplete="off"
+                                   value="{{ old('social_'.$provider.'_client_id', \App\Models\WebsiteSetting::get('social_'.$provider.'_client_id')) }}"
+                                   placeholder="{{ $provider === 'google' ? '1234…apps.googleusercontent.com' : '123456789012345' }}"
+                                   class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1" for="sg-{{ $provider }}-secret">{{ $provider === 'facebook' ? 'App Secret' : 'Client Secret' }}</label>
+                            <input id="sg-{{ $provider }}-secret" type="password" name="social_{{ $provider }}_client_secret" maxlength="255" autocomplete="new-password"
+                                   placeholder="{{ $hasSecret ? '•••••••• সংরক্ষিত — বদলাতে নতুনটি দিন' : 'Secret পেস্ট করুন' }}"
+                                   class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#14532d]">
+                            @if($hasSecret)
+                            <label class="inline-flex items-center gap-1.5 mt-1 text-[11px] text-gray-500"><input type="checkbox" name="social_{{ $provider }}_clear_secret" value="1" class="rounded border-gray-300"> সংরক্ষিত Secret মুছুন</label>
+                            @endif
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-gray-400">Secret এনক্রিপ্ট করে রাখা হয় এবং আর কখনো দেখানো হয় না।</p>
                     @endif
-                    <p class="text-[11px] text-gray-400 mt-0.5">Callback URL: <code class="select-all">{{ url('/auth/'.$provider.'/callback') }}</code></p>
+
+                    <div>
+                        <p class="text-xs font-medium text-gray-600 mb-1">{{ $provider === 'google' ? 'Authorized redirect URI' : 'Valid OAuth Redirect URI' }} (কপি করে {{ $label }}-এ দিন)</p>
+                        <div class="flex gap-2">
+                            <input readonly value="{{ $callback }}" onclick="this.select()" class="flex-1 min-w-0 border border-gray-200 bg-gray-50 rounded px-3 py-2 text-xs font-mono">
+                            <button type="button" onclick="navigator.clipboard && navigator.clipboard.writeText('{{ $callback }}'); this.textContent='✓ কপি হয়েছে'" class="shrink-0 border border-gray-300 rounded px-3 text-xs hover:bg-gray-50">কপি</button>
+                        </div>
+                    </div>
+
+                    <details class="text-xs text-gray-600">
+                        <summary class="cursor-pointer font-semibold text-[#14532d]">কীভাবে {{ $label }} Key পাবেন? (ধাপে ধাপে)</summary>
+                        @if($provider === 'google')
+                        <ol class="list-decimal pl-5 mt-2 space-y-1">
+                            <li><a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" class="text-blue-600 underline">Google Cloud Console → Credentials</a> খুলুন (প্রয়োজনে নতুন Project তৈরি করুন)।</li>
+                            <li><b>OAuth consent screen</b>: User type <b>External</b>, অ্যাপের নাম, সাপোর্ট ইমেইল দিন → সংরক্ষণ করে <b>Publish app</b> করুন।</li>
+                            <li><b>Create credentials → OAuth client ID</b> → Application type: <b>Web application</b>।</li>
+                            <li><b>Authorized redirect URIs</b>-এ উপরের লিংকটি দিন → Create।</li>
+                            <li>যে <b>Client ID</b> ও <b>Client Secret</b> দেখাবে, এখানে পেস্ট করুন → উপরের বক্সে টিক → সংরক্ষণ।</li>
+                        </ol>
+                        @else
+                        <ol class="list-decimal pl-5 mt-2 space-y-1">
+                            <li><a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener" class="text-blue-600 underline">Meta for Developers → My Apps</a> → <b>Create App</b> → use case: <b>Authenticate and request data from users with Facebook Login</b>।</li>
+                            <li><b>Facebook Login → Settings</b>-এ <b>Valid OAuth Redirect URIs</b>-এ উপরের লিংকটি দিন → Save।</li>
+                            <li><b>Use cases → Customize</b>-এ <b>email</b> permission যোগ করুন।</li>
+                            <li><b>App settings → Basic</b>: Privacy Policy URL ও App Domain ({{ request()->getHost() }}) দিন, তারপর অ্যাপটি <b>Live</b> করুন।</li>
+                            <li>ওই পেজের <b>App ID</b> ও <b>App Secret</b> এখানে পেস্ট করুন → উপরের বক্সে টিক → সংরক্ষণ।</li>
+                        </ol>
+                        @endif
+                    </details>
                 </div>
-                <input type="checkbox" name="customer_{{ $provider }}_login"
-                       {{ ($settings['customer_'.$provider.'_login'] ?? '1') === '1' ? 'checked' : '' }}
-                       class="w-5 h-5 rounded text-[#14532d] border-gray-300 focus:ring-[#14532d]">
-            </label>
+            </div>
             @endforeach
         </div>
     </div>

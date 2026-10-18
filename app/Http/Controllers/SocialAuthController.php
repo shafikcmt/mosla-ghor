@@ -27,6 +27,7 @@ class SocialAuthController extends Controller
     public function redirect(Request $request, string $provider)
     {
         abort_unless(AuthSettings::socialEnabled($provider), 404);
+        AuthSettings::applySocialConfig($provider);
 
         $request->session()->put(self::SESSION_REDIRECT, $this->safePath($request->query('redirect')));
 
@@ -41,6 +42,7 @@ class SocialAuthController extends Controller
     public function callback(Request $request, string $provider)
     {
         abort_unless(AuthSettings::socialEnabled($provider), 404);
+        AuthSettings::applySocialConfig($provider);
 
         $back = $request->session()->pull(self::SESSION_REDIRECT) ?: '/';
 

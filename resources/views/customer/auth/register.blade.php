@@ -33,6 +33,7 @@
         @endif
 
         @php $redirectParam = $redirectParam ?? ''; @endphp
+        @include('partials.social-login-buttons', ['socialRedirect' => $redirectParam, 'socialTop' => true, 'socialTopLabel' => 'এক ক্লিকে অ্যাকাউন্ট খুলুন'])
         <form method="POST" action="{{ route('customer.register.post') }}{{ $redirectParam ? '?redirect='.urlencode($redirectParam) : '' }}" class="space-y-4">
             @csrf
 
@@ -74,7 +75,6 @@
                 রেজিস্ট্রেশন করুন
             </button>
         </form>
-        @include('partials.social-login-buttons', ['socialRedirect' => $redirectParam])
     </div>
 
     <div class="text-center mt-5 space-y-2 text-sm text-gray-500">

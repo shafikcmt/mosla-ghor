@@ -104,4 +104,42 @@ class SocialLoginTest extends TestCase
             ->assertRedirect()->assertSessionHas('error');
         $this->assertGuest();
     }
+
+    public function test_admin_can_paste_facebook_keys_and_buttons_lead_the_register_page(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'is_admin' => true]);
+        $this->actingAs($admin)->get(route('admin.auth-settings.index'))->assertOk()
+            ->assertSee('name="social_facebook_client_id"', false)->assertSee(url('/auth/facebook/callback'));
+
+        $this->post(route('admin.auth-settings.update'), [
+            'otp_expiry_minutes' => 5, 'otp_resend_cooldown_seconds' => 60, 'otp_max_attempts' => 5,
+            'guest_checkout_enabled' => '1', 'customer_login_enabled' => '1', 'customer_registration_enabled' => '1', 'customer_password_login' => '1',
+            'customer_google_login' => '1', 'customer_facebook_login' => '1',
+            'social_facebook_client_id' => ' 1234567890 ', 'social_facebook_client_secret' => 'fb-secret',
+        ])->assertSessionHasNoErrors();
+
+        $stored = WebsiteSetting::where('key', 'social_facebook_client_secret')->value('value');
+        $this->assertNotSame('fb-secret', $stored, 'Secret is stored encrypted.');
+        $this->assertSame(['1234567890', 'fb-secret'], \App\Support\AuthSettings::socialCredentials('facebook'));
+        $this->assertSame('admin', \App\Support\AuthSettings::socialKeySource('facebook'));
+        $this->assertSame('env', \App\Support\AuthSettings::socialKeySource('google'));
+
+        // A blank secret on a later save keeps the stored one.
+        $this->post(route('admin.auth-settings.update'), [
+            'otp_expiry_minutes' => 5, 'otp_resend_cooldown_seconds' => 60, 'otp_max_attempts' => 5,
+            'guest_checkout_enabled' => '1', 'customer_login_enabled' => '1', 'customer_registration_enabled' => '1', 'customer_password_login' => '1',
+            'customer_google_login' => '1', 'customer_facebook_login' => '1', 'social_facebook_client_id' => '1234567890',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('fb-secret', \App\Support\AuthSettings::socialCredentials('facebook')[1]);
+
+        \Illuminate\Support\Facades\Auth::logout();
+        $page = $this->get(route('customer.register'))->assertOk();
+        $page->assertSee('data-social-login="facebook"', false)->assertSee('এক ক্লিকে অ্যাকাউন্ট খুলুন');
+        $html = $page->getContent();
+        $this->assertLessThan(strpos($html, 'name="password_confirmation"'), strpos($html, 'data-social-login="google"'), 'Buttons come before the form.');
+
+        // The redirect uses the pasted App ID.
+        $this->get(route('customer.social.redirect', 'facebook'))->assertRedirect();
+        $this->assertSame('1234567890', config('services.facebook.client_id'));
+    }
 }

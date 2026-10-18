@@ -110,12 +110,56 @@ class AuthSettings
             && (self::customerPasswordLogin() || self::customerOtpLogin());
     }
 
-    /** Provider keys are present in config (from .env). */
+    /**
+     * Provider keys: .env wins; otherwise the ones saved in Admin → Login settings
+     * (secret stored encrypted). Returns [client_id, client_secret] or nulls.
+     */
+    public static function socialCredentials(string $provider): array
+    {
+        $id = config("services.{$provider}.client_id");
+        $secret = config("services.{$provider}.client_secret");
+        if (filled($id) && filled($secret)) {
+            return [$id, $secret];
+        }
+        $id = trim(WebsiteSetting::get("social_{$provider}_client_id"));
+        $secret = null;
+        if ($stored = WebsiteSetting::get("social_{$provider}_client_secret")) {
+            try {
+                $secret = \Illuminate\Support\Facades\Crypt::decryptString($stored);
+            } catch (\Throwable $e) {
+                $secret = null; // APP_KEY changed — admin must paste the secret again
+            }
+        }
+
+        return [$id !== '' ? $id : null, $secret ?: null];
+    }
+
+    /** Where the keys came from: 'env', 'admin' or null when missing. */
+    public static function socialKeySource(string $provider): ?string
+    {
+        if (filled(config("services.{$provider}.client_id")) && filled(config("services.{$provider}.client_secret"))) {
+            return 'env';
+        }
+
+        return self::socialConfigured($provider) ? 'admin' : null;
+    }
+
+    /** Provider keys are available (from .env or admin settings). */
     public static function socialConfigured(string $provider): bool
     {
-        return isset(self::SOCIAL_PROVIDERS[$provider])
-            && filled(config("services.{$provider}.client_id"))
-            && filled(config("services.{$provider}.client_secret"));
+        if (! isset(self::SOCIAL_PROVIDERS[$provider])) {
+            return false;
+        }
+        [$id, $secret] = self::socialCredentials($provider);
+
+        return filled($id) && filled($secret);
+    }
+
+    /** Push the resolved keys into config just before Socialite builds the driver. */
+    public static function applySocialConfig(string $provider): void
+    {
+        [$id, $secret] = self::socialCredentials($provider);
+        config(["services.{$provider}.client_id" => $id, "services.{$provider}.client_secret" => $secret]);
     }
 
     /** "Continue with …" is usable: keys set, admin toggle on, customer login on. */

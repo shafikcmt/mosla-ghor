@@ -43,6 +43,7 @@
         </div>
         @endif
 
+        @include('partials.social-login-buttons', ['socialRedirect' => $redirectParam, 'socialTop' => true, 'socialTopLabel' => 'এক ক্লিকে লগইন করুন'])
         <form method="POST" action="{{ route('customer.login.post') }}{{ $redirectParam ? '?redirect='.urlencode($redirectParam) : '' }}" class="space-y-4">
             @csrf
 
@@ -70,7 +71,6 @@
             </button>
         </form>
 
-        @include('partials.social-login-buttons', ['socialRedirect' => $redirectParam])
 
         @if(\App\Support\AuthSettings::customerOtpLogin() && \App\Support\AuthSettings::enabledChannels() !== [])
         <div class="mt-4 pt-4 border-t border-gray-100 text-center">

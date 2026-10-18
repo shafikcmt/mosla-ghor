@@ -2,14 +2,18 @@
     "Continue with Google / Facebook" buttons. Renders nothing unless a provider
     is configured (.env keys) and enabled in Admin → Login settings.
     Optional: $socialRedirect (local path to return to), $socialDivider (bool, default true),
-    $socialOnclick (JS run before navigating, e.g. to remember a pending enquiry).
+    $socialOnclick (JS run before navigating, e.g. to remember a pending enquiry),
+    $socialTop (bool): buttons sit above the form — divider goes below them, $socialTopLabel above.
 --}}
 @php
     $socialList = \App\Support\AuthSettings::socialProviders();
     $socialBack = $socialRedirect ?? '';
 @endphp
 @if($socialList)
-    @if($socialDivider ?? true)
+    @if(! empty($socialTop) && ! empty($socialTopLabel))
+    <p class="text-center text-sm font-semibold text-gray-700 mb-3">{{ $socialTopLabel }}</p>
+    @endif
+    @if(($socialDivider ?? true) && empty($socialTop))
     <div class="flex items-center gap-3 my-4" aria-hidden="true">
         <span class="flex-1 h-px bg-gray-200"></span>
         <span class="text-xs font-semibold text-gray-400">অথবা</span>
@@ -36,4 +40,11 @@
             </a>
         @endforeach
     </div>
+    @if(! empty($socialTop))
+    <div class="flex items-center gap-3 my-5" aria-hidden="true">
+        <span class="flex-1 h-px bg-gray-200"></span>
+        <span class="text-xs font-semibold text-gray-400">{{ $socialTopDivider ?? 'অথবা মোবাইল নম্বর দিয়ে' }}</span>
+        <span class="flex-1 h-px bg-gray-200"></span>
+    </div>
+    @endif
 @endif
