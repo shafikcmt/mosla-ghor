@@ -33,12 +33,71 @@ class TransactionController extends KhataBaseController
     {
         abort_unless(in_array($type, ['sale', 'purchase'], true), 404);
         $vendor = $this->vendor();
+        $data = $this->validTrade($request, $vendor->id, $type);
+        if ($data instanceof \Illuminate\Http\RedirectResponse) {
+            return $data;
+        }
 
+        $tx = $this->book->recordWithItems($vendor, $type, $data, $data['lines']);
+
+        return redirect()->route('vendor.khata.tx.show', $tx)
+            ->with('success', ($type === 'sale' ? 'বিক্রি' : 'ক্রয়').' #'.$tx->number.' সংরক্ষণ হয়েছে।');
+    }
+
+    /** Edit a saved বিক্রি / ক্রয় — same form, prefilled. */
+    public function editTrade(KhataTransaction $tx)
+    {
+        $this->editableTrade($tx);
+        $vendor = $this->vendor();
+        $tx->load('lines');
+        $lineItemIds = $tx->lines->pluck('item_id')->filter()->all();
+
+        return view('vendor.khata.trade-form', [
+            'vendor'  => $vendor,
+            'type'    => $tx->type,
+            'tx'      => $tx,
+            'number'  => $tx->number,
+            // Inactive items already on this entry stay selectable.
+            'items'   => KhataItem::where('vendor_id', $vendor->id)
+                ->where(fn ($q) => $q->where('is_active', true)->orWhereIn('id', $lineItemIds))->orderBy('name')->get(),
+            'parties' => KhataParty::where('vendor_id', $vendor->id)->withBalance()->orderBy('name')->get(),
+            'partyId' => $tx->party_id,
+        ]);
+    }
+
+    public function updateTrade(Request $request, KhataTransaction $tx)
+    {
+        $this->editableTrade($tx);
+        $data = $this->validTrade($request, $tx->vendor_id, $tx->type);
+        if ($data instanceof \Illuminate\Http\RedirectResponse) {
+            return $data;
+        }
+
+        $tx = $this->book->updateWithItems($tx, $data, $data['lines']);
+
+        return redirect()->route('vendor.khata.tx.show', $tx)
+            ->with('success', $tx->typeLabel().' #'.$tx->number.' আপডেট হয়েছে — স্টক নতুন করে হিসাব হয়েছে।');
+    }
+
+    /** Only sales / purchases with all lines still linked to items; staff need the type permission and own the entry (or ledger access). */
+    private function editableTrade(KhataTransaction $tx): void
+    {
+        $this->ownTx($tx);
+        abort_unless(in_array($tx->type, ['sale', 'purchase'], true), 404);
+        $user = Auth::user();
+        abort_unless(KhataStaff::can($user, $tx->type) && ($tx->created_by === $user->id || KhataStaff::can($user, 'ledger')), 403,
+            'এই এন্ট্রি সম্পাদনার অনুমতি আপনার নেই।');
+        abort_if($tx->lines()->whereNull('item_id')->exists(), 409, 'এই এন্ট্রির একটি আইটেম মুছে ফেলা হয়েছে — সম্পাদনা করা যাবে না। দরকার হলে মুছে নতুন করে লিখুন।');
+    }
+
+    /** Shared rules for creating and editing a sale / purchase. */
+    private function validTrade(Request $request, int $vendorId, string $type): array|\Illuminate\Http\RedirectResponse
+    {
         $data = $request->validate([
-            'party_id'        => ['nullable', 'integer', Rule::exists('khata_parties', 'id')->where('vendor_id', $vendor->id)],
+            'party_id'        => ['nullable', 'integer', Rule::exists('khata_parties', 'id')->where('vendor_id', $vendorId)],
             'date'            => ['required', 'date'],
             'lines'           => ['required', 'array', 'min:1', 'max:60'],
-            'lines.*.item_id' => ['required', 'integer', Rule::exists('khata_items', 'id')->where('vendor_id', $vendor->id)],
+            'lines.*.item_id' => ['required', 'integer', Rule::exists('khata_items', 'id')->where('vendor_id', $vendorId)],
             'lines.*.quantity'=> ['required', 'numeric', 'min:0.001'],
             'lines.*.price'   => ['required', 'numeric', 'min:0'],
             'discount'        => ['nullable', 'numeric', 'min:0'],
@@ -59,10 +118,7 @@ class TransactionController extends KhataBaseController
             return back()->withInput()->with('error', 'বাকিতে '.($type === 'sale' ? 'বিক্রি' : 'ক্রয়').' করতে পার্টি বেছে নিন — অথবা পুরো টাকা পরিশোধ দেখান।');
         }
 
-        $tx = $this->book->recordWithItems($vendor, $type, $data, $data['lines']);
-
-        return redirect()->route('vendor.khata.tx.show', $tx)
-            ->with('success', ($type === 'sale' ? 'বিক্রি' : 'ক্রয়').' #'.$tx->number.' সংরক্ষণ হয়েছে।');
+        return $data;
     }
 
     /** পেমেন্ট ইন / আউট and খরচ form. */

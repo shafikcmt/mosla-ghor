@@ -338,6 +338,8 @@ Route::prefix('vendor')->name('vendor.')->middleware('vendor')->group(function (
         Route::get('entry/{type}',  [$k.'TransactionController', 'createAmount'])->whereIn('type', ['payment_in', 'payment_out', 'expense'])->name('amount.create');
         Route::post('entry/{type}', [$k.'TransactionController', 'storeAmount'])->whereIn('type', ['payment_in', 'payment_out', 'expense'])->name('amount.store');
         Route::get('tx/{tx}',     [$k.'TransactionController', 'show'])->name('tx.show');
+        Route::get('tx/{tx}/edit', [$k.'TransactionController', 'editTrade'])->name('tx.edit');
+        Route::put('tx/{tx}',     [$k.'TransactionController', 'updateTrade'])->name('tx.update');
         Route::delete('tx/{tx}',  [$k.'TransactionController', 'destroy'])->name('tx.destroy');
     });
 

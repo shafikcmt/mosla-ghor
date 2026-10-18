@@ -21,7 +21,8 @@ class KhataStaff
     ];
 
     /** Pages every staff member may open (item list is needed to sell). */
-    private const OPEN = ['vendor.khata.home', 'vendor.khata.items.index', 'vendor.khata.items.show', 'vendor.khata.tx.show'];
+    private const OPEN = ['vendor.khata.home', 'vendor.khata.items.index', 'vendor.khata.items.show', 'vendor.khata.tx.show',
+        'vendor.khata.tx.edit', 'vendor.khata.tx.update']; // tx show/edit check ownership + permission in the controller
 
     public static function can(?User $user, string $permission): bool
     {
