@@ -251,3 +251,32 @@ html{scroll-behavior:smooth}
 .market-home .hm-tile-body .hm-price{font-size:17px}
 }
 @media(prefers-reduced-motion:reduce){.market-home .hm-cat,.market-home .product-card{transition:none}}
+
+/* ── Compact cards (2026-10-19): packs are picked on the details page ── */
+.market-home .product-card [id^=card-chips],.market-home .product-card .hm-card-desc{display:none}
+.market-home .product-card>.p-5{padding:12px 14px 14px}
+.market-home .product-card h3{font-size:15.5px;line-height:1.4;min-height:2.8em}
+.market-home .product-card [id^=card-price-wrap]{margin-top:6px;flex-wrap:wrap;row-gap:0}
+.market-home .product-card [id^=card-from-]{font-size:20px}
+.market-home .product-card .hm-from{font-size:11.5px}
+.market-home .product-card .hm-from-pack{color:#14532d;font-weight:600}
+.market-home .product-card [id^=card-retail-btns]{display:flex;gap:8px;margin-top:12px}
+.market-home .product-card [id^=card-retail-btns]>*{min-height:40px;min-width:0;border-radius:11px;box-shadow:none}
+.market-home .product-card .hm-card-detail{display:flex!important;align-items:center;justify-content:center;flex:1;font-weight:700;padding:8px 6px}
+.market-home .product-card .hm-card-quickadd{flex:none;width:42px;padding:0}
+.market-home #card-view,.market-home .hm-product-grid{gap:16px}
+@media(min-width:1280px){.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(min-width:768px) and (max-width:1279px){.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:640px) and (max-width:767px){.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.market-home .hm-stock-badge{font-size:9.5px;padding:1px 7px}
+.market-home .hm-cat-badge{font-size:9.5px;padding:1px 7px}
+@media(max-width:767px){
+.market-home #card-view,.market-home .hm-product-grid{gap:10px}
+.market-home .product-card>.p-5{padding:9px 10px 10px}
+.market-home .product-card h3{font-size:13.5px}
+.market-home .product-card [id^=card-from-]{font-size:16px}
+.market-home .product-card .hm-from{font-size:10px}
+.market-home .product-card [id^=card-retail-btns]{gap:6px;margin-top:8px}
+.market-home .product-card [id^=card-retail-btns]>*{min-height:36px;font-size:12.5px}
+.market-home .product-card .hm-card-quickadd{width:36px}
+}

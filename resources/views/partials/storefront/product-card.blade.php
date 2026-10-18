@@ -101,7 +101,7 @@
                         <span id="card-from-{{ $product->id }}" class="text-[#c9a227] font-serif-bn text-2xl font-bold">
                             {{ $initRetailPrices->isNotEmpty() ? '৳' . number_format($initRetailPrices->first()->final_price, 0) : '' }}
                         </span>
-                        <span class="hm-from text-gray-400 text-xs">থেকে শুরু</span>
+                        <span class="hm-from text-gray-400 text-xs">থেকে শুরু@if($initRetailPrices->isNotEmpty())<span class="hm-from-pack"> · {{ $initRetailPrices->first()->label }}</span>@endif</span>
                     </div>
 
                     {{-- Pack price chips (clickable; selection is scoped to THIS card) --}}
@@ -135,21 +135,22 @@
 
                     <div class="flex-1 min-h-3"></div>
 
-                    {{-- Retail mode buttons --}}
+                    {{-- Retail mode buttons: pack sizes are chosen on the details page; the
+                         cart icon quick-adds the smallest pack (the price shown above). --}}
                     <div id="card-retail-btns-{{ $product->id }}" class="mt-4 flex gap-2">
                         <a href="{{ route('products.show', $product->slug) }}"
-                           class="hm-card-detail flex-1 border border-[#14532d] text-[#14532d] hover:bg-[#14532d] hover:text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                            বিস্তারিত
+                           class="hm-card-detail flex-1 bg-[#14532d] hover:bg-[#166534] text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                            অর্ডার করুন
                         </a>
                         @if($initRetailPrices->isNotEmpty())
-                            {{-- Adds the variant/pack currently selected on THIS card. --}}
                             <button type="button" onclick="cardAddToBag(this, {{ $product->id }})" {{ $product->isInStock() ? '' : 'disabled' }}
-                                    class="flex-1 bg-[#14532d] hover:bg-[#166534] text-white py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
-                                🛍️ ব্যাগে যোগ
+                                    class="hm-card-quickadd shrink-0 w-11 border border-[#14532d] text-[#14532d] hover:bg-[#14532d] hover:text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    title="{{ $initRetailPrices->first()->label }} ব্যাগে যোগ করুন" aria-label="{{ $product->name_bn }} {{ $initRetailPrices->first()->label }} ব্যাগে যোগ করুন">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 11.2a2 2 0 002 1.6h8.2a2 2 0 002-1.5L21 8H6.2M10 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2zM14 9v4m-2-2h4"/></svg>
                             </button>
                         @else
                             <button onclick="goToCombo({{ $product->id }})"
-                                    class="flex-1 border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                                    class="shrink-0 border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors">
                                 বাক্সে যোগ
                             </button>
                         @endif
