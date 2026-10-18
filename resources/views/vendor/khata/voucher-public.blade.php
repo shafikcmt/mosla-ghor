@@ -7,7 +7,7 @@
     <title>{{ $tx->typeLabel() }}{{ $tx->number ? ' #'.$tx->number : '' }} — {{ $tx->vendor->shop_name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Hind Siliguri', system-ui, sans-serif; } .num { font-variant-numeric: tabular-nums; } @media print { .no-print { display: none !important; } .voucher { border: 0 !important; box-shadow: none !important; } }</style>
+    <style>body { font-family: 'Hind Siliguri', system-ui, sans-serif; } .num { font-variant-numeric: tabular-nums; } @media print { .no-print { display: none !important; } .voucher { border: 0 !important; box-shadow: none !important; } .voucher, .voucher * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }</style>
 </head>
 <body class="bg-gray-100 py-4 px-3">
 <div class="max-w-3xl mx-auto">
