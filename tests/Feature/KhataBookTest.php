@@ -251,6 +251,38 @@ class KhataBookTest extends TestCase
         $this->actingAs($other)->get(route('vendor.khata.tx.edit', $payment))->assertNotFound();
     }
 
+    public function test_kg_and_gram_quantities_list_edit_button_and_voucher_sharing(): void
+    {
+        $this->assertSame('27 কেজি 700 গ্রাম', KhataItem::formatQty(27.7, 'kg'));
+        $this->assertSame('5 কেজি 25 গ্রাম', KhataItem::formatQty('5.025', 'kg'));
+        $this->assertSame('700 গ্রাম', KhataItem::formatQty(0.7, 'kg'));
+        $this->assertSame('3 কেজি', KhataItem::formatQty(2.9999, 'kg'));
+        $this->assertSame('−1 কেজি 500 গ্রাম', KhataItem::formatQty(-1.5, 'kg'));
+        $this->assertSame('12 পিস', KhataItem::formatQty(12, 'pcs'));
+
+        $item = $this->item('jira', 50);
+        $customer = $this->party();
+        $this->get(route('vendor.khata.trade.create', 'sale'))->assertOk()->assertSee('kh-kgg', false)->assertSee('"kg":true', false);
+        $this->post(route('vendor.khata.trade.store', 'sale'), [
+            'party_id' => $customer->id, 'date' => now()->toDateString(), 'payment_mode' => 'cash', 'paid' => 0,
+            'lines' => [['item_id' => $item->id, 'quantity' => 27.7, 'price' => 600]],
+        ])->assertSessionHasNoErrors();
+        $sale = KhataTransaction::where('type', 'sale')->sole();
+        $this->assertEquals(16620, $sale->total);
+        $this->assertEquals(22.3, $item->fresh()->stock);
+
+        $this->get(route('vendor.khata.tx.show', $sale))->assertOk()
+            ->assertSee('27 কেজি 700 গ্রাম')->assertSee('data-kh-send="image"', false)->assertSee('data-kh-send="pdf"', false)
+            ->assertSee('html2canvas', false);
+        $this->get(route('vendor.khata.transactions'))->assertOk()->assertSee(route('vendor.khata.tx.edit', $sale));
+        $this->get(route('vendor.khata.items.show', $item))->assertOk()->assertSee('22 কেজি 300 গ্রাম');
+
+        $this->post(route('vendor.khata.trade.store', 'sale'), [
+            'party_id' => $customer->id, 'date' => now()->toDateString(), 'payment_mode' => 'cash',
+            'lines' => [['item_id' => $item->id, 'quantity' => '', 'price' => 600]],
+        ])->assertSessionHasErrors(['lines.0.quantity' => 'প্রতিটি সারিতে পরিমাণ দিন (যেমন: ২৭ কেজি ৭০০ গ্রাম)।']);
+    }
+
     public function test_admin_switches_a_vendor_between_panel_modes(): void
     {
         [, $shop] = $this->makeVendor('shop', 'full');

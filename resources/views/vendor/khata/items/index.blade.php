@@ -47,7 +47,7 @@
                 <td class="px-4 py-3 text-right num">৳{{ number_format((float) $item->sale_price, 0) }}</td>
                 <td class="px-4 py-3 text-right num text-gray-500">৳{{ number_format((float) $item->purchase_price, 0) }}</td>
                 <td class="px-4 py-3 text-right num">৳{{ number_format((float) ($s->firstWhere('type', 'sale')->amount ?? 0), 0) }}</td>
-                <td class="px-4 py-3 text-right font-bold num {{ (float) $item->stock <= 0 ? 'text-red-600' : ($item->isLow() ? 'text-amber-600' : 'text-gray-800') }}">{{ $q3($item->stock) }} {{ $item->unitLabel() }}</td>
+                <td class="px-4 py-3 text-right font-bold num {{ (float) $item->stock <= 0 ? 'text-red-600' : ($item->isLow() ? 'text-amber-600' : 'text-gray-800') }}">{{ $item->stockLabel() }}</td>
             </tr>
             @endforeach
         </tbody>
@@ -69,7 +69,7 @@
                 <div><p class="text-gray-400">বিক্রয়</p><p class="font-semibold num">৳{{ number_format((float) ($s->firstWhere('type', 'sale')->amount ?? 0), 0) }}</p></div>
                 <div><p class="text-gray-400">ক্রয়</p><p class="font-semibold num">৳{{ number_format((float) ($s->firstWhere('type', 'purchase')->amount ?? 0), 0) }}</p></div>
                 <div><p class="text-gray-400">স্টক</p>
-                    <p class="font-bold num {{ (float) $item->stock <= 0 ? 'text-red-600' : ($item->isLow() ? 'text-amber-600' : 'text-gray-800') }}">{{ $q3($item->stock) }} {{ $item->unitLabel() }}</p></div>
+                    <p class="font-bold num {{ (float) $item->stock <= 0 ? 'text-red-600' : ($item->isLow() ? 'text-amber-600' : 'text-gray-800') }}">{{ $item->stockLabel() }}</p></div>
             </div>
         </div>
     </a>

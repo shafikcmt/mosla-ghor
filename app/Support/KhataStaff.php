@@ -33,6 +33,13 @@ class KhataStaff
         return in_array($permission, (array) $user->staff_permissions, true);
     }
 
+    /** Sales / purchases are editable by the owner, or by staff with that type's permission on their own entry (any entry with ledger access). */
+    public static function canEdit(?User $user, \App\Models\Khata\KhataTransaction $tx): bool
+    {
+        return $user !== null && in_array($tx->type, ['sale', 'purchase'], true) && self::can($user, $tx->type)
+            && ($tx->created_by === $user->id || self::can($user, 'ledger'));
+    }
+
     /**
      * Permission the current khata route needs: null = open to all staff,
      * 'owner' = shop owner only.

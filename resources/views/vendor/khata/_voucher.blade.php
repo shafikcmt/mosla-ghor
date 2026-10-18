@@ -51,7 +51,7 @@
                 <tr class="border-t border-gray-200">
                     <td class="p-2">{{ $i + 1 }}</td>
                     <td class="p-2">{{ $line->name }}</td>
-                    <td class="p-2 text-right num">{{ $q3($line->quantity) }} {{ \App\Models\Khata\KhataItem::UNITS[$line->unit] ?? $line->unit }}</td>
+                    <td class="p-2 text-right num">{{ \App\Models\Khata\KhataItem::formatQty($line->quantity, $line->unit) }}</td>
                     <td class="p-2 text-right num">{{ $tk($line->price) }}</td>
                     <td class="p-2 text-right num">{{ $tk($line->total) }}</td>
                 </tr>

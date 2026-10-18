@@ -84,9 +84,7 @@ class TransactionController extends KhataBaseController
     {
         $this->ownTx($tx);
         abort_unless(in_array($tx->type, ['sale', 'purchase'], true), 404);
-        $user = Auth::user();
-        abort_unless(KhataStaff::can($user, $tx->type) && ($tx->created_by === $user->id || KhataStaff::can($user, 'ledger')), 403,
-            'এই এন্ট্রি সম্পাদনার অনুমতি আপনার নেই।');
+        abort_unless(KhataStaff::canEdit(Auth::user(), $tx), 403, 'এই এন্ট্রি সম্পাদনার অনুমতি আপনার নেই।');
         abort_if($tx->lines()->whereNull('item_id')->exists(), 409, 'এই এন্ট্রির একটি আইটেম মুছে ফেলা হয়েছে — সম্পাদনা করা যাবে না। দরকার হলে মুছে নতুন করে লিখুন।');
     }
 
@@ -109,6 +107,8 @@ class TransactionController extends KhataBaseController
         ], [
             'lines.required'  => 'অন্তত একটি আইটেম যোগ করুন।',
             'lines.*.item_id.required' => 'প্রতিটি সারিতে আইটেম বেছে নিন।',
+            'lines.*.quantity.required' => 'প্রতিটি সারিতে পরিমাণ দিন (যেমন: ২৭ কেজি ৭০০ গ্রাম)।',
+            'lines.*.quantity.min' => 'পরিমাণ ০-এর বেশি হতে হবে।',
         ]);
 
         // A due (বাকি) needs someone to owe it.
@@ -201,10 +201,10 @@ class TransactionController extends KhataBaseController
             return null;
         }
         $shop  = $tx->vendor->shop_name;
-        $lines = $tx->lines->map(fn ($l) => '• '.$l->name.' — '.rtrim(rtrim(number_format((float) $l->quantity, 3, '.', ''), '0'), '.').' × ৳'.number_format((float) $l->price, 0).' = ৳'.number_format((float) $l->total, 0))->implode("\n");
+        $lines = $tx->lines->map(fn ($l) => '• '.$l->name.' — '.KhataItem::formatQty($l->quantity, $l->unit).' × ৳'.number_format((float) $l->price, 0).' = ৳'.number_format((float) $l->total, 0))->implode("\n");
         $bal   = $tx->party->balance();
 
-        $text = "🧾 *{$shop}* — {$tx->typeLabel()}".($tx->number ? " #{$tx->number}" : '')."\n"
+        $text = "*{$shop}* — {$tx->typeLabel()}".($tx->number ? " #{$tx->number}" : '')."\n"
             ."তারিখ: ".$tx->date->format('d M Y')."\n\n"
             .($lines ? $lines."\n\n" : '')
             ."মোট: ৳".number_format((float) $tx->total, 0)."\n"
