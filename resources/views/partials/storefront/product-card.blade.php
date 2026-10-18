@@ -60,12 +60,12 @@
                             </div>
                         </div>
                     @endif
-                    <span class="absolute top-3 left-3 text-[10px] font-bold px-2 py-0.5 rounded-full shadow
+                    <span class="hm-stock-badge absolute top-3 left-3 text-[10px] font-bold px-2 py-0.5 rounded-full shadow
                         {{ $product->isInStock() ? 'bg-[#c9a227] text-[#0f3d22]' : 'bg-red-500 text-white' }}">
                         {{ $product->isInStock() ? 'স্টকে আছে' : 'স্টক শেষ' }}
                     </span>
                     @if($product->cat)
-                    <span class="absolute top-3 right-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/90 text-[#14532d] shadow">
+                    <span class="hm-cat-badge absolute top-3 right-3 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/90 text-[#14532d] shadow">
                         {{ $product->cat->name_bn }}
                     </span>
                     @endif
@@ -79,7 +79,7 @@
                     </a>
 
                     @if($product->short_description)
-                        <p class="text-gray-500 text-sm mt-2 leading-relaxed line-clamp-2">{{ $product->short_description }}</p>
+                        <p class="hm-card-desc text-gray-500 text-sm mt-2 leading-relaxed line-clamp-2">{{ $product->short_description }}</p>
                     @endif
 
                     @if($wholesaleOnly)
@@ -101,7 +101,7 @@
                         <span id="card-from-{{ $product->id }}" class="text-[#c9a227] font-serif-bn text-2xl font-bold">
                             {{ $initRetailPrices->isNotEmpty() ? '৳' . number_format($initRetailPrices->first()->final_price, 0) : '' }}
                         </span>
-                        <span class="text-gray-400 text-xs">থেকে শুরু</span>
+                        <span class="hm-from text-gray-400 text-xs">থেকে শুরু</span>
                     </div>
 
                     {{-- Pack price chips (clickable; selection is scoped to THIS card) --}}
@@ -138,7 +138,7 @@
                     {{-- Retail mode buttons --}}
                     <div id="card-retail-btns-{{ $product->id }}" class="mt-4 flex gap-2">
                         <a href="{{ route('products.show', $product->slug) }}"
-                           class="flex-1 border border-[#14532d] text-[#14532d] hover:bg-[#14532d] hover:text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                           class="hm-card-detail flex-1 border border-[#14532d] text-[#14532d] hover:bg-[#14532d] hover:text-white text-center py-2.5 rounded-xl text-sm font-semibold transition-colors">
                             বিস্তারিত
                         </a>
                         @if($initRetailPrices->isNotEmpty())
