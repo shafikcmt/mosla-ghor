@@ -32,6 +32,31 @@ class KhataItem extends Model
         return self::UNITS[$this->unit] ?? $this->unit;
     }
 
+    /** "27 কেজি 700 গ্রাম" for kg, otherwise "12.5 পিস". */
+    public static function formatQty(float|string|null $qty, ?string $unit): string
+    {
+        $qty  = round((float) $qty, 3);
+        $sign = $qty < 0 ? '−' : '';
+        $abs  = abs($qty);
+        if ($unit === 'kg') {
+            $kg = (int) floor($abs + 1e-9);
+            $g  = (int) round(($abs - $kg) * 1000);
+            if ($g === 1000) { $kg++; $g = 0; }
+            if ($g > 0) {
+                return $sign.($kg > 0 ? $kg.' কেজি ' : '').$g.' গ্রাম';
+            }
+
+            return $sign.$kg.' কেজি';
+        }
+
+        return $sign.rtrim(rtrim(number_format($abs, 3, '.', ''), '0'), '.').' '.(self::UNITS[$unit] ?? $unit);
+    }
+
+    public function stockLabel(): string
+    {
+        return self::formatQty($this->stock, $this->unit);
+    }
+
     public function stockValue(): float
     {
         return max(0, (float) $this->stock) * (float) $this->purchase_price;

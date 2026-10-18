@@ -121,7 +121,7 @@
     @foreach($lowStock as $item)
     <a href="{{ route('vendor.khata.items.show', $item) }}" class="flex justify-between px-4 py-2 text-sm hover:bg-gray-50">
         <span>{{ $item->name }}</span>
-        <span class="font-semibold text-red-600 num">{{ $q3($item->stock) }} {{ $item->unitLabel() }}</span>
+        <span class="font-semibold text-red-600 num">{{ $item->stockLabel() }}</span>
     </a>
     @endforeach
 </div>

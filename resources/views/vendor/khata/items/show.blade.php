@@ -13,7 +13,7 @@
 
 <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
     <p class="text-sm text-gray-500">বর্তমান স্টক</p>
-    <p class="text-3xl font-bold num {{ (float) $item->stock <= 0 ? 'text-red-600' : 'text-gray-900' }}">{{ $q3($item->stock) }} <span class="text-lg font-semibold">{{ $item->unitLabel() }}</span></p>
+    <p class="text-3xl font-bold num {{ (float) $item->stock <= 0 ? 'text-red-600' : 'text-gray-900' }}">{{ $item->stockLabel() }}</p>
     <div class="grid grid-cols-3 gap-2 mt-3 text-sm">
         <div><p class="text-gray-400 text-xs">বিক্রয়</p><p class="font-bold num">{{ $tk($stats->sold ?? 0) }}</p></div>
         <div><p class="text-gray-400 text-xs">ক্রয়</p><p class="font-bold num">{{ $tk($stats->bought ?? 0) }}</p></div>
@@ -40,7 +40,7 @@
             <div>
                 <label class="block text-sm font-semibold mb-1">পরিমাণ ({{ $item->unitLabel() }}) *</label>
                 <input type="number" name="quantity" step="0.001" min="0.001" required inputmode="decimal" class="{{ $inp }}">
-                <p class="text-[11px] text-gray-400 mt-0.5">বর্তমান স্টক: {{ $q3($item->stock) }}</p>
+                <p class="text-[11px] text-gray-400 mt-0.5">বর্তমান স্টক: {{ $item->stockLabel() }}</p>
             </div>
             <div>
                 <label class="block text-sm font-semibold mb-1">তারিখ</label>
@@ -71,7 +71,7 @@
                 <p class="text-xs text-gray-400">{{ $t?->date->format('d M Y') }}@if($t?->note) · {{ $t->note }}@endif</p>
             </div>
             <div class="text-right">
-                <p class="font-bold num {{ $in ? 'text-green-700' : 'text-red-600' }}">{{ $in ? '+' : '−' }}{{ $q3($line->quantity) }}</p>
+                <p class="font-bold num {{ $in ? 'text-green-700' : 'text-red-600' }}">{{ $in ? '+' : '−' }}{{ \App\Models\Khata\KhataItem::formatQty($line->quantity, $item->unit) }}</p>
                 <p class="text-xs text-gray-400 num">৳{{ number_format((float) $line->total, 0) }}</p>
             </div>
         </a>

@@ -8,7 +8,7 @@
     $own    = $tx ? $tx->lines->groupBy('item_id')->map(fn ($l) => (float) $l->sum('quantity')) : collect();
     $inp    = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#0f7a3e]';
     $itemData = $items->mapWithKeys(fn ($i) => [$i->id => [
-        'name' => $i->name, 'unit' => $i->unitLabel(), 'stock' => (float) $i->stock + $sign * ($own[$i->id] ?? 0),
+        'name' => $i->name, 'unit' => $i->unitLabel(), 'kg' => $i->unit === 'kg', 'stock' => (float) $i->stock + $sign * ($own[$i->id] ?? 0),
         'price' => (float) ($isSale ? $i->sale_price : $i->purchase_price),
     ]]);
     $partyData = $parties->mapWithKeys(fn ($p) => [$p->id => ['balance' => $p->balance(), 'phone' => $p->phone]]);
@@ -65,11 +65,17 @@
                     </select>
                     <button type="button" class="kh-del text-red-500 px-2 text-xl" aria-label="সারি মুছুন">🗑</button>
                 </div>
-                <div class="grid grid-cols-3 gap-2 mt-2 items-center">
-                    <label class="text-xs text-gray-500">পরিমাণ <span class="kh-unit"></span>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 items-end">
+                    <div class="col-span-2 text-xs text-gray-500">
+                        পরিমাণ <span class="kh-unit"></span>
                         <input type="number" name="lines[{{ $i }}][quantity]" value="{{ $l['quantity'] ?? 1 }}" step="0.001" min="0.001" required inputmode="decimal" class="kh-qty w-full border border-gray-200 rounded-lg px-2 py-2 bg-white text-base text-gray-800">
-                    </label>
-                    <label class="text-xs text-gray-500">মূল্য (৳)
+                        {{-- কেজি items: whole kg + grams (e.g. 27 কেজি 700 গ্রাম) fill the quantity above. --}}
+                        <div class="kh-kgg grid grid-cols-2 gap-2" style="display:none">
+                            <div class="relative"><input type="number" min="0" step="1" inputmode="numeric" placeholder="0" aria-label="কেজি" class="kh-kg w-full border border-gray-200 rounded-lg pl-2 pr-11 py-2 bg-white text-base text-gray-800"><span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">কেজি</span></div>
+                            <div class="relative"><input type="number" min="0" max="999" step="1" inputmode="numeric" placeholder="0" aria-label="গ্রাম" class="kh-g w-full border border-gray-200 rounded-lg pl-2 pr-11 py-2 bg-white text-base text-gray-800"><span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">গ্রাম</span></div>
+                        </div>
+                    </div>
+                    <label class="text-xs text-gray-500">মূল্য (৳<span class="kh-per"></span>)
                         <input type="number" name="lines[{{ $i }}][price]" value="{{ $l['price'] ?? '' }}" step="0.01" min="0" required inputmode="decimal" class="kh-price w-full border border-gray-200 rounded-lg px-2 py-2 bg-white text-base text-gray-800">
                     </label>
                     <div class="text-right">
@@ -146,11 +152,17 @@
             </select>
             <button type="button" class="kh-del text-red-500 px-2 text-xl" aria-label="সারি মুছুন">🗑</button>
         </div>
-        <div class="grid grid-cols-3 gap-2 mt-2 items-center">
-            <label class="text-xs text-gray-500">পরিমাণ <span class="kh-unit"></span>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 items-end">
+            <div class="col-span-2 text-xs text-gray-500">
+                পরিমাণ <span class="kh-unit"></span>
                 <input type="number" name="lines[__I__][quantity]" value="1" step="0.001" min="0.001" required inputmode="decimal" class="kh-qty w-full border border-gray-200 rounded-lg px-2 py-2 bg-white text-base text-gray-800">
-            </label>
-            <label class="text-xs text-gray-500">মূল্য (৳)
+                {{-- কেজি items: whole kg + grams (e.g. 27 কেজি 700 গ্রাম) fill the quantity above. --}}
+                <div class="kh-kgg grid grid-cols-2 gap-2" style="display:none">
+                    <div class="relative"><input type="number" min="0" step="1" inputmode="numeric" placeholder="0" aria-label="কেজি" class="kh-kg w-full border border-gray-200 rounded-lg pl-2 pr-11 py-2 bg-white text-base text-gray-800"><span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">কেজি</span></div>
+                    <div class="relative"><input type="number" min="0" max="999" step="1" inputmode="numeric" placeholder="0" aria-label="গ্রাম" class="kh-g w-full border border-gray-200 rounded-lg pl-2 pr-11 py-2 bg-white text-base text-gray-800"><span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">গ্রাম</span></div>
+                </div>
+            </div>
+            <label class="text-xs text-gray-500">মূল্য (৳<span class="kh-per"></span>)
                 <input type="number" name="lines[__I__][price]" step="0.01" min="0" required inputmode="decimal" class="kh-price w-full border border-gray-200 rounded-lg px-2 py-2 bg-white text-base text-gray-800">
             </label>
             <div class="text-right">
@@ -172,15 +184,41 @@
     const num = el => parseFloat(el && el.value) || 0;
     const q3 = n => (Math.round(n * 1000) / 1000).toString();
 
+    // কেজি items: show কেজি + গ্রাম boxes; the hidden quantity input carries kg (27.7).
+    const fmtQty = (n, it) => {
+        if (!it || !it.kg) return q3(n) + (it ? ' ' + it.unit : '');
+        const neg = n < 0, a = Math.abs(Math.round(n * 1000) / 1000), kg = Math.floor(a + 1e-9), g = Math.round((a - kg) * 1000);
+        return (neg ? '−' : '') + (g ? (kg ? kg + ' কেজি ' : '') + g + ' গ্রাম' : kg + ' কেজি');
+    };
+    function kgMode(line, it) {
+        const qty = line.querySelector('.kh-qty'), box = line.querySelector('.kh-kgg');
+        const on = !!(it && it.kg);
+        if (on && box.style.display === 'none') {
+            const v = Math.round(num(qty) * 1000), kg = Math.floor(v / 1000);
+            line.querySelector('.kh-kg').value = kg || (v ? 0 : '');
+            line.querySelector('.kh-g').value = v % 1000 || '';
+        }
+        box.style.display = on ? '' : 'none';
+        qty.style.display = on ? 'none' : '';
+        qty.required = !on; // the কেজি/গ্রাম boxes are the visible fields
+    }
+    function fromKgG(line) {
+        const g = Math.min(999, Math.max(0, Math.round(num(line.querySelector('.kh-g')))));
+        const kg = Math.max(0, Math.floor(num(line.querySelector('.kh-kg'))));
+        line.querySelector('.kh-qty').value = (kg + g / 1000) ? q3(kg + g / 1000) : '';
+    }
+
     function fill(line, setPrice) {
         const it = ITEMS[line.querySelector('.kh-item').value];
-        line.querySelector('.kh-unit').textContent = it ? '(' + it.unit + ')' : '';
+        line.querySelector('.kh-unit').textContent = it && !it.kg ? '(' + it.unit + ')' : '';
+        line.querySelector('.kh-per').textContent = it && it.kg ? ' / কেজি' : '';
+        kgMode(line, it);
         const price = line.querySelector('.kh-price');
         if (it && (setPrice || !price.value)) price.value = it.price || '';
         const st = line.querySelector('.kh-stock');
         if (!it) { st.textContent = ''; return; }
         const left = it.stock - (IS_SALE ? num(line.querySelector('.kh-qty')) : -num(line.querySelector('.kh-qty')));
-        st.textContent = 'স্টক: ' + q3(it.stock) + ' ' + it.unit + (IS_SALE ? ' → বিক্রির পর ' + q3(left) : '');
+        st.textContent = 'স্টক: ' + fmtQty(it.stock, it) + (IS_SALE ? ' → বিক্রির পর ' + fmtQty(left, it) : '');
         st.className = 'kh-stock text-[11px] mt-1 ' + (IS_SALE && left < 0 ? 'text-red-600 font-semibold' : 'text-gray-400');
     }
     function recalc() {
@@ -215,6 +253,8 @@
         if (e.target.closest('.kh-del') && box.querySelectorAll('.kh-line').length > 1) { e.target.closest('.kh-line').remove(); recalc(); }
     });
     box.addEventListener('change', e => { if (e.target.classList.contains('kh-item')) { fill(e.target.closest('.kh-line'), true); recalc(); } });
+    // Runs before the form's recalc listener (the event bubbles from here up to the form).
+    box.addEventListener('input', e => { if (e.target.matches('.kh-kg, .kh-g')) fromKgG(e.target.closest('.kh-line')); });
     document.getElementById('kh-trade').addEventListener('input', recalc);
     document.getElementById('kh-full').addEventListener('click', () => { document.getElementById('kh-paid').value = Math.round(recalc() * 100) / 100; recalc(); });
     document.getElementById('kh-party').addEventListener('change', partyInfo);
