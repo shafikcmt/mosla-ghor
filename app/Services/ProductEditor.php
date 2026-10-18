@@ -146,14 +146,65 @@ class ProductEditor
                     }
                     $gallery[] = $media->adopt($tmp, 'products/images', "gallery_tokens.$i");
                 }
-                if ($remove || $request->hasFile('gallery_images') || $galleryTokens) {
+                // Alt text that follows an image to its new key (replaced / swapped with main).
+                $altMoves = [];
+                $oldAlts = array_merge((array) ($product->gallery_alts ?? []), array_map(
+                    fn ($v) => is_string($v) ? trim($v) : '', (array) ($data['gallery_alts'] ?? [])
+                ));
+                // Replace one gallery photo in place (same position), keyed by the old photo's token.
+                $replaced = false;
+                foreach ((array) ($data['gallery_replace'] ?? []) as $oldToken => $upToken) {
+                    if (! is_string($upToken) || $upToken === '') { continue; }
+                    $idx = array_search($oldToken, array_map(fn ($p) => hash('sha256', $p), $gallery), true);
+                    if ($idx === false) {
+                        throw ValidationException::withMessages(['gallery_replace' => 'গ্যালারির ছবি বদলেছে বা এই পণ্যের নয়। পেজ রিফ্রেশ করুন।']);
+                    }
+                    $tmp = TempUpload::resolve($upToken, $uid, 'gallery');
+                    if (! $tmp) {
+                        throw ValidationException::withMessages(['gallery_replace' => 'নতুন ছবির আপলোডের মেয়াদ শেষ — ছবিটি আবার বেছে নিন।']);
+                    }
+                    $new = $media->adopt($tmp, 'products/images', 'gallery_replace');
+                    $media->retire($gallery[$idx]);
+                    if (($oldAlts[$oldToken] ?? '') !== '') { $altMoves[hash('sha256', $new)] = $oldAlts[$oldToken]; }
+                    $gallery[$idx] = $new;
+                    $replaced = true;
+                }
+                // Make a gallery photo the main photo; the old main photo takes its place in the gallery.
+                $madeMain = false;
+                if (! empty($data['make_main']) && ! array_key_exists('main_image', $fields)) {
+                    $idx = array_search($data['make_main'], array_map(fn ($p) => hash('sha256', $p), $gallery), true);
+                    if ($idx === false) {
+                        throw ValidationException::withMessages(['make_main' => 'যে ছবিটি মূল ছবি করতে চেয়েছেন সেটি আর গ্যালারিতে নেই।']);
+                    }
+                    $target = $gallery[$idx];
+                    $oldMain = $product->main_image;
+                    $fields['main_image'] = $target;
+                    $fields['main_image_alt'] = ($oldAlts[hash('sha256', $target)] ?? '') ?: null;
+                    if ($oldMain) {
+                        $gallery[$idx] = $oldMain;
+                        if (trim((string) $product->main_image_alt) !== '') { $altMoves[hash('sha256', $oldMain)] = trim((string) $product->main_image_alt); }
+                    } else {
+                        unset($gallery[$idx]);
+                    }
+                    $madeMain = true;
+                } elseif (! empty($data['make_main']) && array_key_exists('main_image', $fields)) {
+                    // A new main photo was uploaded (or the main photo removed) — that choice wins.
+                    if ($fields['main_image'] === null) {
+                        $idx = array_search($data['make_main'], array_map(fn ($p) => hash('sha256', $p), $gallery), true);
+                        if ($idx !== false) {
+                            $fields['main_image'] = $gallery[$idx];
+                            $fields['main_image_alt'] = ($oldAlts[$data['make_main']] ?? '') ?: null;
+                            unset($gallery[$idx]);
+                            $madeMain = true;
+                        }
+                    }
+                }
+                if ($remove || $request->hasFile('gallery_images') || $galleryTokens || $replaced || $madeMain) {
                     $fields['gallery_images'] = array_values($gallery);
                 }
                 // Gallery alt text, keyed by sha256 of the image path; only for images still in the gallery.
                 if (array_key_exists('gallery_alts', $data) || isset($fields['gallery_images'])) {
-                    $alts = array_merge((array) ($product->gallery_alts ?? []), array_map(
-                        fn ($v) => is_string($v) ? trim($v) : '', (array) ($data['gallery_alts'] ?? [])
-                    ));
+                    $alts = array_merge($oldAlts, $altMoves);
                     $current = array_map(fn ($p) => hash('sha256', $p), $fields['gallery_images'] ?? ($product->gallery_images ?? []));
                     $alts = array_filter(array_intersect_key($alts, array_flip($current)), fn ($v) => $v !== '');
                     $fields['gallery_alts'] = $alts ?: null;
@@ -278,6 +329,9 @@ class ProductEditor
             'main_image_token' => 'nullable|string|max:2000',
             'wholesale_main_image_token' => 'nullable|string|max:2000',
             'og_image_token' => 'nullable|string|max:2000',
+            'gallery_replace' => 'sometimes|nullable|array|max:100',
+            'gallery_replace.*' => 'nullable|string|max:2000',
+            'make_main' => 'nullable|string|size:64',
             'gallery_tokens' => 'sometimes|nullable|array|max:20',
             'gallery_tokens.*' => 'nullable|string|max:2000',
         ];

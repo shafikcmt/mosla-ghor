@@ -208,7 +208,7 @@ document.querySelectorAll('[data-product-editor]').forEach(editor => {
     };
     const addItem = (input, file) => {
         const list = listFor(input);
-        if (input.dataset.asyncUpload !== 'gallery') {
+        if (input.dataset.asyncUpload !== 'gallery' || input.hasAttribute('data-single')) {
             // Single-image fields: the newest choice replaces earlier ones.
             list.querySelectorAll('.pe-upload:not([data-state=uploading])').forEach(el => el.remove());
         }
@@ -228,7 +228,29 @@ document.querySelectorAll('[data-product-editor]').forEach(editor => {
         const remove = event.target.closest('[data-remove]');
         if (!remove) return;
         const item = remove.closest('.pe-upload');
-        if (item && item.dataset.state !== 'uploading') item.remove();
+        if (item && item.dataset.state !== 'uploading') {
+            // Undo a gallery "বদলান": show the current photo again.
+            const photo = item.closest('[data-photo]');
+            const img = photo && photo.querySelector('[data-photo-img]');
+            if (img && img.dataset.original) { img.src = img.dataset.original; photo.removeAttribute('data-replaced'); }
+            item.remove();
+        }
+    });
+    // Gallery "বদলান": preview the new photo in its card right away.
+    editor.addEventListener('change', event => {
+        const input = event.target;
+        if (!input.matches || !input.matches('input[type=file][data-replace-preview]') || !input.files || !input.files[0]) return;
+        const photo = input.closest('[data-photo]');
+        const img = photo && photo.querySelector('[data-photo-img]');
+        if (!img) return;
+        if (!img.dataset.original) img.dataset.original = img.getAttribute('src') || '';
+        img.src = URL.createObjectURL(input.files[0]);
+        photo.setAttribute('data-replaced', '');
+    }, true);
+    // "মূল ছবি করুন" is a radio: a second click clears the choice.
+    editor.querySelectorAll('input[name=make_main]').forEach(radio => {
+        radio.addEventListener('mousedown', () => { radio.dataset.was = radio.checked ? '1' : ''; });
+        radio.addEventListener('click', () => { if (radio.dataset.was === '1') { radio.checked = false; radio.dataset.was = ''; } });
     });
     editor.addEventListener('change', event => {
         const input = event.target;
