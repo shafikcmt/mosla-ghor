@@ -100,6 +100,24 @@ class HomeController extends Controller
         $reviews = Review::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
 
         $heroSlides = \App\Models\HeroSlide::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
+
+        // Category tiles: a product photo and a product count per top-level category
+        // (sub-category products count towards their parent). Two light queries.
+        $parentOf = Category::whereIn('parent_id', $navCategories->pluck('id'))->pluck('parent_id', 'id')->all();
+        $categoryThumbs = [];
+        $categoryCounts = [];
+        $allProductCount = 0;
+        foreach (Product::active()->reorder()->orderBy('sort_order')->get(['id', 'category_id', 'main_image']) as $p) {
+            $allProductCount++;
+            if (! $p->category_id) {
+                continue;
+            }
+            $top = $parentOf[$p->category_id] ?? $p->category_id;
+            $categoryCounts[$top] = ($categoryCounts[$top] ?? 0) + 1;
+            if (! isset($categoryThumbs[$top]) && $p->main_image) {
+                $categoryThumbs[$top] = \App\Support\ProductMedia::url($p->main_image);
+            }
+        }
         $ws = WebsiteSetting::allKeyed();
 
         return view('home', compact(
@@ -107,7 +125,8 @@ class HomeController extends Controller
             'activeZones', 'zonesForJs', 'fixedCombos', 'fixedCombosForJs',
             'bdDivisions', 'bdDistricts',
             'faqs', 'reviews', 'ws',
-            'navCategories', 'selectedCategory', 'featuredProducts', 'heroSlides'
+            'navCategories', 'selectedCategory', 'featuredProducts', 'heroSlides',
+            'categoryThumbs', 'categoryCounts', 'allProductCount'
         ));
     }
 }
