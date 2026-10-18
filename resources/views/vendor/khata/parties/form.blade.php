@@ -27,11 +27,19 @@
 
     <div>
         <label class="block text-sm font-semibold mb-1">নাম <span class="text-red-500">*</span></label>
-        <input name="name" value="{{ old('name', $party->name) }}" required maxlength="150" @unless($party->exists) autofocus @endunless class="{{ $inp }}">
+        <input name="name" value="{{ old('name', $party->name) }}" required maxlength="150" autocomplete="name" @unless($party->exists) autofocus @endunless class="{{ $inp }}" data-contact-name>
     </div>
     <div>
-        <label class="block text-sm font-semibold mb-1">ফোন নম্বর</label>
-        <input type="tel" name="phone" value="{{ old('phone', $party->phone) }}" inputmode="tel" placeholder="01XXXXXXXXX" class="{{ $inp }}">
+        <label class="block text-sm font-semibold mb-1" for="party-phone">ফোন নম্বর</label>
+        <div class="flex gap-2">
+            <input id="party-phone" type="tel" name="phone" value="{{ old('phone', $party->phone) }}" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" class="{{ $inp }}" data-contact-phone>
+            {{-- Shown only where the browser supports the Contact Picker (Android Chrome). --}}
+            <button type="button" hidden data-contact-pick
+                    class="shrink-0 px-3 rounded-xl border border-[#0f7a3e] text-[#0f7a3e] font-semibold text-sm hover:bg-green-50"
+                    aria-label="ফোনের কন্টাক্ট থেকে নাম ও নম্বর নিন">📇 কন্টাক্ট</button>
+        </div>
+        <select hidden data-contact-numbers aria-label="কোন নম্বরটি নেবেন" class="{{ $inp }} mt-2"></select>
+        <p hidden data-contact-msg class="text-xs text-gray-500 mt-1"></p>
     </div>
 
     <details class="group rounded-xl border border-gray-100 bg-gray-50" @if($more) open @endif>
@@ -76,3 +84,50 @@
 </form>
 @endif
 @endsection
+
+@push('scripts')
+<script>
+// Pick a party from the phone's contacts (Contact Picker API — Android Chrome, HTTPS).
+// The browser opens the phone's own contact list; nothing is read without the user's choice.
+(function () {
+    const btn = document.querySelector('[data-contact-pick]');
+    if (!btn || !('contacts' in navigator) || !('ContactsManager' in window)) return;
+    const nameEl = document.querySelector('[data-contact-name]');
+    const phoneEl = document.querySelector('[data-contact-phone]');
+    const list = document.querySelector('[data-contact-numbers]');
+    const msg = document.querySelector('[data-contact-msg]');
+    const bn = '০১২৩৪৫৬৭৮৯';
+    const say = (t) => { msg.textContent = t; msg.hidden = !t; };
+    // +880 1XXXXXXXXX / 8801… / Bangla digits → 01XXXXXXXXX
+    const clean = (n) => {
+        let s = String(n || '').replace(/[০-৯]/g, d => bn.indexOf(d)).replace(/[^\d+]/g, '');
+        if (s.startsWith('+880')) s = '0' + s.slice(4);
+        else if (s.startsWith('880')) s = '0' + s.slice(3);
+        return s;
+    };
+    btn.hidden = false;
+    btn.addEventListener('click', async () => {
+        say('');
+        try {
+            const [c] = await navigator.contacts.select(['name', 'tel'], { multiple: false });
+            if (!c) return;
+            const name = (c.name || []).find(Boolean);
+            const nums = [...new Set((c.tel || []).map(clean).filter(Boolean))];
+            if (name) nameEl.value = name.trim().slice(0, 150);
+            list.innerHTML = '';
+            list.hidden = nums.length < 2;
+            if (nums.length > 1) {
+                nums.forEach(n => list.add(new Option(n, n)));
+                say('এই কন্টাক্টে একাধিক নম্বর আছে — নিচ থেকে বেছে নিন।');
+            } else if (!nums.length) {
+                say('এই কন্টাক্টে কোনো নম্বর নেই।');
+            }
+            phoneEl.value = nums[0] || phoneEl.value;
+        } catch (e) {
+            say('কন্টাক্ট খোলা যায়নি — নম্বর হাতে লিখুন।');
+        }
+    });
+    list.addEventListener('change', () => { phoneEl.value = list.value; });
+})();
+</script>
+@endpush
