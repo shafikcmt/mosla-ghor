@@ -32,4 +32,21 @@ class HomepageModernLayoutTest extends TestCase
             ->assertSee('২টি পণ্য')->assertSee('৩টি পণ্য');
         $res->assertSee('hm-card-detail', false)->assertSee('storefront-home.css', false);
     }
+
+    public function test_wholesale_section_shows_text_cards_with_moq_and_quick_enquiry_without_photos(): void
+    {
+        \App\Models\WebsiteSetting::updateOrCreate(['key' => 'whatsapp_number'], ['value' => '01818945646']);
+        Product::create(['name_bn' => 'পাইকারি জিরা', 'slug' => 'ws-jira', 'stock' => 5, 'retail_price_1kg' => 500, 'main_image' => 'storage/products/images/ws-jira.webp',
+            'short_description' => 'দোকানের জন্য বাছাইকৃত জিরা', 'min_order_quantity' => 30, 'min_order_unit' => 'kg', 'delivery_time' => '১–৩ দিন',
+            'is_active' => true, 'show_in_retail' => true, 'show_in_wholesale' => true])->syncPrices();
+
+        $html = $this->get('/')->assertOk()->getContent();
+        $section = substr($html, strpos($html, 'id="wholesale-products"'), 6000);
+        $this->assertStringContainsString('hm-ws-banner', $section);
+        $this->assertStringContainsString('WhatsApp-এ কোটেশন নিন', $section);
+        $this->assertStringContainsString('সর্বনিম্ন অর্ডার: <b>30 kg</b>', $section);
+        $this->assertStringContainsString('দোকানের জন্য বাছাইকৃত জিরা', $section);
+        $this->assertStringContainsString("msQuickEnquiry(this, 'form')", $section);
+        $this->assertStringNotContainsString('<img', $section, 'Wholesale cards have no photos.');
+    }
 }
