@@ -88,6 +88,10 @@ class KhataBook
                 'item_id'  => $item->id,
                 'name'     => $item->name,
                 'unit'     => $item->unit,
+                // Weight of one unit for this line (a bosta may differ per purchase); falls back to the item's.
+                'pack_kg'  => KhataItem::hasPackWeight($item->unit)
+                    ? ((float) ($line['pack_kg'] ?? 0) > 0 ? round((float) $line['pack_kg'], 3) : ($item->pack_kg !== null ? (float) $item->pack_kg : null))
+                    : null,
                 'quantity' => $qty,
                 'price'    => $price,
                 'cost'     => $type === 'purchase' ? $price : (float) ($oldCosts[$item->id] ?? $item->purchase_price),
@@ -130,6 +134,9 @@ class KhataBook
             $item->stock = round((float) $item->stock + $sign * $attrs['quantity'], 3);
             if ($tx->type === 'purchase' && $attrs['price'] > 0) {
                 $item->purchase_price = $attrs['price']; // latest buying price
+            }
+            if ($item->pack_kg === null && $attrs['pack_kg']) {
+                $item->pack_kg = $attrs['pack_kg']; // first weight given becomes the item default
             }
             $item->save();
         }

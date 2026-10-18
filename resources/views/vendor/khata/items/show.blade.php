@@ -1,7 +1,7 @@
 @extends('vendor.khata.layout')
 @section('title', $item->name)
 @section('heading', $item->name)
-@section('subheading', ($item->category ? $item->category.' · ' : '').'একক: '.$item->unitLabel())
+@section('subheading', ($item->category ? $item->category.' · ' : '').'একক: '.(\App\Models\Khata\KhataItem::packLabel($item->unit, $item->pack_kg) ?? $item->unitLabel()))
 @section('back', route('vendor.khata.items.index'))
 
 @section('content')
@@ -22,6 +22,11 @@
     <div class="grid grid-cols-2 gap-2 mt-3 text-sm text-gray-600">
         <p>বিক্রয় মূল্য: <b class="num">{{ $tk($item->sale_price) }}</b></p>
         <p>ক্রয় মূল্য: <b class="num">{{ $tk($item->purchase_price) }}</b></p>
+        @if($pack = \App\Models\Khata\KhataItem::packLabel($item->unit, $item->pack_kg))
+        <p class="col-span-2 text-amber-800 bg-amber-50 rounded-lg px-2 py-1">⚖ {{ $pack }}@if((float) $item->sale_price > 0) · বিক্রয় {{ $tk((float) $item->sale_price / (float) $item->pack_kg) }}/কেজি@endif</p>
+        @elseif(\App\Models\Khata\KhataItem::hasPackWeight($item->unit))
+        <p class="col-span-2"><a href="{{ route('vendor.khata.items.edit', $item) }}" class="text-amber-700 underline">১ {{ $item->unitLabel() }}-এ কত কেজি তা যোগ করুন</a></p>
+        @endif
     </div>
     <a href="{{ route('vendor.khata.items.edit', $item) }}" class="inline-block mt-3 text-sm text-[#0f7a3e] font-semibold">✎ সম্পাদনা</a>
 </div>

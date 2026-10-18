@@ -8,12 +8,13 @@
     $own    = $tx ? $tx->lines->groupBy('item_id')->map(fn ($l) => (float) $l->sum('quantity')) : collect();
     $inp    = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#0f7a3e]';
     $itemData = $items->mapWithKeys(fn ($i) => [$i->id => [
-        'name' => $i->name, 'unit' => $i->unitLabel(), 'kg' => $i->unit === 'kg', 'stock' => (float) $i->stock + $sign * ($own[$i->id] ?? 0),
+        'name' => $i->name, 'unit' => $i->unitLabel(), 'kg' => $i->unit === 'kg',
+        'packable' => \App\Models\Khata\KhataItem::hasPackWeight($i->unit), 'pack' => $i->pack_kg !== null ? (float) $i->pack_kg : null, 'stock' => (float) $i->stock + $sign * ($own[$i->id] ?? 0),
         'price' => (float) ($isSale ? $i->sale_price : $i->purchase_price),
     ]]);
     $partyData = $parties->mapWithKeys(fn ($p) => [$p->id => ['balance' => $p->balance(), 'phone' => $p->phone]]);
     $defLines = $tx
-        ? $tx->lines->map(fn ($l) => ['item_id' => $l->item_id, 'quantity' => (float) $l->quantity, 'price' => (float) $l->price])->values()->all()
+        ? $tx->lines->map(fn ($l) => ['item_id' => $l->item_id, 'quantity' => (float) $l->quantity, 'price' => (float) $l->price, 'pack_kg' => $l->pack_kg !== null ? (float) $l->pack_kg : null])->values()->all()
         : [['item_id' => '', 'quantity' => 1, 'price' => '']];
     $oldLines = old('lines', $defLines);
     $val = fn ($key, $default = null) => old($key, $tx ? $tx->{$key} : $default);
@@ -82,6 +83,13 @@
                         <p class="text-xs text-gray-500">মোট</p>
                         <p class="kh-total font-bold num">৳0</p>
                     </div>
+                </div>
+                {{-- কার্টন / বস্তা / প্যাকেট: weight of one unit for this line --}}
+                <div class="kh-packrow mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-amber-50 border border-amber-100 px-2.5 py-1.5 text-xs text-gray-700" style="display:none">
+                    <span>১ <span class="kh-pu"></span> =</span>
+                    <input type="number" name="lines[{{ $i }}][pack_kg]" value="{{ $l['pack_kg'] ?? '' }}" step="0.001" min="0.001" inputmode="decimal" placeholder="?" aria-label="প্রতি এককে কত কেজি" class="kh-pack w-20 border border-amber-200 rounded-md px-2 py-1 bg-white text-sm text-gray-800">
+                    <span>কেজি</span>
+                    <span class="kh-weight ml-auto font-semibold text-gray-900"></span>
                 </div>
                 <p class="kh-stock text-[11px] text-gray-400 mt-1"></p>
             </div>
@@ -170,6 +178,13 @@
                 <p class="kh-total font-bold num">৳0</p>
             </div>
         </div>
+        {{-- কার্টন / বস্তা / প্যাকেট: weight of one unit for this line --}}
+        <div class="kh-packrow mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-amber-50 border border-amber-100 px-2.5 py-1.5 text-xs text-gray-700" style="display:none">
+            <span>১ <span class="kh-pu"></span> =</span>
+            <input type="number" name="lines[__I__][pack_kg]" value="" step="0.001" min="0.001" inputmode="decimal" placeholder="?" aria-label="প্রতি এককে কত কেজি" class="kh-pack w-20 border border-amber-200 rounded-md px-2 py-1 bg-white text-sm text-gray-800">
+            <span>কেজি</span>
+            <span class="kh-weight ml-auto font-semibold text-gray-900"></span>
+        </div>
         <p class="kh-stock text-[11px] text-gray-400 mt-1"></p>
     </div>
 </template>
@@ -208,17 +223,34 @@
         line.querySelector('.kh-qty').value = (kg + g / 1000) ? q3(kg + g / 1000) : '';
     }
 
+    // কার্টন / বস্তা…: "১ কার্টন = 20 কেজি" per line, prefilled from the item.
+    function packMode(line, it, changed) {
+        const row = line.querySelector('.kh-packrow'), pack = line.querySelector('.kh-pack');
+        const on = !!(it && it.packable);
+        row.style.display = on ? '' : 'none';
+        if (!on) return;
+        line.querySelector('.kh-pu').textContent = it.unit;
+        if (changed || !pack.value) pack.value = it.pack || '';
+        const w = num(pack) * num(line.querySelector('.kh-qty'));
+        const per = num(pack) > 0 ? num(line.querySelector('.kh-price')) / num(pack) : 0;
+        line.querySelector('.kh-weight').textContent = w > 0
+            ? 'মোট ' + fmtQty(w, { kg: true }) + (per > 0 ? ' · ' + khTaka(per) + '/কেজি' : '') : 'ওজন দিলে মোট কেজি দেখাবে';
+    }
+
     function fill(line, setPrice) {
         const it = ITEMS[line.querySelector('.kh-item').value];
         line.querySelector('.kh-unit').textContent = it && !it.kg ? '(' + it.unit + ')' : '';
         line.querySelector('.kh-per').textContent = it && it.kg ? ' / কেজি' : '';
         kgMode(line, it);
+        packMode(line, it, setPrice);
         const price = line.querySelector('.kh-price');
         if (it && (setPrice || !price.value)) price.value = it.price || '';
         const st = line.querySelector('.kh-stock');
         if (!it) { st.textContent = ''; return; }
         const left = it.stock - (IS_SALE ? num(line.querySelector('.kh-qty')) : -num(line.querySelector('.kh-qty')));
-        st.textContent = 'স্টক: ' + fmtQty(it.stock, it) + (IS_SALE ? ' → বিক্রির পর ' + fmtQty(left, it) : '');
+        const pk = it.packable ? num(line.querySelector('.kh-pack')) : 0;
+        const withKg = n => fmtQty(n, it) + (pk > 0 ? ' (' + fmtQty(n * pk, { kg: true }) + ')' : '');
+        st.textContent = 'স্টক: ' + withKg(it.stock) + (IS_SALE ? ' → বিক্রির পর ' + withKg(left) : '');
         st.className = 'kh-stock text-[11px] mt-1 ' + (IS_SALE && left < 0 ? 'text-red-600 font-semibold' : 'text-gray-400');
     }
     function recalc() {

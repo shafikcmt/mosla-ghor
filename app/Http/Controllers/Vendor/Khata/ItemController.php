@@ -144,6 +144,7 @@ class ItemController extends KhataBaseController
                 Rule::unique('khata_items', 'name')->where('vendor_id', $this->vendor()->id)->ignore($item?->id)],
             'category'        => ['nullable', 'string', 'max:80'],
             'unit'            => ['required', 'string', 'max:20'],
+            'pack_kg'         => ['nullable', 'numeric', 'gt:0', 'max:9999999'],
             'sale_price'      => ['nullable', 'numeric', 'min:0'],
             'purchase_price'  => ['nullable', 'numeric', 'min:0'],
             'low_stock_alert' => ['nullable', 'numeric', 'min:0'],
@@ -152,7 +153,11 @@ class ItemController extends KhataBaseController
         ], [
             'name.required' => 'আইটেমের নাম দিন।',
             'name.unique'   => 'এই নামে আইটেম আগেই আছে।',
+            'pack_kg.gt'    => 'ওজন ০-এর বেশি হতে হবে।',
+            'pack_kg.numeric' => 'ওজন একটি সংখ্যা হতে হবে।',
         ]);
+        // কেজি / গ্রাম items are a weight already.
+        $v['pack_kg'] = KhataItem::hasPackWeight($v['unit']) ? ($v['pack_kg'] ?? null) : null;
         $v['sale_price']     = $v['sale_price'] ?? 0;
         $v['purchase_price'] = $v['purchase_price'] ?? 0;
         $v['is_active']      = true;

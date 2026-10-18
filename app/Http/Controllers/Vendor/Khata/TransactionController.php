@@ -98,6 +98,7 @@ class TransactionController extends KhataBaseController
             'lines.*.item_id' => ['required', 'integer', Rule::exists('khata_items', 'id')->where('vendor_id', $vendorId)],
             'lines.*.quantity'=> ['required', 'numeric', 'min:0.001'],
             'lines.*.price'   => ['required', 'numeric', 'min:0'],
+            'lines.*.pack_kg' => ['nullable', 'numeric', 'gt:0', 'max:9999999'],
             'discount'        => ['nullable', 'numeric', 'min:0'],
             'extra_label'     => ['nullable', 'string', 'max:60'],
             'extra_charge'    => ['nullable', 'numeric', 'min:0'],
@@ -109,6 +110,7 @@ class TransactionController extends KhataBaseController
             'lines.*.item_id.required' => 'প্রতিটি সারিতে আইটেম বেছে নিন।',
             'lines.*.quantity.required' => 'প্রতিটি সারিতে পরিমাণ দিন (যেমন: ২৭ কেজি ৭০০ গ্রাম)।',
             'lines.*.quantity.min' => 'পরিমাণ ০-এর বেশি হতে হবে।',
+            'lines.*.pack_kg.gt' => 'প্রতি এককের ওজন ০-এর বেশি হতে হবে।',
         ]);
 
         // A due (বাকি) needs someone to owe it.
@@ -201,7 +203,7 @@ class TransactionController extends KhataBaseController
             return null;
         }
         $shop  = $tx->vendor->shop_name;
-        $lines = $tx->lines->map(fn ($l) => '• '.$l->name.' — '.KhataItem::formatQty($l->quantity, $l->unit).' × ৳'.number_format((float) $l->price, 0).' = ৳'.number_format((float) $l->total, 0))->implode("\n");
+        $lines = $tx->lines->map(fn ($l) => '• '.$l->name.' — '.$l->qtyLabel().' × ৳'.number_format((float) $l->price, 0).' = ৳'.number_format((float) $l->total, 0))->implode("\n");
         $bal   = $tx->party->balance();
 
         $text = "*{$shop}* — {$tx->typeLabel()}".($tx->number ? " #{$tx->number}" : '')."\n"

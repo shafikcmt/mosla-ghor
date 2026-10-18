@@ -77,7 +77,7 @@
                 <div class="rounded-xl border border-gray-200 px-3 py-2.5 flex items-start justify-between gap-3">
                     <div class="min-w-0">
                         <p class="font-semibold">{{ $i + 1 }}. {{ $line->name }}</p>
-                        <p class="text-xs text-gray-500 num">{{ \App\Models\Khata\KhataItem::formatQty($line->quantity, $line->unit) }} × {{ $tk($line->price) }}</p>
+                        <p class="text-xs text-gray-500 num">{{ $line->qtyLabel() }} × {{ $tk($line->price) }}</p>
                     </div>
                     <p class="font-bold num whitespace-nowrap">{{ $tk($line->total) }}</p>
                 </div>
@@ -99,7 +99,7 @@
                         <tr>
                             <td class="px-3 py-2.5 text-gray-500">{{ $i + 1 }}</td>
                             <td class="px-3 py-2.5 font-semibold">{{ $line->name }}</td>
-                            <td class="px-3 py-2.5 text-right num whitespace-nowrap">{{ \App\Models\Khata\KhataItem::formatQty($line->quantity, $line->unit) }}</td>
+                            <td class="px-3 py-2.5 text-right num whitespace-nowrap">{{ $line->qtyLabel() }}</td>
                             <td class="px-3 py-2.5 text-right num whitespace-nowrap">{{ $tk($line->price) }}</td>
                             <td class="px-3 py-2.5 text-right num whitespace-nowrap font-semibold">{{ $tk($line->total) }}</td>
                         </tr>
