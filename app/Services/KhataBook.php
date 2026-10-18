@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * দোকানের খাতা bookkeeping: every sale / purchase / payment / expense / stock
  * adjustment is one KhataTransaction; item stock moves with it and is reversed
- * when the transaction is deleted. Party balances are derived (never stored).
+ * when the transaction is edited or deleted. Party balances are derived (never stored).
  */
 class KhataBook
 {
@@ -35,59 +35,119 @@ class KhataBook
     public function recordWithItems(Vendor $vendor, string $type, array $data, array $lines): KhataTransaction
     {
         return DB::transaction(function () use ($vendor, $type, $data, $lines) {
-            $subtotal = 0.0;
-            $rows     = [];
-            foreach ($lines as $line) {
-                $item  = KhataItem::where('vendor_id', $vendor->id)->lockForUpdate()->findOrFail($line['item_id']);
-                $qty   = round((float) $line['quantity'], 3);
-                $price = round((float) $line['price'], 2);
-                $total = round($qty * $price, 2);
-                $subtotal += $total;
-                $rows[] = [$item, [
-                    'item_id'  => $item->id,
-                    'name'     => $item->name,
-                    'unit'     => $item->unit,
-                    'quantity' => $qty,
-                    'price'    => $price,
-                    'cost'     => $type === 'purchase' ? $price : (float) $item->purchase_price,
-                    'total'    => $total,
-                ]];
-            }
+            [$rows, $subtotal] = $this->buildLines($vendor, $type, $lines);
 
-            $discount = min(max(0, (float) ($data['discount'] ?? 0)), $subtotal);
-            $extra    = max(0, (float) ($data['extra_charge'] ?? 0));
-            $total    = in_array($type, ['sale', 'purchase'], true) ? round($subtotal - $discount + $extra, 2) : round($subtotal, 2);
-            $paid     = in_array($type, ['sale', 'purchase'], true) ? min(max(0, (float) ($data['paid'] ?? 0)), $total) : 0;
-
-            $tx = KhataTransaction::create([
-                'vendor_id'    => $vendor->id,
-                'party_id'     => $data['party_id'] ?? null,
-                'type'         => $type,
-                'number'       => in_array($type, ['sale', 'purchase'], true) ? ($data['number'] ?? $this->nextNumber($vendor, $type)) : null,
-                'date'         => $data['date'] ?? now()->toDateString(),
-                'subtotal'     => $subtotal,
-                'discount'     => $discount,
-                'extra_label'  => $extra > 0 ? ($data['extra_label'] ?? 'অতিরিক্ত চার্জ') : null,
-                'extra_charge' => $extra,
-                'total'        => $total,
-                'paid'         => $paid,
-                'payment_mode' => $paid <= 0 && in_array($type, ['sale', 'purchase'], true) ? 'credit' : ($data['payment_mode'] ?? 'cash'),
-                'note'         => $data['note'] ?? null,
-                'created_by'   => Auth::id(),
+            $tx = KhataTransaction::create($this->amounts($type, $data, $subtotal) + [
+                'vendor_id'  => $vendor->id,
+                'type'       => $type,
+                'number'     => in_array($type, ['sale', 'purchase'], true) ? ($data['number'] ?? $this->nextNumber($vendor, $type)) : null,
+                'created_by' => Auth::id(),
             ]);
-
-            $sign = self::STOCK_SIGN[$type] ?? 0;
-            foreach ($rows as [$item, $attrs]) {
-                $tx->lines()->create($attrs);
-                $item->stock = round((float) $item->stock + $sign * $attrs['quantity'], 3);
-                if ($type === 'purchase' && $attrs['price'] > 0) {
-                    $item->purchase_price = $attrs['price']; // latest buying price
-                }
-                $item->save();
-            }
+            $this->applyLines($tx, $rows);
 
             return $tx;
         });
+    }
+
+    /**
+     * Edit a sale / purchase: put the old lines' stock back, then apply the new
+     * lines — all in one database transaction, so stock is never half-updated.
+     * Number, creator and share link stay the same.
+     *
+     * @param  array<int, array{item_id:int, quantity:float, price:float}>  $lines
+     */
+    public function updateWithItems(KhataTransaction $tx, array $data, array $lines): KhataTransaction
+    {
+        return DB::transaction(function () use ($tx, $data, $lines) {
+            $tx = KhataTransaction::lockForUpdate()->with('vendor')->findOrFail($tx->id);
+            // A sale keeps the cost it was booked at, so editing does not rewrite past profit.
+            $oldCosts = $tx->lines->whereNotNull('item_id')->pluck('cost', 'item_id')->all();
+            $this->reverseStock($tx);
+            $tx->lines()->delete();
+
+            [$rows, $subtotal] = $this->buildLines($tx->vendor, $tx->type, $lines, $oldCosts);
+            $tx->update($this->amounts($tx->type, $data, $subtotal));
+            $this->applyLines($tx, $rows);
+
+            return $tx->fresh('lines');
+        });
+    }
+
+    /** Lock items and price each line. Returns [[item, line attributes], subtotal]. */
+    private function buildLines(Vendor $vendor, string $type, array $lines, array $oldCosts = []): array
+    {
+        $subtotal = 0.0;
+        $rows     = [];
+        foreach ($lines as $line) {
+            $item  = KhataItem::where('vendor_id', $vendor->id)->lockForUpdate()->findOrFail($line['item_id']);
+            $qty   = round((float) $line['quantity'], 3);
+            $price = round((float) $line['price'], 2);
+            $total = round($qty * $price, 2);
+            $subtotal += $total;
+            $rows[] = [$item, [
+                'item_id'  => $item->id,
+                'name'     => $item->name,
+                'unit'     => $item->unit,
+                'quantity' => $qty,
+                'price'    => $price,
+                'cost'     => $type === 'purchase' ? $price : (float) ($oldCosts[$item->id] ?? $item->purchase_price),
+                'total'    => $total,
+            ]];
+        }
+
+        return [$rows, $subtotal];
+    }
+
+    /** Header amounts for a sale / purchase / stock entry. */
+    private function amounts(string $type, array $data, float $subtotal): array
+    {
+        $trade    = in_array($type, ['sale', 'purchase'], true);
+        $discount = min(max(0, (float) ($data['discount'] ?? 0)), $subtotal);
+        $extra    = max(0, (float) ($data['extra_charge'] ?? 0));
+        $total    = $trade ? round($subtotal - $discount + $extra, 2) : round($subtotal, 2);
+        $paid     = $trade ? min(max(0, (float) ($data['paid'] ?? 0)), $total) : 0;
+
+        return [
+            'party_id'     => $data['party_id'] ?? null,
+            'date'         => $data['date'] ?? now()->toDateString(),
+            'subtotal'     => $subtotal,
+            'discount'     => $discount,
+            'extra_label'  => $extra > 0 ? ($data['extra_label'] ?? 'অতিরিক্ত চার্জ') : null,
+            'extra_charge' => $extra,
+            'total'        => $total,
+            'paid'         => $paid,
+            'payment_mode' => $paid <= 0 && $trade ? 'credit' : ($data['payment_mode'] ?? 'cash'),
+            'note'         => $data['note'] ?? null,
+        ];
+    }
+
+    /** Save the lines and move each item's stock. */
+    private function applyLines(KhataTransaction $tx, array $rows): void
+    {
+        $sign = self::STOCK_SIGN[$tx->type] ?? 0;
+        foreach ($rows as [$item, $attrs]) {
+            $tx->lines()->create($attrs);
+            $item->stock = round((float) $item->stock + $sign * $attrs['quantity'], 3);
+            if ($tx->type === 'purchase' && $attrs['price'] > 0) {
+                $item->purchase_price = $attrs['price']; // latest buying price
+            }
+            $item->save();
+        }
+    }
+
+    /** Undo the stock movement of a transaction's current lines. */
+    private function reverseStock(KhataTransaction $tx): void
+    {
+        $sign = self::STOCK_SIGN[$tx->type] ?? 0;
+        if (! $sign) {
+            return;
+        }
+        foreach ($tx->lines as $line) {
+            $item = $line->item_id ? KhataItem::lockForUpdate()->find($line->item_id) : null;
+            if ($item) {
+                $item->update(['stock' => round((float) $item->stock - $sign * (float) $line->quantity, 3)]);
+            }
+        }
     }
 
     /** payment_in / payment_out / expense — a single amount. */
@@ -115,15 +175,7 @@ class KhataBook
     public function delete(KhataTransaction $tx): void
     {
         DB::transaction(function () use ($tx) {
-            $sign = self::STOCK_SIGN[$tx->type] ?? 0;
-            if ($sign) {
-                foreach ($tx->lines as $line) {
-                    $item = $line->item_id ? KhataItem::lockForUpdate()->find($line->item_id) : null;
-                    if ($item) {
-                        $item->update(['stock' => round((float) $item->stock - $sign * (float) $line->quantity, 3)]);
-                    }
-                }
-            }
+            $this->reverseStock($tx);
             $tx->lines()->delete();
             $tx->delete();
         });

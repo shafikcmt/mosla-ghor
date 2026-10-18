@@ -182,6 +182,75 @@ class KhataBookTest extends TestCase
         $this->assertSame('01712345678', KhataParty::latest('id')->value('phone'));
     }
 
+    public function test_editing_a_sale_or_purchase_recalculates_stock(): void
+    {
+        $jira = $this->item('jira', 50);
+        $elach = $this->item('elach', 10);
+        $customer = $this->party();
+        $this->post(route('vendor.khata.trade.store', 'sale'), [
+            'party_id' => $customer->id, 'date' => now()->toDateString(), 'payment_mode' => 'cash', 'paid' => 0,
+            'lines' => [['item_id' => $jira->id, 'quantity' => 10, 'price' => 600]],
+        ])->assertSessionHasNoErrors();
+        $sale = KhataTransaction::where('type', 'sale')->sole();
+        $this->assertEquals(40, $jira->fresh()->stock);
+
+        $this->get(route('vendor.khata.tx.show', $sale))->assertOk()->assertSee(route('vendor.khata.tx.edit', $sale));
+        $this->get(route('vendor.khata.tx.edit', $sale))->assertOk()->assertSee('বিক্রি সম্পাদনা')->assertSee('"stock":50', false);
+
+        // 10 kg → 4 kg jira plus 2 kg elach; number and creator stay.
+        $this->put(route('vendor.khata.tx.update', $sale), [
+            'party_id' => $customer->id, 'date' => now()->toDateString(), 'payment_mode' => 'cash', 'paid' => 1000,
+            'lines' => [['item_id' => $jira->id, 'quantity' => 4, 'price' => 600], ['item_id' => $elach->id, 'quantity' => 2, 'price' => 3000]],
+        ])->assertSessionHasNoErrors()->assertRedirect(route('vendor.khata.tx.show', $sale));
+        $sale->refresh();
+        $this->assertEquals(46, $jira->fresh()->stock);
+        $this->assertEquals(8, $elach->fresh()->stock);
+        $this->assertEquals(8400, $sale->total);
+        $this->assertEquals(1000, $sale->paid);
+        $this->assertSame(1, $sale->number);
+        $this->assertCount(2, $sale->lines);
+        $this->assertSame(1, KhataTransaction::where('type', 'sale')->count());
+
+        // Purchase edit: 20 → 5 kg.
+        $this->post(route('vendor.khata.trade.store', 'purchase'), [
+            'date' => now()->toDateString(), 'payment_mode' => 'cash', 'paid' => 10000,
+            'lines' => [['item_id' => $jira->id, 'quantity' => 20, 'price' => 500]],
+        ])->assertSessionHasNoErrors();
+        $purchase = KhataTransaction::where('type', 'purchase')->sole();
+        $this->assertEquals(66, $jira->fresh()->stock);
+        $this->put(route('vendor.khata.tx.update', $purchase), [
+            'date' => now()->toDateString(), 'payment_mode' => 'cash', 'paid' => 2500,
+            'lines' => [['item_id' => $jira->id, 'quantity' => 5, 'price' => 500]],
+        ])->assertSessionHasNoErrors();
+        $this->assertEquals(51, $jira->fresh()->stock);
+
+        // A rejected edit (due without party) leaves stock and totals untouched.
+        $this->put(route('vendor.khata.tx.update', $purchase), [
+            'date' => now()->toDateString(), 'payment_mode' => 'cash', 'paid' => 0,
+            'lines' => [['item_id' => $jira->id, 'quantity' => 1, 'price' => 500]],
+        ])->assertSessionHas('error');
+        $this->assertEquals(51, $jira->fresh()->stock);
+        $this->assertEquals(2500, $purchase->fresh()->total);
+
+        // Deleting after an edit still restores stock exactly.
+        $this->delete(route('vendor.khata.tx.destroy', $sale))->assertRedirect();
+        $this->assertEquals(55, $jira->fresh()->stock);
+        $this->assertEquals(10, $elach->fresh()->stock);
+    }
+
+    public function test_payments_cannot_be_edited_as_trades_and_other_shops_are_blocked(): void
+    {
+        $customer = $this->party();
+        $this->post(route('vendor.khata.amount.store', 'payment_in'), [
+            'party_id' => $customer->id, 'amount' => 500, 'date' => now()->toDateString(), 'payment_mode' => 'cash',
+        ])->assertSessionHasNoErrors();
+        $payment = KhataTransaction::where('type', 'payment_in')->sole();
+        $this->get(route('vendor.khata.tx.edit', $payment))->assertNotFound();
+
+        [$other] = $this->makeVendor('rahim', 'inventory');
+        $this->actingAs($other)->get(route('vendor.khata.tx.edit', $payment))->assertNotFound();
+    }
+
     public function test_admin_switches_a_vendor_between_panel_modes(): void
     {
         [, $shop] = $this->makeVendor('shop', 'full');

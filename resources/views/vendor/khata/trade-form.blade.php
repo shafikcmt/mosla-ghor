@@ -1,28 +1,38 @@
 @extends('vendor.khata.layout')
 @php
     $isSale = $type === 'sale';
-    $title  = $isSale ? 'বিক্রি যোগ করুন' : 'ক্রয় যোগ করুন';
+    $tx     = $tx ?? null; // set when editing a saved entry
+    $title  = $tx ? ($isSale ? 'বিক্রি সম্পাদনা' : 'ক্রয় সম্পাদনা') : ($isSale ? 'বিক্রি যোগ করুন' : 'ক্রয় যোগ করুন');
+    // When editing, show stock as it was before this entry (its own quantities added back).
+    $sign   = $isSale ? 1 : -1;
+    $own    = $tx ? $tx->lines->groupBy('item_id')->map(fn ($l) => (float) $l->sum('quantity')) : collect();
     $inp    = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-[#0f7a3e]';
     $itemData = $items->mapWithKeys(fn ($i) => [$i->id => [
-        'name' => $i->name, 'unit' => $i->unitLabel(), 'stock' => (float) $i->stock,
+        'name' => $i->name, 'unit' => $i->unitLabel(), 'stock' => (float) $i->stock + $sign * ($own[$i->id] ?? 0),
         'price' => (float) ($isSale ? $i->sale_price : $i->purchase_price),
     ]]);
     $partyData = $parties->mapWithKeys(fn ($p) => [$p->id => ['balance' => $p->balance(), 'phone' => $p->phone]]);
-    $oldLines = old('lines', [['item_id' => '', 'quantity' => 1, 'price' => '']]);
+    $defLines = $tx
+        ? $tx->lines->map(fn ($l) => ['item_id' => $l->item_id, 'quantity' => (float) $l->quantity, 'price' => (float) $l->price])->values()->all()
+        : [['item_id' => '', 'quantity' => 1, 'price' => '']];
+    $oldLines = old('lines', $defLines);
+    $val = fn ($key, $default = null) => old($key, $tx ? $tx->{$key} : $default);
+    $num = fn ($key) => ($v = $val($key)) !== null && (float) $v > 0 ? (float) $v : null;
     $selParty = old('party_id', $partyId);
 @endphp
 @section('title', $title)
 @section('heading', $title)
-@section('back', $selParty ? route('vendor.khata.parties.show', $selParty) : route('vendor.khata.home'))
+@section('back', $tx ? route('vendor.khata.tx.show', $tx) : ($selParty ? route('vendor.khata.parties.show', $selParty) : route('vendor.khata.home')))
 
 @section('content')
-<form method="POST" action="{{ route('vendor.khata.trade.store', $type) }}" id="kh-trade" class="space-y-3 max-w-3xl lg:max-w-none lg:grid lg:grid-cols-5 lg:gap-6 lg:space-y-0 lg:items-start">
+<form method="POST" action="{{ $tx ? route('vendor.khata.tx.update', $tx) : route('vendor.khata.trade.store', $type) }}" id="kh-trade" class="space-y-3 max-w-3xl lg:max-w-none lg:grid lg:grid-cols-5 lg:gap-6 lg:space-y-0 lg:items-start">
     @csrf
+    @if($tx) @method('PUT') @endif
     <div class="space-y-3 lg:col-span-3">
     <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 grid grid-cols-2 gap-3">
         <div class="col-span-2 flex items-center justify-between gap-3">
             <p class="text-sm text-gray-500">{{ $isSale ? 'চালান' : 'ক্রয়' }} <b class="text-gray-900 num">#{{ $number }}</b></p>
-            <input type="date" name="date" value="{{ old('date', now()->toDateString()) }}" required aria-label="তারিখ" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm">
+            <input type="date" name="date" value="{{ old('date', $tx ? $tx->date->toDateString() : now()->toDateString()) }}" required aria-label="তারিখ" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm">
         </div>
         <div class="col-span-2">
             <div class="flex items-center justify-between mb-1">
@@ -78,17 +88,17 @@
 
     <div class="space-y-3 lg:col-span-2 lg:sticky lg:top-20">
     {{-- Totals: optional extras open on demand --}}
-    @php $hasDisc = (float) old('discount') > 0; $hasExtra = (float) old('extra_charge') > 0; $hasNote = filled(old('note')); @endphp
+    @php $hasDisc = (float) $val('discount') > 0; $hasExtra = (float) $val('extra_charge') > 0; $hasNote = filled($val('note')); @endphp
     <div class="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 space-y-3">
         <div class="flex justify-between"><span class="text-gray-500">উপমোট</span><span id="kh-sub" class="font-semibold num">৳0</span></div>
 
         <div id="kh-disc-row" class="flex items-center justify-between gap-2 {{ $hasDisc ? '' : 'hidden' }}">
             <span class="text-gray-500">ডিসকাউন্ট</span>
-            <input type="number" name="discount" id="kh-disc" value="{{ old('discount') }}" step="0.01" min="0" placeholder="৳ 0" class="w-32 border border-gray-200 rounded-lg px-2 py-2 text-right">
+            <input type="number" name="discount" id="kh-disc" value="{{ $num('discount') }}" step="0.01" min="0" placeholder="৳ 0" class="w-32 border border-gray-200 rounded-lg px-2 py-2 text-right">
         </div>
         <div id="kh-extra-row" class="flex items-center justify-between gap-2 {{ $hasExtra ? '' : 'hidden' }}">
-            <input name="extra_label" value="{{ old('extra_label') }}" maxlength="60" placeholder="যেমন: লেবার ভাড়া" class="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-2">
-            <input type="number" name="extra_charge" id="kh-extra" value="{{ old('extra_charge') }}" step="0.01" min="0" placeholder="৳ 0" class="w-32 border border-gray-200 rounded-lg px-2 py-2 text-right">
+            <input name="extra_label" value="{{ $val('extra_label') }}" maxlength="60" placeholder="যেমন: লেবার ভাড়া" class="flex-1 min-w-0 border border-gray-200 rounded-lg px-2 py-2">
+            <input type="number" name="extra_charge" id="kh-extra" value="{{ $num('extra_charge') }}" step="0.01" min="0" placeholder="৳ 0" class="w-32 border border-gray-200 rounded-lg px-2 py-2 text-right">
         </div>
         <div class="flex flex-wrap gap-2 text-sm">
             <button type="button" data-show="kh-disc-row" class="kh-chip {{ $hasDisc ? 'hidden' : '' }} text-[#0f7a3e] font-semibold">+ ডিসকাউন্ট</button>
@@ -102,7 +112,7 @@
             <span class="font-semibold">{{ $isSale ? 'টাকা পেয়েছি' : 'টাকা দিয়েছি' }}</span>
             <div class="flex items-center gap-2">
                 <button type="button" id="kh-full" class="text-xs font-semibold text-[#0f7a3e] border border-green-200 rounded-lg px-2.5 py-2">পুরো টাকা</button>
-                <input type="number" name="paid" id="kh-paid" value="{{ old('paid') }}" step="0.01" min="0" placeholder="৳ 0" inputmode="decimal" class="w-32 border border-gray-200 rounded-lg px-2 py-2 text-right">
+                <input type="number" name="paid" id="kh-paid" value="{{ $num('paid') }}" step="0.01" min="0" placeholder="৳ 0" inputmode="decimal" class="w-32 border border-gray-200 rounded-lg px-2 py-2 text-right">
             </div>
         </div>
         <div id="kh-mode-row" class="flex items-center justify-between gap-2 hidden">
@@ -110,7 +120,7 @@
             <div class="flex gap-1 text-xs">
                 @foreach(['cash' => 'নগদ', 'bkash' => 'bKash', 'nagad' => 'Nagad', 'bank' => 'ব্যাংক'] as $k => $l)
                 <label class="cursor-pointer">
-                    <input type="radio" name="payment_mode" value="{{ $k }}" class="peer sr-only" @checked(old('payment_mode', 'cash') === $k)>
+                    <input type="radio" name="payment_mode" value="{{ $k }}" class="peer sr-only" @checked(old('payment_mode', $tx && $tx->payment_mode !== 'credit' ? $tx->payment_mode : 'cash') === $k)>
                     <span class="block px-2.5 py-1.5 rounded-lg border border-gray-200 font-semibold peer-checked:bg-gray-800 peer-checked:text-white peer-checked:border-gray-800">{{ $l }}</span>
                 </label>
                 @endforeach
@@ -118,11 +128,12 @@
         </div>
         <div class="flex justify-between"><span class="font-semibold">বাকি</span><span id="kh-due" class="font-bold text-red-600 num">৳0</span></div>
         <div id="kh-note-row" class="{{ $hasNote ? '' : 'hidden' }}">
-            <input name="note" value="{{ old('note') }}" maxlength="500" placeholder="নোট" class="w-full border border-gray-200 rounded-lg px-3 py-2">
+            <input name="note" value="{{ $val('note') }}" maxlength="500" placeholder="নোট" class="w-full border border-gray-200 rounded-lg px-3 py-2">
         </div>
     </div>
 
-    <button class="w-full bg-[#0f7a3e] hover:bg-[#0c6533] text-white font-bold py-3.5 rounded-xl text-lg shadow">সেভ করুন</button>
+    <button class="w-full bg-[#0f7a3e] hover:bg-[#0c6533] text-white font-bold py-3.5 rounded-xl text-lg shadow">{{ $tx ? 'আপডেট করুন' : 'সেভ করুন' }}</button>
+    @if($tx)<p class="text-xs text-gray-500 text-center">সেভ করলে আগের হিসাবের স্টক ফেরত যাবে এবং নতুন পরিমাণে স্টক আবার হিসাব হবে।</p>@endif
     </div>
 </form>
 

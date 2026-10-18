@@ -13,6 +13,15 @@
     @if($whatsapp)
         <a href="{{ $whatsapp }}" target="_blank" rel="noopener" class="text-center bg-[#25D366] text-white font-semibold py-2.5 rounded-xl">WhatsApp-এ পাঠান</a>
     @endif
+    @php
+        $khUser = auth()->user();
+        $canEdit = in_array($tx->type, ['sale', 'purchase'], true) && \App\Support\KhataStaff::can($khUser, $tx->type)
+            && ($tx->created_by === $khUser->id || \App\Support\KhataStaff::can($khUser, 'ledger'))
+            && $tx->lines->every(fn ($l) => $l->item_id !== null);
+    @endphp
+    @if($canEdit)
+        <a href="{{ route('vendor.khata.tx.edit', $tx) }}" class="text-center bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-xl">✏️ সম্পাদনা</a>
+    @endif
     <button type="button" onclick="window.print()" class="bg-gray-800 text-white font-semibold py-2.5 rounded-xl">🖨 প্রিন্ট / PDF</button>
     <button type="button" id="kh-share" class="bg-blue-600 text-white font-semibold py-2.5 rounded-xl" data-url="{{ $tx->publicUrl() }}">🔗 লিংক শেয়ার</button>
     @if($tx->type === 'sale' && $tx->due() > 0 && $tx->party_id)

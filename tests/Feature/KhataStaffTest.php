@@ -79,6 +79,12 @@ class KhataStaffTest extends TestCase
         $sale = KhataTransaction::where('type', 'sale')->sole();
         $this->assertSame($staff->id, $sale->created_by);
         $this->get(route('vendor.khata.tx.show', $sale))->assertOk(); // own entry
+        $this->get(route('vendor.khata.tx.edit', $sale))->assertOk();     // and may fix it
+        $this->put(route('vendor.khata.tx.update', $sale), [
+            'date' => now()->toDateString(), 'payment_mode' => 'cash', 'paid' => 1200,
+            'lines' => [['item_id' => $item->id, 'quantity' => 2, 'price' => 600]],
+        ])->assertSessionHasNoErrors();
+        $this->assertEquals(18, $item->fresh()->stock);
 
         foreach ([route('vendor.khata.trade.create', 'purchase'), route('vendor.khata.amount.create', 'expense'),
             route('vendor.khata.report'), route('vendor.khata.transactions'), route('vendor.khata.parties.index'),
@@ -88,6 +94,15 @@ class KhataStaffTest extends TestCase
         $this->post(route('vendor.khata.trade.store', 'purchase'), [])->assertForbidden();
         $this->delete(route('vendor.khata.tx.destroy', $sale))->assertForbidden();
         $this->assertSame(1, KhataTransaction::where('type', 'sale')->count());
+
+        // An entry written by the owner is not editable by staff without ledger access.
+        Auth::logout();
+        $this->actingAs($this->owner)->post(route('vendor.khata.trade.store', 'sale'), [
+            'date' => now()->toDateString(), 'payment_mode' => 'cash', 'paid' => 600,
+            'lines' => [['item_id' => $item->id, 'quantity' => 1, 'price' => 600]],
+        ])->assertSessionHasNoErrors();
+        $ownerSale = KhataTransaction::where('created_by', $this->owner->id)->where('type', 'sale')->sole();
+        $this->actingAs($staff)->get(route('vendor.khata.tx.edit', $ownerSale))->assertForbidden();
 
         // The owner sees who wrote it.
         $this->actingAs($this->owner)->get(route('vendor.khata.tx.show', $sale))->assertOk()->assertSee('লিখেছেন');
