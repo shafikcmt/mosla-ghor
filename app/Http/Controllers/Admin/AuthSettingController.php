@@ -97,6 +97,23 @@ class AuthSettingController extends Controller
             );
         }
 
+        // Google / Facebook keys pasted in the panel (used when .env has none).
+        $social = $request->validate([
+            'social_google_client_id'       => 'nullable|string|max:255',
+            'social_google_client_secret'   => 'nullable|string|max:255',
+            'social_facebook_client_id'     => 'nullable|string|max:255',
+            'social_facebook_client_secret' => 'nullable|string|max:255',
+        ]);
+        foreach (array_keys(AuthSettings::SOCIAL_PROVIDERS) as $provider) {
+            WebsiteSetting::updateOrCreate(['key' => "social_{$provider}_client_id"], ['value' => trim((string) ($social["social_{$provider}_client_id"] ?? ''))]);
+            if ($request->boolean("social_{$provider}_clear_secret")) {
+                WebsiteSetting::updateOrCreate(['key' => "social_{$provider}_client_secret"], ['value' => '']);
+            } elseif (filled($secret = trim((string) ($social["social_{$provider}_client_secret"] ?? '')))) {
+                // Blank keeps the saved secret; it is never shown again.
+                WebsiteSetting::updateOrCreate(['key' => "social_{$provider}_client_secret"], ['value' => \Illuminate\Support\Facades\Crypt::encryptString($secret)]);
+            }
+        }
+
         WebsiteSetting::updateOrCreate(
             ['key' => 'vendor_registration_message'],
             ['value' => $request->input('vendor_registration_message', self::TEXT_DEFAULTS['vendor_registration_message'])]
