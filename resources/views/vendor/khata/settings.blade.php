@@ -32,4 +32,8 @@
     @csrf
     <button class="w-full border border-gray-300 text-gray-700 font-semibold py-3 rounded-xl">লগআউট</button>
 </form>
+<a href="{{ route('vendor.khata.staff.index') }}" class="mt-4 flex items-center justify-between rounded-2xl bg-white border border-gray-100 shadow-sm p-4 max-w-xl hover:border-[#0f7a3e]">
+    <span><span class="block font-bold">স্টাফ</span><span class="block text-sm text-gray-500">কর্মচারী যোগ করুন ও কে কোন কাজ করতে পারবে ঠিক করুন</span></span>
+    <span class="text-[#0f7a3e] text-xl">›</span>
+</a>
 @endsection

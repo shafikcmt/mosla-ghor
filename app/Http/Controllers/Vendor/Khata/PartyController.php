@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Vendor\Khata;
 
 use App\Models\Khata\KhataParty;
+use App\Support\KhataStaff;
 use App\Support\Phone;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class PartyController extends KhataBaseController
 {
@@ -45,6 +47,10 @@ class PartyController extends KhataBaseController
 
         if ($back = $this->safeBack($request->input('back'))) {
             return redirect()->to($back.(str_contains($back, '?') ? '&' : '?').'party='.$party->id)->with('success', 'পার্টি যোগ হয়েছে।');
+        }
+
+        if (! KhataStaff::can(Auth::user(), 'ledger')) {
+            return redirect()->route('vendor.khata.parties.create')->with('success', "{$party->name} যোগ হয়েছে।");
         }
 
         return redirect()->route('vendor.khata.parties.show', $party)->with('success', 'পার্টি সফলভাবে যোগ হয়েছে।');
@@ -98,6 +104,10 @@ class PartyController extends KhataBaseController
     {
         $this->ownParty($party);
         $party->update($this->validated($request));
+
+        if (! KhataStaff::can(Auth::user(), 'ledger')) {
+            return redirect()->route('vendor.khata.home')->with('success', 'পার্টির তথ্য আপডেট হয়েছে।');
+        }
 
         return redirect()->route('vendor.khata.parties.show', $party)->with('success', 'পার্টির তথ্য আপডেট হয়েছে।');
     }

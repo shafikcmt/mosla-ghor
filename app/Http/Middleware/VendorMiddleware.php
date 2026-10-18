@@ -30,12 +30,20 @@ class VendorMiddleware
             return redirect()->route('admin.dashboard');
         }
 
+        // Disabled staff (or staff of a removed shop) are signed out.
+        if ($user->isStaff() && (! $user->staff_active || ! $user->vendor)) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            return redirect()->route('vendor.login')->with('error', 'আপনার স্টাফ অ্যাকাউন্ট বন্ধ করা হয়েছে। দোকানের মালিকের সাথে যোগাযোগ করুন।');
+        }
+
         // Share vendor with all views
         $vendor = $user->vendor;
         view()->share('authVendor', $vendor);
 
-        // Inventory-only shops live in দোকানের খাতা — every e-commerce page sends them there.
-        if ($vendor?->isInventoryOnly()) {
+        // Inventory-only shops and shop staff live in দোকানের খাতা — every e-commerce page sends them there.
+        if ($vendor?->isInventoryOnly() || $user->isStaff()) {
             $route = $request->route()?->getName() ?? '';
             $open  = str_starts_with($route, 'vendor.khata.')
                 || in_array($route, ['vendor.logout', 'vendor.notifications.index', 'vendor.notifications.read', 'vendor.notifications.readAll'], true);

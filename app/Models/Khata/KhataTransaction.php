@@ -50,6 +50,12 @@ class KhataTransaction extends Model
         return $this->belongsTo(KhataParty::class, 'party_id');
     }
 
+    /** Who wrote the entry (the owner or a staff member). */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
+    }
+
     public function lines(): HasMany
     {
         return $this->hasMany(KhataTransactionItem::class, 'transaction_id');

@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Vendor\Khata;
 use App\Models\Khata\KhataItem;
 use App\Models\Khata\KhataParty;
 use App\Models\Khata\KhataTransaction;
+use App\Support\KhataStaff;
 use App\Support\Phone;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class TransactionController extends KhataBaseController
@@ -94,6 +96,10 @@ class TransactionController extends KhataBaseController
 
         $tx = $this->book->recordAmount($vendor, $type, $data);
 
+        if (! KhataStaff::can(Auth::user(), 'ledger')) {
+            return redirect()->route('vendor.khata.home')->with('success', $tx->typeLabel().' ৳'.number_format((float) $tx->total, 0).' সংরক্ষণ হয়েছে।');
+        }
+
         if ($tx->party_id) {
             return redirect()->route('vendor.khata.parties.show', $tx->party_id)->with('success', $tx->typeLabel().' ৳'.number_format((float) $tx->total, 0).' সংরক্ষণ হয়েছে।');
         }
@@ -105,13 +111,16 @@ class TransactionController extends KhataBaseController
     public function show(KhataTransaction $tx)
     {
         $this->ownTx($tx);
+        // Staff without ledger access may open only the entries they wrote themselves.
+        $ledger = KhataStaff::can(Auth::user(), 'ledger');
+        abort_unless($ledger || $tx->created_by === Auth::id(), 403, 'এই এন্ট্রি দেখার অনুমতি আপনার নেই।');
         $tx->load('lines', 'party', 'vendor');
         $tx->ensureShareToken();
 
         return view('vendor.khata.voucher-page', [
             'vendor'   => $this->vendor(),
             'tx'       => $tx,
-            'balance'  => $tx->party?->balance(),
+            'balance'  => $ledger ? $tx->party?->balance() : null,
             'whatsapp' => $this->whatsappUrl($tx),
         ]);
     }
