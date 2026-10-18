@@ -25,7 +25,7 @@
         </div>
         <div>
             <label class="block text-sm font-semibold mb-1">একক</label>
-            <select name="unit" class="{{ $inp }}">
+            <select name="unit" id="kh-unit" class="{{ $inp }}">
                 @foreach(\App\Models\Khata\KhataItem::UNITS as $k => $l)<option value="{{ $k }}" @selected(old('unit', $item->unit) === $k)>{{ $l }}</option>@endforeach
             </select>
         </div>
@@ -41,6 +41,18 @@
         </div>
     </div>
     <p class="text-xs text-gray-400 -mt-2">ক্রয় মূল্য দিলে প্রতিটি বিক্রিতে কত লাভ হলো তা রিপোর্টে দেখাবে।</p>
+
+    {{-- কার্টন / বস্তা / প্যাকেট… : how many kg one unit holds --}}
+    <div id="kh-pack" class="rounded-xl border border-amber-200 bg-amber-50 p-3" @unless(\App\Models\Khata\KhataItem::hasPackWeight(old('unit', $item->unit))) hidden @endunless>
+        <label class="block text-sm font-semibold mb-1" for="pack_kg">এক <span id="kh-pack-unit">{{ \App\Models\Khata\KhataItem::UNITS[old('unit', $item->unit)] ?? 'একক' }}</span>-এ কত কেজি?</label>
+        <div class="flex items-center gap-2">
+            <span class="text-gray-600 font-semibold">১ <span data-unit-name>{{ \App\Models\Khata\KhataItem::UNITS[old('unit', $item->unit)] ?? '' }}</span> =</span>
+            <input id="pack_kg" type="number" name="pack_kg" step="0.001" min="0.001" inputmode="decimal" placeholder="যেমন: 20"
+                   value="{{ old('pack_kg', $item->pack_kg !== null ? (float) $item->pack_kg : '') }}" class="{{ $inp }} max-w-[10rem]">
+            <span class="text-gray-600 font-semibold">কেজি</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">ঐচ্ছিক। দিলে স্টক, চালান ও ভাউচারে মোট কেজিও দেখাবে (যেমন: ৩ কার্টন = ৬০ কেজি)। প্রতিটি ক্রয়/বিক্রিতে আলাদা ওজনও দিতে পারবেন।</p>
+    </div>
 
     <details class="group rounded-xl border border-gray-100 bg-gray-50" @if($more) open @endif>
         <summary class="cursor-pointer list-none px-3 py-2.5 text-sm font-semibold text-[#0f7a3e] flex items-center justify-between">
@@ -79,3 +91,20 @@
 </form>
 @endif
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    const unit = document.getElementById('kh-unit'), box = document.getElementById('kh-pack');
+    const sync = () => {
+        const weight = ['kg', 'gram'].includes(unit.value);
+        box.hidden = weight;
+        const name = unit.options[unit.selectedIndex].text;
+        document.getElementById('kh-pack-unit').textContent = name;
+        box.querySelector('[data-unit-name]').textContent = name;
+    };
+    unit.addEventListener('change', sync);
+    sync();
+})();
+</script>
+@endpush

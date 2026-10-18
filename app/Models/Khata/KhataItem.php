@@ -8,12 +8,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class KhataItem extends Model
 {
     protected $fillable = [
-        'vendor_id', 'name', 'category', 'unit', 'sale_price', 'purchase_price',
+        'vendor_id', 'name', 'category', 'unit', 'pack_kg', 'sale_price', 'purchase_price',
         'stock', 'low_stock_alert', 'note', 'is_active',
     ];
 
     protected $casts = [
         'sale_price'      => 'decimal:2',
+        'pack_kg'         => 'decimal:3',
         'purchase_price'  => 'decimal:2',
         'stock'           => 'decimal:3',
         'low_stock_alert' => 'decimal:3',
@@ -30,6 +31,35 @@ class KhataItem extends Model
     public function unitLabel(): string
     {
         return self::UNITS[$this->unit] ?? $this->unit;
+    }
+
+    /** Units that are a weight themselves; every other unit can carry "1 unit = N কেজি". */
+    public const WEIGHT_UNITS = ['kg', 'gram'];
+
+    public static function hasPackWeight(?string $unit): bool
+    {
+        return ! in_array($unit, self::WEIGHT_UNITS, true);
+    }
+
+    /** "1 কার্টন = 20 কেজি" — null when no weight is set. */
+    public static function packLabel(?string $unit, float|string|null $packKg): ?string
+    {
+        if (! self::hasPackWeight($unit) || (float) $packKg <= 0) {
+            return null;
+        }
+
+        return '1 '.(self::UNITS[$unit] ?? $unit).' = '.self::formatQty($packKg, 'kg');
+    }
+
+    /** Quantity with its weight when known: "2 কার্টন (40 কেজি)". */
+    public static function formatQtyWithWeight(float|string|null $qty, ?string $unit, float|string|null $packKg): string
+    {
+        $text = self::formatQty($qty, $unit);
+        if (self::hasPackWeight($unit) && (float) $packKg > 0) {
+            $text .= ' ('.self::formatQty((float) $qty * (float) $packKg, 'kg').')';
+        }
+
+        return $text;
     }
 
     /** "27 কেজি 700 গ্রাম" for kg, otherwise "12.5 পিস". */
@@ -54,7 +84,7 @@ class KhataItem extends Model
 
     public function stockLabel(): string
     {
-        return self::formatQty($this->stock, $this->unit);
+        return self::formatQtyWithWeight($this->stock, $this->unit, $this->pack_kg);
     }
 
     public function stockValue(): float

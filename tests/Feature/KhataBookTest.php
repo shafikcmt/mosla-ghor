@@ -283,6 +283,45 @@ class KhataBookTest extends TestCase
         ])->assertSessionHasErrors(['lines.0.quantity' => 'প্রতিটি সারিতে পরিমাণ দিন (যেমন: ২৭ কেজি ৭০০ গ্রাম)।']);
     }
 
+    public function test_carton_and_bag_items_carry_a_kg_weight(): void
+    {
+        $this->assertSame('1 কার্টন = 20 কেজি', KhataItem::packLabel('carton', 20));
+        $this->assertNull(KhataItem::packLabel('kg', 20));
+        $this->assertSame('3 কার্টন (60 কেজি)', KhataItem::formatQtyWithWeight(3, 'carton', 20));
+        $this->assertSame('1 বস্তা (37 কেজি 500 গ্রাম)', KhataItem::formatQtyWithWeight(1, 'bag', 37.5));
+
+        $this->actingAs($this->user)->get(route('vendor.khata.items.create'))->assertOk()->assertSee('name="pack_kg"', false);
+        $this->post(route('vendor.khata.items.store'), [
+            'name' => 'এলাচ', 'unit' => 'carton', 'pack_kg' => 20, 'sale_price' => 52000, 'purchase_price' => 50000, 'opening_stock' => 2,
+        ])->assertSessionHasNoErrors();
+        $elach = KhataItem::where('name', 'এলাচ')->sole();
+        $this->assertEquals(20, $elach->pack_kg);
+        $this->get(route('vendor.khata.items.show', $elach))->assertOk()->assertSee('1 কার্টন = 20 কেজি')->assertSee('2 কার্টন (40 কেজি)');
+        // kg items never keep a pack weight.
+        $this->post(route('vendor.khata.items.store'), ['name' => 'জিরা', 'unit' => 'kg', 'pack_kg' => 5])->assertSessionHasNoErrors();
+        $this->assertNull(KhataItem::where('name', 'জিরা')->value('pack_kg'));
+
+        $supplier = $this->party('supplier');
+        $this->get(route('vendor.khata.trade.create', 'purchase'))->assertOk()->assertSee('kh-packrow', false)->assertSee('"pack":20', false);
+        // This purchase's cartons are 25 kg; the line keeps it, the item default stays 20.
+        $this->post(route('vendor.khata.trade.store', 'purchase'), [
+            'party_id' => $supplier->id, 'date' => now()->toDateString(), 'payment_mode' => 'cash', 'paid' => 5000,
+            'lines' => [['item_id' => $elach->id, 'quantity' => 1, 'price' => 50000, 'pack_kg' => 25]],
+        ])->assertSessionHasNoErrors();
+        $purchase = KhataTransaction::where('type', 'purchase')->sole();
+        $this->assertEquals(25, $purchase->lines->first()->pack_kg);
+        $this->assertEquals(20, $elach->fresh()->pack_kg);
+        $this->get(route('vendor.khata.tx.show', $purchase))->assertOk()->assertSee('1 কার্টন (25 কেজি)');
+        $this->get(route('vendor.khata.tx.edit', $purchase))->assertOk()->assertSee('value="25"', false);
+
+        // Without a line weight the item's is used.
+        $this->post(route('vendor.khata.trade.store', 'sale'), [
+            'date' => now()->toDateString(), 'payment_mode' => 'cash', 'paid' => 52000,
+            'lines' => [['item_id' => $elach->id, 'quantity' => 1, 'price' => 52000]],
+        ])->assertSessionHasNoErrors();
+        $this->assertEquals(20, KhataTransaction::where('type', 'sale')->sole()->lines->first()->pack_kg);
+    }
+
     public function test_admin_switches_a_vendor_between_panel_modes(): void
     {
         [, $shop] = $this->makeVendor('shop', 'full');

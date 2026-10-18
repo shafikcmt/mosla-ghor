@@ -40,7 +40,7 @@
                 <td class="px-4 py-3">
                     <a href="{{ route('vendor.khata.items.show', $item) }}" class="flex items-center gap-3 font-semibold">
                         <span class="shrink-0 w-8 h-8 rounded-lg bg-green-50 text-[#0f7a3e] font-bold flex items-center justify-center">{{ mb_strtoupper(mb_substr($item->name, 0, 1)) }}</span>
-                        {{ $item->name }}
+                        <span>{{ $item->name }}@if($pack = \App\Models\Khata\KhataItem::packLabel($item->unit, $item->pack_kg))<span class="block text-[11px] font-normal text-amber-700">{{ $pack }}</span>@endif</span>
                     </a>
                 </td>
                 <td class="px-4 py-3 text-gray-500">{{ $item->category ?: '—' }}</td>
@@ -62,7 +62,7 @@
         <span class="shrink-0 w-10 h-10 rounded-xl bg-green-50 text-[#0f7a3e] font-bold flex items-center justify-center">{{ mb_strtoupper(mb_substr($item->name, 0, 1)) }}</span>
         <div class="min-w-0 flex-1">
             <div class="flex items-start justify-between gap-2">
-                <p class="font-bold truncate">{{ $item->name }}</p>
+                <p class="font-bold truncate">{{ $item->name }}@if($pack = \App\Models\Khata\KhataItem::packLabel($item->unit, $item->pack_kg)) <span class="text-[11px] font-normal text-amber-700">· {{ $pack }}</span>@endif</p>
                 @if($item->category)<span class="shrink-0 text-[11px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{{ $item->category }}</span>@endif
             </div>
             <div class="grid grid-cols-3 gap-1 mt-1.5 text-xs">
