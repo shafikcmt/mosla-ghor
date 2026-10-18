@@ -280,3 +280,33 @@ html{scroll-behavior:smooth}
 .market-home .product-card [id^=card-retail-btns]>*{min-height:36px;font-size:12.5px}
 .market-home .product-card .hm-card-quickadd{width:36px}
 }
+
+/* ── Phones (2026-10-19 b): one card per row, photo left / details right ── */
+@media(max-width:767px){
+.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:minmax(0,1fr);gap:10px}
+.market-home .product-card,.market-home .hm-product-tile{flex-direction:row;align-items:stretch;border-radius:16px}
+.market-home .product-card>a.block,.market-home .hm-product-tile>.hm-tile-image{flex:0 0 38%;max-width:160px;align-self:stretch;background:#fff}
+.market-home .product-card [data-slideshow]{height:100%!important;min-height:150px;aspect-ratio:auto}
+.market-home .hm-tile-image{height:auto;min-height:150px;aspect-ratio:auto}
+.market-home .product-card>.p-5,.market-home .hm-tile-body{flex:1;min-width:0;padding:12px 12px 12px 14px}
+.market-home .product-card h3,.market-home .hm-product-tile h3{font-size:15px;line-height:1.4;min-height:0;-webkit-line-clamp:2}
+.market-home .product-card [id^=card-from-]{font-size:18px}
+.market-home .product-card .hm-from{font-size:11px}
+.market-home .hm-stock-badge{top:6px;left:6px;font-size:9px;padding:0 6px}
+.market-home .card-dot{width:5px;height:5px}
+.market-home .product-card [id^=card-retail-btns]{margin-top:10px;gap:8px}
+.market-home .product-card [id^=card-retail-btns]>*{min-height:38px;font-size:13.5px}
+.market-home .product-card .hm-card-quickadd{width:40px}
+/* Wholesale actions fit the narrower column: price button full width, then two compact buttons */
+.market-home .product-card .ms-qa{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:2px}
+.market-home .product-card .ms-qa>*{min-height:36px;font-size:12px;padding:6px 4px;border-radius:10px;gap:3px;overflow:hidden}
+.market-home .product-card .ms-qa>:first-child{grid-column:1/-1;font-size:13.5px;min-height:38px}
+.market-home .product-card .ms-qa svg{width:14px;height:14px}
+.market-home .product-card [id^=card-wholesale-btns]{margin-top:10px}
+}
+@media(max-width:767px){
+.market-home .product-card .hm-card-desc{display:-webkit-box!important;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;font-size:12px;line-height:1.5;margin-top:2px;color:#6b7280}
+}
+/* Photos fill the card frame evenly (portrait / landscape shots no longer leave gaps). */
+.market-home .product-card .card-slide,.market-home .product-card [data-slideshow] img,
+.market-home .hm-tile-image img,.market-home [data-list-product] .product-artwork{object-fit:cover!important;object-position:center;background:#fff}
