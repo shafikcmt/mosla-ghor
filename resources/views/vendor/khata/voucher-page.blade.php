@@ -2,7 +2,7 @@
 @section('title', $tx->typeLabel().($tx->number ? ' #'.$tx->number : ''))
 @section('heading', $tx->typeLabel().($tx->number ? ' #'.$tx->number : ''))
 @section('subheading', $tx->party?->name ?? $tx->date->format('d M Y'))
-@section('back', $tx->party_id ? route('vendor.khata.parties.show', $tx->party_id) : route('vendor.khata.transactions'))
+@section('back', ! \App\Support\KhataStaff::can(auth()->user(), 'ledger') ? route('vendor.khata.home') : ($tx->party_id ? route('vendor.khata.parties.show', $tx->party_id) : route('vendor.khata.transactions')))
 
 @push('head')
 <style>@media print { header, nav, main > div:not(.voucher-wrap) { display: none !important; } .voucher { border: 0 !important; box-shadow: none !important; } main { padding: 0 !important; } }</style>
@@ -22,6 +22,9 @@
     @endif
 </div>
 
+@if($tx->creator?->isStaff())
+<p class="no-print text-xs text-gray-500 mb-2">লিখেছেন: <span class="font-semibold text-gray-700">{{ $tx->creator->name }}</span> (স্টাফ)</p>
+@endif
 <div class="voucher-wrap">@include('vendor.khata._voucher')</div>
 
 <form method="POST" action="{{ route('vendor.khata.tx.destroy', $tx) }}" class="no-print mt-4"

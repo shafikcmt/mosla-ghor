@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin'         => \App\Http\Middleware\AdminMiddleware::class,
             'vendor'        => \App\Http\Middleware\VendorMiddleware::class,
+            'khata.staff'   => \App\Http\Middleware\KhataStaffAccess::class,
             'customer-auth' => \App\Http\Middleware\CustomerMiddleware::class,
             'guest.allowed' => \App\Http\Middleware\GuestAllowed::class,
             'bot.token'     => \App\Http\Middleware\AuthenticateBotToken::class,

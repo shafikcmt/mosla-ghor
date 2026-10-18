@@ -26,6 +26,9 @@ class User extends Authenticatable
         'google_id',
         'facebook_id',
         'avatar_url',
+        'staff_vendor_id',
+        'staff_permissions',
+        'staff_active',
     ];
 
     /**
@@ -50,12 +53,26 @@ class User extends Authenticatable
             'password'          => 'hashed',
             'password_set_at'   => 'datetime',
             'is_admin'          => 'boolean',
+            'staff_permissions' => 'array',
+            'staff_active'      => 'boolean',
         ];
     }
 
-    public function vendor(): HasOne
+    /**
+     * The shop this user works in: their own vendor, or — for shop staff — the
+     * owner's vendor, so every `->vendor` lookup scopes staff to that shop.
+     */
+    public function vendor(): HasOne|\Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->hasOne(Vendor::class);
+        return $this->staff_vendor_id
+            ? $this->belongsTo(Vendor::class, 'staff_vendor_id')
+            : $this->hasOne(Vendor::class);
+    }
+
+    /** Shop staff (দোকানের খাতা) — not the shop owner. */
+    public function isStaff(): bool
+    {
+        return $this->staff_vendor_id !== null;
     }
 
     public function customer(): HasOne

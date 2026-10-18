@@ -319,13 +319,14 @@ Route::prefix('vendor')->name('vendor.')->middleware('vendor')->group(function (
     Route::get('dashboard', [VendorDashboardController::class, 'index'])->name('dashboard');
 
     // ── দোকানের খাতা (stock & ledger book; the whole panel for inventory-only shops) ──
-    Route::prefix('khata')->name('khata.')->group(function () {
+    Route::prefix('khata')->name('khata.')->middleware('khata.staff')->group(function () {
         $k = 'App\\Http\\Controllers\\Vendor\\Khata\\';
         Route::get('/',             [$k.'HomeController', 'home'])->name('home');
         Route::get('transactions',  [$k.'HomeController', 'transactions'])->name('transactions');
         Route::get('report',        [$k.'HomeController', 'report'])->name('report');
         Route::get('settings',      [$k.'HomeController', 'settings'])->name('settings');
         Route::post('settings',     [$k.'HomeController', 'saveSettings'])->name('settings.save');
+        Route::resource('staff', $k.'StaffController')->except(['show'])->parameters(['staff' => 'staff']);
 
         Route::post('items/{item}/adjust', [$k.'ItemController', 'adjust'])->name('items.adjust');
         Route::resource('items', $k.'ItemController');
