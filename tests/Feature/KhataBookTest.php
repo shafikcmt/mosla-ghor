@@ -171,6 +171,17 @@ class KhataBookTest extends TestCase
         }
     }
 
+    public function test_party_form_offers_phone_contact_picker_and_saves_international_numbers(): void
+    {
+        $this->actingAs($this->user)->get(route('vendor.khata.parties.create'))->assertOk()
+            ->assertSee('data-contact-pick', false)->assertSee('navigator.contacts.select', false);
+
+        // Contacts often store +880 numbers; they are saved as 01XXXXXXXXX.
+        $this->post(route('vendor.khata.parties.store'), ['name' => 'রহিম', 'phone' => '+880 1712-345678', 'type' => 'supplier'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('01712345678', KhataParty::latest('id')->value('phone'));
+    }
+
     public function test_admin_switches_a_vendor_between_panel_modes(): void
     {
         [, $shop] = $this->makeVendor('shop', 'full');
