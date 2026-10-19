@@ -121,4 +121,44 @@ class HeroSlideTest extends TestCase
         $this->delete(route('admin.hero-slides.destroy', $unowned));
         Storage::disk('public')->assertExists('products/keep.jpg');
     }
+
+    public function test_banner_slides_are_one_link_with_a_phone_image_and_no_buttons(): void
+    {
+        $this->slide(['title' => 'Eid offer 10% off', 'display_mode' => 'image', 'link_url' => '/#products',
+            'mobile_image_path' => 'storage/hero-slides/mobile.jpg', 'primary_label' => 'Shop', 'primary_url' => '/#products', 'sort_order' => 0]);
+        $this->slide(['title' => 'Text slide', 'sort_order' => 1]);
+        $html = $this->get('/')->assertOk()
+            ->assertSee('hm-slide-banner', false)
+            ->assertSee('<source media="(max-width: 767px)" srcset="'.asset('storage/hero-slides/mobile.jpg').'">', false)
+            ->assertSee('href="/#products"', false)->getContent();
+        $dom = new \DOMDocument();
+        @$dom->loadHTML('<?xml encoding="utf-8" ?>'.$html);
+        $this->assertSame(1, $dom->getElementsByTagName('h1')->length, 'Banner keeps one (screen-reader) heading.');
+        $banner = (new \DOMXPath($dom))->query('//a[contains(@class,"hm-slide-banner")]')->item(0);
+        $this->assertNotNull($banner);
+        $this->assertSame(0, (new \DOMXPath($dom))->query('.//*[contains(@class,"hm-button")]', $banner)->length, 'No buttons on a banner.');
+    }
+
+    public function test_admin_saves_banner_mode_link_and_mobile_image(): void
+    {
+        Storage::fake('public');
+        $this->admin();
+        $this->get(route('admin.hero-slides.create'))->assertOk()->assertSee('name="display_mode"', false)->assertSee('১৯২০ × ৬০০');
+        $this->post(route('admin.hero-slides.store'), ['title' => 'Banner', 'sort_order' => 0, 'is_active' => 1, 'display_mode' => 'image',
+            'link_url' => '/#products', 'image' => UploadedFile::fake()->image('wide.png', 1920, 600),
+            'mobile_image' => UploadedFile::fake()->image('phone.png', 1080, 720)])->assertSessionHasNoErrors();
+        $slide = HeroSlide::sole();
+        $this->assertTrue($slide->isBanner());
+        $this->assertSame('/#products', $slide->link_url);
+        $this->assertNotNull($slide->mobile_image_path);
+        Storage::disk('public')->assertExists(substr($slide->mobile_image_path, 8));
+
+        $this->put(route('admin.hero-slides.update', $slide), ['title' => 'Banner', 'sort_order' => 0, 'is_active' => 1, 'display_mode' => 'image',
+            'link_url' => 'javascript:alert(1)'])->assertSessionHasErrors('link_url');
+        $old = $slide->mobile_image_path;
+        $this->put(route('admin.hero-slides.update', $slide), ['title' => 'Banner', 'sort_order' => 0, 'is_active' => 1, 'display_mode' => 'image',
+            'remove_mobile_image' => 1])->assertSessionHasNoErrors();
+        $this->assertNull($slide->fresh()->mobile_image_path);
+        Storage::disk('public')->assertMissing(substr($old, 8));
+    }
 }

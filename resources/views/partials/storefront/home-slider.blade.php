@@ -1,6 +1,21 @@
 <section class="hm-container hm-slider" data-hero-slider aria-roledescription="carousel" aria-label="প্রধান অফার">
     <div class="hm-slides">
         @foreach($heroSlides as $slide)
+        @if($slide->isBanner())
+        {{-- Picture banner: text lives in the image; the whole slide is one link. --}}
+        @php
+            $bannerLink = \App\Support\AnnouncementUrl::isValid($slide->link_url ?? '') ? $slide->link_url : null;
+            $bannerTag = $bannerLink ? 'a' : 'div';
+            $mobileSrc = $slide->mobile_image_path ? \App\Support\ProductMedia::url($slide->mobile_image_path) : null;
+        @endphp
+        <{{ $bannerTag }} class="hm-slide hm-slide-banner {{ $mobileSrc ? 'has-mobile' : '' }} {{ $loop->first ? 'is-current' : '' }}" data-slide @unless($bannerLink) role="group" @endunless aria-roledescription="slide" aria-label="{{ $loop->iteration }} / {{ $loop->count }}: {{ $slide->title }}" @if($bannerLink) href="{{ $bannerLink }}" @endif @if(!$loop->first) inert aria-hidden="true" @endif>
+            @if($loop->first)<h1 id="home-title" class="sr-only">{{ $slide->title }}</h1>@endif
+            <picture>
+                @if($mobileSrc)<source media="(max-width: 767px)" srcset="{{ $mobileSrc }}">@endif
+                <img src="{{ \App\Support\ProductMedia::url($slide->image_path) }}" alt="{{ $slide->title }}" @if($loop->first) fetchpriority="high" @else loading="lazy" @endif decoding="async">
+            </picture>
+        </{{ $bannerTag }}>
+        @else
         <div class="hm-hero hm-slide {{ $loop->first ? 'is-current' : '' }}" data-slide role="group" aria-roledescription="slide" aria-label="{{ $loop->iteration }} / {{ $loop->count }}" @if(!$loop->first) inert aria-hidden="true" @endif>
             <div class="hm-hero-copy">
                 @if($slide->eyebrow)<p class="hm-campaign">{{ $slide->eyebrow }}</p>@endif
@@ -18,6 +33,7 @@
                 <img class="product-artwork" src="{{ \App\Support\ProductMedia::url($slide->image_path) }}" alt="{{ $slide->title }}" @if($loop->first) fetchpriority="high" @else loading="lazy" @endif onerror="this.onerror=null;this.src='{{ asset('images/product-placeholder.svg') }}'">
             </div>
         </div>
+        @endif
         @endforeach
     </div>
     @if($heroSlides->count() > 1)
