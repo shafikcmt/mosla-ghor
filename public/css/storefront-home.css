@@ -352,3 +352,18 @@ html{scroll-behavior:smooth}
 .market-home .hm-ws-tile{padding:14px}
 .market-home .hm-ws-actions .ms-qa>*{font-size:13px}
 }
+
+/* ── Picture banner slides (2026-10-20): whole image is the link, no buttons ── */
+.market-home .hm-slider:has(.hm-slide-banner){position:relative;background:none;box-shadow:none;border-radius:20px}
+.market-home .hm-slide-banner{display:block;padding:0;min-height:0;border-radius:20px;overflow:hidden;background:#eef2ea;box-shadow:var(--hm-card-shadow)}
+.market-home .hm-slide-banner picture,.market-home .hm-slide-banner img{display:block;width:100%}
+.market-home .hm-slide-banner img{aspect-ratio:16/5;object-fit:cover;object-position:center}
+.market-home a.hm-slide-banner:focus-visible{outline:3px solid #b78421;outline-offset:3px}
+.market-home .hm-slider:has(.hm-slide-banner) .hm-slider-controls{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:2;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.88);box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.market-home .hm-slider:has(.hm-slide-banner) .hm-slider-controls button{min-width:30px;min-height:30px;font-size:18px}
+@media(max-width:767px){
+.market-home .hm-slide-banner{border-radius:14px}
+.market-home .hm-slide-banner.has-mobile img{aspect-ratio:3/2}
+.market-home .hm-slider:has(.hm-slide-banner) .hm-slider-controls{bottom:8px;padding:0 4px}
+.market-home .hm-slider:has(.hm-slide-banner) .hm-slider-controls [data-prev],.market-home .hm-slider:has(.hm-slide-banner) .hm-slider-controls [data-next]{display:none}
+}
