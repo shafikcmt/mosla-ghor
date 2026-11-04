@@ -926,10 +926,10 @@
         if (clr) clr.classList.toggle('hidden', !(grams > 0));
         if (!(grams > 0)) {
             if (qtyRow) qtyRow.classList.remove('hidden');
-            if (!document.querySelector('.pd-pack.active')) {
-                const cur = document.querySelector('.pd-pack[data-price-id="' + pdSelectedPriceId + '"]') || document.querySelector('.pd-pack');
-                if (cur) cur.classList.add('active');
-            }
+            // Back to plain pack mode: highlight only the pack the customer had selected.
+            document.querySelectorAll('.pd-pack').forEach(b => b.classList.remove('active'));
+            const cur = document.querySelector('.pd-pack[data-price-id="' + pdSelectedPriceId + '"]') || document.querySelector('.pd-pack');
+            if (cur) cur.classList.add('active');
             pdRefreshPrice(); return;
         }
         if (qtyRow) qtyRow.classList.add('hidden');
