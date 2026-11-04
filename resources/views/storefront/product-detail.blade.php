@@ -403,6 +403,7 @@
             {{-- Product data for the quick enquiry popup (WhatsApp / call / quick quote). --}}
             <div id="pd-qe-data" hidden
                  data-action="{{ route('products.enquiry.store', $product->slug) }}"
+                 data-id="{{ $product->id }}"
                  data-slug="{{ $product->slug }}"
                  data-name="{{ $product->name_bn ?: $product->name_en }}"
                  data-image="{{ $main }}"
@@ -437,30 +438,40 @@
             </dl>
             @endif
 
-            <div class="flex flex-wrap gap-3 mt-3">
-                <button type="button" onclick="pdToggleEnquiry(true)"
-                        class="btn-gold text-[#0f3d22] font-bold text-sm px-5 py-2.5 rounded-xl whitespace-nowrap">
-                    পাইকারি দাম জানুন
-                </button>
-                @if($pdWa)
-                {{-- Wholesale WhatsApp / call go through the quick step (qty ≥ MOQ + contact) first. --}}
-                <button type="button" onclick="pdQuickEnquiry('whatsapp')"
-                        class="inline-flex items-center gap-1.5 border border-[#25D366] text-[#128C7E] hover:bg-[#25D366] hover:text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
-                    WhatsApp করুন
-                </button>
-                <button type="button" onclick="pdQuickEnquiry('call')"
-                        class="inline-flex items-center gap-1.5 bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap">
-                    📞 কল করুন
-                </button>
-                @endif
+            {{-- How it works: many products → ONE enquiry (customers were sending one enquiry per product). --}}
+            <ol class="mt-3 grid grid-cols-3 gap-2 text-center text-[11px] leading-snug text-amber-900">
+                <li class="rounded-lg bg-white border border-amber-200 px-2 py-2"><b class="block text-amber-700 text-sm">১</b>পণ্য তালিকায় যোগ করুন</li>
+                <li class="rounded-lg bg-white border border-amber-200 px-2 py-2"><b class="block text-amber-700 text-sm">২</b>আরও পণ্য বেছে নিন</li>
+                <li class="rounded-lg bg-white border border-amber-200 px-2 py-2"><b class="block text-amber-700 text-sm">৩</b>সব একসাথে পাঠান</li>
+            </ol>
+
+            <div class="flex flex-col gap-2.5 mt-3">
                 <button type="button" id="pd-add-bag"
                         data-id="{{ $product->id }}" data-slug="{{ $product->slug }}"
                         data-name="{{ $product->display_name }}" data-image="{{ $main }}"
                         data-qty="{{ $product->min_order_quantity ?: 1 }}" data-unit="{{ $product->min_order_unit ?: 'kg' }}"
                         data-min="{{ $product->min_order_quantity ?: '' }}" data-min-unit="{{ $product->min_order_unit ?: '' }}"
-                        class="border border-amber-500 text-amber-700 hover:bg-amber-50 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors">
-                    🛍️ পাইকারি তালিকায় যোগ করুন
+                        class="w-full bg-amber-500 hover:bg-amber-600 text-[#3b2200] font-bold text-[15px] px-5 py-3 rounded-xl shadow transition-colors">
+                    🧺 পাইকারি তালিকায় যোগ করুন
+                    <span class="block text-[11px] font-medium opacity-80">একাধিক পণ্যের দাম একবারেই জানুন</span>
                 </button>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="pdToggleEnquiry(true)"
+                            class="flex-1 min-w-[150px] border border-[#14532d] text-[#14532d] hover:bg-green-50 font-semibold text-sm px-4 py-2.5 rounded-xl whitespace-nowrap transition-colors">
+                        শুধু এই পণ্যের দাম জানুন
+                    </button>
+                    @if($pdWa)
+                    {{-- Wholesale WhatsApp / call go through the quick step (qty ≥ MOQ + contact) first. --}}
+                    <button type="button" onclick="pdQuickEnquiry('whatsapp')"
+                            class="inline-flex items-center gap-1.5 border border-[#25D366] text-[#128C7E] hover:bg-[#25D366] hover:text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                        WhatsApp
+                    </button>
+                    <button type="button" onclick="pdQuickEnquiry('call')"
+                            class="inline-flex items-center gap-1.5 bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+                        📞 কল
+                    </button>
+                    @endif
+                </div>
             </div>
 
             {{-- Bulk pricing note + platform-safety message --}}
@@ -769,13 +780,14 @@
         </a>
         @endif
     @elseif($showWholesale)
+        {{-- List-first: many products → ONE enquiry. Single-product price stays one tap away. --}}
+        <button type="button" onclick="document.getElementById('pd-add-bag').click()"
+                class="flex-[2] bg-amber-500 text-[#3b2200] font-bold text-sm py-2.5 rounded-xl">🧺 তালিকায় যোগ করুন</button>
         <button type="button" onclick="pdToggleEnquiry(true)"
-                class="flex-1 bg-[#14532d] text-white font-semibold text-sm py-2.5 rounded-xl">দাম জানুন</button>
+                class="flex-1 border border-[#14532d] text-[#14532d] font-semibold text-sm py-2.5 rounded-xl">শুধু এটির দাম</button>
         @if($pdWa)
-        <button type="button" onclick="pdQuickEnquiry('whatsapp')"
-                class="flex-1 text-center border border-[#25D366] text-[#128C7E] font-semibold text-sm py-2.5 rounded-xl">WhatsApp</button>
-        <button type="button" onclick="pdQuickEnquiry('call')"
-                class="flex-1 text-center bg-[#c9a227] text-[#0f3d22] font-semibold text-sm py-2.5 rounded-xl">কল করুন</button>
+        <button type="button" onclick="pdQuickEnquiry('whatsapp')" aria-label="WhatsApp"
+                class="w-11 shrink-0 flex items-center justify-center border border-[#25D366] text-[#128C7E] font-bold text-lg rounded-xl">💬</button>
         @endif
     @endif
 </div>

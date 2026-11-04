@@ -103,6 +103,10 @@
                     class="w-full bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-60">
                 দাম জানতে চাই
             </button>
+            <button type="button" id="ms-qe-addlist" onclick="msQeAddToList()"
+                    class="w-full border border-amber-500 text-amber-800 hover:bg-amber-50 font-semibold text-sm py-2.5 rounded-xl transition-colors">
+                🧺 অন্য পণ্যও লাগবে? তালিকায় যোগ করে সব একসাথে পাঠান
+            </button>
             <p class="text-[11px] text-gray-400 text-center">লগইন লাগবে না। নাম ও নম্বর এই ডিভাইসে মনে থাকবে — পরের বার শুধু পরিমাণ দিলেই হবে।</p>
         </form>
 
@@ -118,6 +122,10 @@
                 <a id="ms-qe-done-tel" href="#"
                    style="display:none" class="inline-flex items-center justify-center gap-2 bg-[#c9a227] hover:bg-[#e2bb45] text-[#0f3d22] font-semibold py-3 rounded-xl">
                     📞 এখনই কল করুন
+                </a>
+                <a href="/?mode=wholesale#products" onclick="msQuickEnquiryClose()"
+                   class="inline-flex items-center justify-center bg-amber-50 border border-amber-300 text-amber-900 font-semibold py-2.5 rounded-xl hover:bg-amber-100">
+                    আরও পণ্যের দাম জানতে চান? তালিকায় যোগ করুন →
                 </a>
                 <button type="button" onclick="msQuickEnquiryClose()" class="border border-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl hover:bg-gray-50">ঠিক আছে</button>
             </div>
@@ -251,6 +259,19 @@
             store('ms_qe_pending', JSON.stringify(lastData));
         }
         return true;
+    };
+
+    // "Other products too?" → put this product (with the typed quantity) in the shared list instead.
+    window.msQeAddToList = function () {
+        const id = parseInt(lastData && lastData.id, 10);
+        if (!id) { window.location.href = '/?mode=wholesale#products'; return; }
+        const q = parseFloat(form.quantity_kg.value) || moq || 5, u = form.quantity_unit.value || 'kg';
+        if (belowMoq()) { refreshRetailHint(); return showError('পাইকারি অর্ডারের জন্য কমপক্ষে ' + moq + ' ' + (UNIT_BN[moqUnit] || moqUnit) + ' দিন।'); }
+        const items = msBagGet();
+        const ex = items.find(function (x) { return x.product_id === id && (x.variant_id || null) === (parseInt(form.product_variant_id.value, 10) || null); });
+        if (ex) { ex.quantity = q; ex.unit = u; msBagSave(items); msToast('🛍️ তালিকা আপডেট হয়েছে'); }
+        else { msBagAdd(id, slug, productName, lastData.image || '', q, u, moq || null, moqUnit, form.product_variant_id.value || null, null); }
+        msQuickEnquiryClose();
     };
 
     window.msQuickEnquiryClose = function () {

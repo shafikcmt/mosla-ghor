@@ -1,6 +1,6 @@
 {{--
-    IndiaMart-style wholesale action row: দাম জানুন / WhatsApp / কল করুন. All three
-    open the quick enquiry popup (quantity ≥ MOQ + name + phone, remembered on the
+    IndiaMart-style wholesale action row: ＋ তালিকায় যোগ করুন (primary — one enquiry for many
+    products) / শুধু এই পণ্যের দাম / WhatsApp / কল করুন. The last three open the quick enquiry popup (quantity ≥ MOQ + name + phone, remembered on the
     device); WhatsApp / call open only after that lead is saved, so retail-size
     buyers are steered to the retail page instead. Needs $product; optional
     $compact for the narrow list view. Popup: quick-enquiry-modal.
@@ -21,6 +21,7 @@
 {{-- Card: full-width দাম জানুন, then WhatsApp + Call. Compact (list): one row. --}}
 <div class="ms-qa {{ $qaCompact ? 'flex flex-wrap justify-end' : 'grid grid-cols-2' }} gap-1.5"
      data-action="{{ route('products.enquiry.store', $product->slug) }}"
+     data-id="{{ $product->id }}"
      data-slug="{{ $product->slug }}"
      data-name="{{ $qaName }}"
      data-image="{{ \App\Support\ProductMedia::url($product->main_image) }}"
@@ -34,9 +35,14 @@
             দাম জানুন
         </a>
     @else
+        {{-- Primary: add to the shared wholesale list → many products, ONE enquiry. --}}
+        <button type="button" data-list-btn onclick="msAddToList(this)"
+                class="ms-list-btn {{ $qaBtn }} {{ $qaPrimary }} inline-flex items-center justify-center gap-1 bg-amber-500 hover:bg-amber-600 text-[#3b2200] font-bold whitespace-nowrap transition-colors shadow-sm">
+            <span data-list-label>＋ তালিকায় যোগ করুন</span>
+        </button>
         <button type="button" onclick="msQuickEnquiry(this, 'form')"
-                class="{{ $qaBtn }} {{ $qaPrimary }} inline-flex items-center justify-center gap-1 bg-[#14532d] hover:bg-[#166534] text-white font-semibold whitespace-nowrap transition-colors shadow-sm">
-            দাম জানুন
+                class="{{ $qaBtn }} {{ $qaPrimary }} inline-flex items-center justify-center gap-1 border border-[#14532d] text-[#14532d] hover:bg-green-50 font-semibold whitespace-nowrap transition-colors">
+            শুধু এই পণ্যের দাম জানুন
         </button>
         @if($qaIntl)
         <button type="button" onclick="msQuickEnquiry(this, 'whatsapp')"

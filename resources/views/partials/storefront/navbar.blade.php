@@ -142,6 +142,25 @@
             </button>
         </div>
     </div>
+
+    {{-- "Your list" strip: always visible (the header is sticky) while the visitor has items in the
+         wholesale list or the retail bag, so they find the one-shot "send everything together" step.
+         Filled by msBadges() in partials/mini-cart. Hidden on checkout / order / enquiry-list pages. --}}
+    @php $stripHide = \Illuminate\Support\Str::startsWith($navPath, ['checkout', 'order', 'wholesale/enquiry-bag']); @endphp
+    <div id="ms-list-strip" data-hide="{{ $stripHide ? 1 : 0 }}" class="hidden border-t border-white/10 bg-[#0b2f1a]">
+        <div class="max-w-6xl mx-auto px-3 py-1.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <a id="ms-strip-bag" href="{{ route('wholesale.enquiry-bag') }}"
+               class="hidden items-center gap-2 text-[12px] sm:text-[13px] text-amber-100 hover:text-white">
+                <span>🧺 পাইকারি তালিকায় <b id="ms-strip-bag-n" class="text-amber-300">০</b>টি পণ্য</span>
+                <span class="bg-amber-500 text-[#3b2200] font-bold rounded-full px-3 py-1 whitespace-nowrap">সব একসাথে দাম জানুন →</span>
+            </a>
+            <button id="ms-strip-cart" type="button" onclick="msCartOpen('retail')"
+                    class="hidden items-center gap-2 text-[12px] sm:text-[13px] text-green-100 hover:text-white">
+                <span>🛒 ব্যাগে <b id="ms-strip-cart-n" class="text-[#e2bb45]">০</b>টি পণ্য · <b id="ms-strip-cart-total" class="text-[#e2bb45]">৳০</b></span>
+                <span class="bg-[#c9a227] text-[#0f3d22] font-bold rounded-full px-3 py-1 whitespace-nowrap">ব্যাগ দেখুন →</span>
+            </button>
+        </div>
+    </div>
 </header>
 
 {{-- ── Mobile / tablet slide-in drawer (right) ── --}}

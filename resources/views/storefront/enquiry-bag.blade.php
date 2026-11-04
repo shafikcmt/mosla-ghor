@@ -1,5 +1,5 @@
 @extends('storefront.layout')
-@section('title', 'পাইকারি Enquiry Bag')
+@section('title', 'পাইকারি তালিকা — সব পণ্য একসাথে পাঠান')
 
 @php
     // Autofill from the logged-in customer profile (editable).
@@ -16,15 +16,15 @@
     <span>/</span>
     <a href="/?tab=wholesale#products" class="hover:text-[#14532d]">পাইকারি পণ্য</a>
     <span>/</span>
-    <span class="text-gray-700 font-medium">Enquiry Bag</span>
+    <span class="text-gray-700 font-medium">পাইকারি তালিকা</span>
 </nav>
 
-<h1 class="font-serif-bn text-2xl font-bold text-[#14532d] mb-1">পাইকারি Enquiry Bag</h1>
+<h1 class="font-serif-bn text-2xl font-bold text-[#14532d] mb-1">আপনার পাইকারি তালিকা</h1>
 <p class="text-sm text-gray-500 mb-5">একাধিক পাইকারি পণ্য একসাথে enquiry পাঠান। {{ $siteName }} team আপনাকে quote জানাবে।</p>
 
 {{-- Empty state --}}
 <div id="bag-empty" class="hidden bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-    <p class="text-gray-500 text-sm mb-4">আপনার Enquiry Bag খালি।</p>
+    <p class="text-gray-500 text-sm mb-4">আপনার পাইকারি তালিকা খালি।</p>
     <a href="/?tab=wholesale#products" class="inline-block bg-[#14532d] text-white font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-[#0d3520] transition-colors">পাইকারি পণ্য দেখুন</a>
 </div>
 
