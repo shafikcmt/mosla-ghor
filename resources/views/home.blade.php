@@ -309,7 +309,8 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
             <x-storefront.section-heading
                 title="নিজের মশলার বাক্স বানান"
                 subtitle="আপনার পছন্দের মশলা বেছে নিন, পরিমাণ ঠিক করুন — আমরা পৌঁছে দেব।"
-                margin="mb-8" />
+                margin="mb-5" />
+            @include('partials.storefront.how-to-steps', ['tone' => 'green', 'steps' => ['"＋ যোগ করুন" চেপে পণ্য বাছুন', 'আরও পণ্য লাগলে একইভাবে যোগ করুন', 'শেষে একবারেই সব অর্ডার করুন']])
 
         <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-start">
 
@@ -395,8 +396,8 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                     <div class="bg-[#14532d] px-5 py-3 min-h-[110px] max-h-[300px] overflow-y-auto" id="combo-items-wrap">
                         <div id="combo-empty" class="flex flex-col items-center justify-center py-5 text-center">
                             <span class="text-3xl mb-2">🌿</span>
-                            <p class="text-green-400 text-sm">এখনো কোনো পণ্য যোগ করেননি।</p>
-                            <p class="text-green-700 text-xs mt-1">বাম দিক থেকে পণ্য বেছে নিন।</p>
+                            <p class="text-green-300 text-sm font-semibold">এখনো কোনো পণ্য যোগ করেননি।</p>
+                            <p class="text-green-200 text-xs mt-1">পণ্যের তালিকা থেকে "＋ যোগ করুন" চাপুন। একাধিক পণ্য যোগ করা যায়।</p>
                         </div>
                         <div id="combo-list"></div>
                     </div>
@@ -426,14 +427,14 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                         <button type="button" id="combo-order-btn"
                                 onclick="proceedToCheckout()"
                                 class="w-full bg-[#c9a227] text-[#0f3d22] font-bold py-3 rounded-xl text-sm shadow-lg opacity-40 cursor-not-allowed pointer-events-none transition-all">
-                            অর্ডার করুন →
+                            আগে পণ্য যোগ করুন
                         </button>
                         <p id="min-order-warning" style="display:none"
                            class="text-red-400 text-[11px] text-center mt-2 leading-tight">
                             ন্যূনতম অর্ডার ৳{{ number_format($minOrderAmount, 0) }}। আরো পণ্য যোগ করুন।
                         </p>
                         <p class="text-green-700 text-[10px] text-center mt-2 leading-relaxed">
-                            পণ্য যোগ করুন · তারপর অর্ডার দিন
+                            একাধিক পণ্য যোগ করা যায় — সব একসাথেই অর্ডার হবে
                         </p>
                     </div>
 
@@ -454,6 +455,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                     Wholesale price available on request. Quantity অনুযায়ী price change হতে পারে।
                 </p>
             </div>
+            @include('partials.storefront.how-to-steps', ['tone' => 'amber', 'steps' => ['"＋ যোগ করুন" চেপে পণ্য ও পরিমাণ বাছুন', 'আরও পণ্য লাগলে একইভাবে যোগ করুন', 'শেষে সব একসাথে পাঠান — একবারেই দাম পাবেন']])
 
             <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-start">
 
@@ -534,8 +536,8 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                         <div class="bg-amber-800 px-5 py-3 min-h-[110px] max-h-[300px] overflow-y-auto" id="paykari-items-wrap">
                             <div id="paykari-empty" class="flex flex-col items-center justify-center py-5 text-center">
                                 <span class="text-3xl mb-2">📦</span>
-                                <p class="text-amber-300 text-sm">এখনো কোনো পণ্য যোগ করেননি।</p>
-                                <p class="text-amber-700 text-xs mt-1">বাম দিক থেকে পণ্য বেছে নিন।</p>
+                                <p class="text-amber-200 text-sm font-semibold">এখনো কোনো পণ্য যোগ করেননি।</p>
+                                <p class="text-amber-200 text-xs mt-1">পণ্যের তালিকা থেকে "＋ যোগ করুন" চাপুন। একাধিক পণ্য যোগ করা যায়।</p>
                             </div>
                             <div id="paykari-list"></div>
                         </div>
@@ -548,14 +550,14 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                             <button type="button" id="paykari-enquiry-btn"
                                     onclick="openPaykariEnquiryForm()"
                                     class="w-full bg-amber-500 text-white font-bold py-3 rounded-xl text-sm shadow-lg opacity-40 cursor-not-allowed pointer-events-none transition-all">
-                                পাইকারি অর্ডার পাঠান
+                                আগে পণ্য যোগ করুন
                             </button>
                             <button type="button" onclick="msCartOpen('paykari')"
                                     class="w-full mt-2 text-amber-300 hover:text-white text-xs font-semibold py-2 transition-colors">
                                 🛍️ আমার পাইকারি ব্যাগ দেখুন
                             </button>
-                            <p class="text-amber-700 text-[10px] text-center mt-1 leading-relaxed">
-                                পণ্য যোগ করুন · তারপর enquiry পাঠান
+                            <p class="text-amber-300 text-[11px] text-center mt-1 leading-relaxed">
+                                একাধিক পণ্য যোগ করা যায় — সব একসাথেই পাঠানো হবে
                             </p>
                         </div>
                     </div>
@@ -2165,12 +2167,15 @@ function renderPaykariBasket() {
         if (emptyEl) emptyEl.style.display = '';
         listEl.innerHTML = '';
         if (badgeEl) { badgeEl.style.display = 'none'; badgeEl.textContent = '0'; }
-        if (btnEl) btnEl.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        if (btnEl) { btnEl.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none'); btnEl.textContent = 'আগে পণ্য যোগ করুন'; }
         return;
     }
     if (emptyEl) emptyEl.style.display = 'none';
     if (badgeEl) { badgeEl.style.display = ''; badgeEl.textContent = n; }
-    if (btnEl) btnEl.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+    if (btnEl) {
+        btnEl.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        btnEl.textContent = '✓ সব ' + n + 'টি পণ্য একসাথে পাঠান →';
+    }
 
     listEl.innerHTML = items.map(function (it, i) {
         const cfg = pkCfg(it.unit), min = pkMin(PRODUCTS[it.product_id], it.unit);
@@ -2789,8 +2794,10 @@ function renderCombo() {
     if (orderBtn) {
         if (n > 0 && minOk) {
             orderBtn.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+            orderBtn.textContent = '✓ সব ' + n + 'টি পণ্য একসাথে অর্ডার করুন →';
         } else {
             orderBtn.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+            orderBtn.textContent = n > 0 ? 'আরও পণ্য যোগ করুন' : 'আগে পণ্য যোগ করুন';
         }
     }
 
