@@ -46,9 +46,9 @@
                 <td class="px-4 py-3">
                     <div class="flex items-center gap-3">
                         @if($product->main_image)
-                        <img src="{{ asset($product->main_image) }}" alt="" class="w-9 h-9 rounded-lg object-cover flex-shrink-0">
+                        <img src="{{ asset($product->main_image) }}" alt="" class="w-9 h-9 rounded-lg object-cover shrink-0">
                         @else
-                        <div class="w-9 h-9 rounded-lg bg-gray-100 flex-shrink-0"></div>
+                        <div class="w-9 h-9 rounded-lg bg-gray-100 shrink-0"></div>
                         @endif
                         <div>
                             <p class="font-medium text-gray-800">{{ $product->name_bn }}</p>

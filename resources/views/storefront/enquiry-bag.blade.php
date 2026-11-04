@@ -133,7 +133,7 @@
             }).join('');
             return '' +
             '<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex items-start gap-3">' +
-                '<img src="' + bagImg(it) + '" alt="" class="w-16 h-16 rounded-lg product-artwork border border-gray-100 flex-shrink-0">' +
+                '<img src="' + bagImg(it) + '" alt="" class="w-16 h-16 rounded-lg product-artwork border border-gray-100 shrink-0">' +
                 '<div class="flex-1 min-w-0">' +
                     '<a href="/wholesale/products/' + it.slug + '" class="text-sm font-semibold text-gray-800 hover:underline truncate block">' + (it.name || '') + '</a>' +
                     variantSelectHtml(it, i) +
@@ -142,7 +142,7 @@
                         '<select onchange="bagSetUnit(' + i + ', this.value)" class="border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white">' + opts + '</select>' +
                     '</div>' +
                 '</div>' +
-                '<button type="button" onclick="bagRemove(' + i + ')" class="text-red-500 hover:text-red-700 text-sm font-semibold flex-shrink-0">মুছুন</button>' +
+                '<button type="button" onclick="bagRemove(' + i + ')" class="text-red-500 hover:text-red-700 text-sm font-semibold shrink-0">মুছুন</button>' +
             '</div>';
         }).join('');
     }

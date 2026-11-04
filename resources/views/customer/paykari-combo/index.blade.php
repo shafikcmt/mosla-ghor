@@ -60,7 +60,7 @@
                     <p class="text-gray-500 text-xs">{{ $enquiry->delivery_location }} · {{ $enquiry->businessTypeLabel() }}</p>
                 </div>
 
-                <div class="flex items-center gap-2 flex-shrink-0">
+                <div class="flex items-center gap-2 shrink-0">
                     @if($enquiry->latestQuote && $enquiry->latestQuote->admin_approved)
                     <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg font-semibold">Quote আছে</span>
                     @endif

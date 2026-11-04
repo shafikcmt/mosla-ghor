@@ -626,7 +626,7 @@
                 <img src="{{ $imgUrl($review->image) }}" alt="রিভিউ ছবি" loading="lazy" decoding="async" class="mt-2 w-20 h-20 rounded-lg object-cover border border-gray-100">
             @endif
             <div class="flex items-center gap-2 mt-3 pt-2 border-t border-gray-50">
-                <div class="w-8 h-8 rounded-full bg-[#14532d] flex items-center justify-center flex-shrink-0">
+                <div class="w-8 h-8 rounded-full bg-[#14532d] flex items-center justify-center shrink-0">
                     <span class="text-[#c9a227] font-bold text-sm">{{ mb_substr($review->display_name, 0, 1) }}</span>
                 </div>
                 <div>
@@ -711,7 +711,7 @@
             $rpPrice = $relatedWholesale ? null : $rp->activeRetailPrices->min('final_price');
         @endphp
         <a href="{{ $rpUrl }}"
-           class="flex-shrink-0 w-40 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+           class="shrink-0 w-40 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
            style="scroll-snap-align: start;">
             <div class="aspect-square rounded-t-xl overflow-hidden bg-gray-50">
                 <img src="{{ $rpImg }}" alt="{{ $rp->display_name }}" class="w-full h-full product-artwork" loading="lazy">

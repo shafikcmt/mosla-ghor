@@ -232,7 +232,7 @@
                 : 'https://placehold.co/300x300/f1f5f3/14532d?text=' . urlencode($rp->display_name);
         @endphp
         <a href="{{ route('customer.wholesale.products.show', $rp->slug) }}"
-           class="flex-shrink-0 w-40 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+           class="shrink-0 w-40 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
            style="scroll-snap-align: start;">
             <div class="aspect-square rounded-t-xl overflow-hidden bg-gray-50">
                 <img src="{{ $rpImg }}" alt="{{ $rp->display_name }}" class="w-full h-full object-cover">

@@ -19,7 +19,7 @@
             <p class="text-gray-400 text-xs mt-0.5">{{ $quote->created_at->format('d M Y') }}</p>
         </div>
         <a href="{{ route('customer.wholesale.enquiry.show', $quote->enquiry_id) }}"
-           class="text-sm bg-[#14532d] hover:bg-[#166534] text-white px-4 py-2 rounded-xl transition-colors font-semibold flex-shrink-0">
+           class="text-sm bg-[#14532d] hover:bg-[#166534] text-white px-4 py-2 rounded-xl transition-colors font-semibold shrink-0">
             বিস্তারিত
         </a>
     </div>

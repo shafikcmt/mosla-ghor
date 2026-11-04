@@ -82,6 +82,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 
     @vite('resources/css/app.css')
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;600;700&family=Noto+Sans+Bengali:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -334,14 +335,14 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 
                         {{-- Header: avatar + name + price --}}
                         <div class="flex items-center gap-3">
-                            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#14532d] to-[#1a6b3a] flex items-center justify-center flex-shrink-0 shadow">
+                            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#14532d] to-[#1a6b3a] flex items-center justify-center shrink-0 shadow">
                                 <span class="text-[#c9a227] font-serif-bn font-bold text-lg">{{ mb_substr($product->name_bn, 0, 1) }}</span>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="font-serif-bn text-[#14532d] font-bold text-sm sm:text-base leading-tight truncate">{{ $product->name_bn }}</div>
                             </div>
                             <div id="picker-price-{{ $product->id }}"
-                                 class="text-[#c9a227] font-bold font-serif-bn text-base sm:text-lg flex-shrink-0 text-right">
+                                 class="text-[#c9a227] font-bold font-serif-bn text-base sm:text-lg shrink-0 text-right">
                                 {{ $pickerRetailPrices->isNotEmpty() ? '৳' . number_format($pickerRetailPrices->first()->final_price, 0) : '' }}
                             </div>
                         </div>
@@ -379,7 +380,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
             </div>
 
             {{-- ── Combo Summary ── --}}
-            <div class="w-full lg:w-80 xl:w-96 flex-shrink-0 lg:sticky lg:top-24">
+            <div class="w-full lg:w-80 xl:w-96 shrink-0 lg:sticky lg:top-24">
                 <div class="rounded-2xl shadow-xl overflow-hidden border border-green-800">
 
                     {{-- Header --}}
@@ -465,7 +466,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                          class="bg-white border border-amber-100 rounded-xl p-3 sm:p-4 shadow-sm">
                         {{-- Top: avatar + name + MOQ --}}
                         <div class="flex items-center gap-3">
-                            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center flex-shrink-0 shadow">
+                            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-600 to-amber-800 flex items-center justify-center shrink-0 shadow">
                                 <span class="text-white font-serif-bn font-bold text-lg">{{ mb_substr($product->name_bn, 0, 1) }}</span>
                             </div>
                             <div class="flex-1 min-w-0">
@@ -492,12 +493,12 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                         <div class="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
                             <div class="flex items-center gap-2">
                                 <select id="paykari-unit-{{ $product->id }}" onchange="paykariUnitChange({{ $product->id }})" aria-label="একক"
-                                        class="flex-shrink-0 border border-amber-200 rounded-lg px-2 py-2.5 text-xs bg-white text-amber-900 font-medium focus:outline-none focus:ring-1 focus:ring-amber-400">
+                                        class="shrink-0 border border-amber-200 rounded-lg px-2 py-2.5 text-xs bg-white text-amber-900 font-medium focus:outline-none focus:ring-1 focus:ring-amber-400">
                                     <option value="kg">কেজি (kg)</option>
                                     <option value="bag">বস্তা</option>
                                     <option value="carton">কার্টন</option>
                                 </select>
-                                <div class="flex items-center gap-1 flex-shrink-0">
+                                <div class="flex items-center gap-1 shrink-0">
                                     <button type="button" onclick="paykariStep({{ $product->id }}, -1)" aria-label="কমান"
                                             class="w-9 h-9 rounded-lg border border-amber-200 text-amber-800 font-bold text-lg leading-none flex items-center justify-center hover:bg-amber-50 transition">−</button>
                                     <input type="number" id="paykari-qty-{{ $product->id }}" inputmode="decimal" min="5" step="5" value="5"
@@ -520,7 +521,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                 </div>
 
                 {{-- Paykari Enquiry Basket --}}
-                <div class="w-full lg:w-80 xl:w-96 flex-shrink-0 lg:sticky lg:top-24">
+                <div class="w-full lg:w-80 xl:w-96 shrink-0 lg:sticky lg:top-24">
                     <div class="rounded-2xl shadow-xl overflow-hidden border border-amber-700">
                         {{-- Header --}}
                         <div class="bg-amber-700 px-5 py-4 flex items-center justify-between">
@@ -593,7 +594,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                         <img src="{{ $review->image }}" alt="{{ $review->customer_name }}"
                              class="w-10 h-10 rounded-full object-cover border-2 border-amber-100">
                     @else
-                        <div class="w-10 h-10 rounded-full bg-[#14532d] flex items-center justify-center flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-[#14532d] flex items-center justify-center shrink-0">
                             <span class="text-[#c9a227] font-bold text-base">{{ mb_substr($review->customer_name, 0, 1) }}</span>
                         </div>
                     @endif
@@ -1056,7 +1057,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                     <div>
                         <h2 id="modal-name-bn" class="font-serif-bn text-[#14532d] text-2xl sm:text-3xl font-bold leading-tight"></h2>
                     </div>
-                    <span id="modal-stock-badge" class="flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full mt-1"></span>
+                    <span id="modal-stock-badge" class="shrink-0 text-xs font-bold px-3 py-1 rounded-full mt-1"></span>
                 </div>
 
                 <div class="gold-rule mb-4"></div>
@@ -1105,7 +1106,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                                 class="flex-1 border border-green-200 bg-white rounded-xl px-4 py-2.5 text-sm text-[#14532d] font-medium focus:outline-none focus:ring-2 focus:ring-[#14532d]">
                             <option value="">— পরিমাণ বেছে নিন —</option>
                         </select>
-                        <div id="modal-sel-price" class="flex-shrink-0 text-[#c9a227] font-serif-bn text-2xl font-bold min-w-[70px] text-right">
+                        <div id="modal-sel-price" class="shrink-0 text-[#c9a227] font-serif-bn text-2xl font-bold min-w-[70px] text-right">
                             ——
                         </div>
                     </div>
@@ -1248,7 +1249,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                             <button type="button" id="division-btn" onclick="toggleAddrSection('division')"
                                     class="w-full flex justify-between items-center border border-green-200 rounded-xl px-4 py-2.5 bg-white text-sm hover:border-[#14532d] transition-colors">
                                 <span id="division-display" class="text-gray-400">বিভাগ বেছে নিন</span>
-                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             </button>
                             <div id="division-section" class="hidden mt-2">
                                 <input type="text" id="division-search" placeholder="বিভাগ খুঁজুন..."
@@ -1265,7 +1266,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                             <button type="button" id="district-btn" onclick="toggleAddrSection('district')"
                                     class="w-full flex justify-between items-center border border-green-200 rounded-xl px-4 py-2.5 bg-white text-sm hover:border-[#14532d] transition-colors">
                                 <span id="district-display" class="text-gray-400">জেলা বেছে নিন</span>
-                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             </button>
                             <div id="district-section" class="hidden mt-2">
                                 <input type="text" id="district-search" placeholder="জেলা খুঁজুন..."
@@ -1421,7 +1422,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                     <label class="flex items-start gap-2.5 cursor-pointer select-none">
                         <input type="checkbox" name="accepts_marketing" value="1"
                                id="f-accepts_marketing"
-                               class="mt-0.5 flex-shrink-0 rounded border-green-300 text-[#14532d] focus:ring-[#14532d]">
+                               class="mt-0.5 shrink-0 rounded border-green-300 text-[#14532d] focus:ring-[#14532d]">
                         <span class="text-gray-500 text-xs leading-relaxed">
                             আমি {{ $siteName }} থেকে নতুন অফার ও আপডেট পেতে চাই।
                         </span>
@@ -1586,7 +1587,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                 <div id="combo-bar-text" class="text-[#fef9ee] font-serif-bn font-bold text-xl leading-tight">৳০</div>
             </div>
             <a href="#combo-builder"
-               class="flex-shrink-0 bg-[#c9a227] hover:bg-[#e2bb45] text-[#0f3d22] font-bold text-sm px-5 py-2.5 rounded-xl whitespace-nowrap transition-colors shadow">
+               class="shrink-0 bg-[#c9a227] hover:bg-[#e2bb45] text-[#0f3d22] font-bold text-sm px-5 py-2.5 rounded-xl whitespace-nowrap transition-colors shadow">
                 বাক্স দেখুন →
             </a>
         </div>
@@ -2179,7 +2180,7 @@ function renderPaykariBasket() {
             '<div class="flex-1 min-w-0 mr-2">' +
                 '<span class="font-serif-bn text-white text-sm font-semibold">' + (it.name || '') + vName + '</span>' +
             '</div>' +
-            '<div class="flex items-center gap-1.5 flex-shrink-0">' +
+            '<div class="flex items-center gap-1.5 shrink-0">' +
                 '<input type="number" value="' + (parseFloat(it.quantity) || 0) + '" min="' + min + '" step="' + cfg.step + '" ' +
                     'onchange="editPaykariQty(' + i + ', this.value)" ' +
                     'class="w-14 text-center text-xs border border-amber-600 rounded-lg bg-amber-900 text-amber-200 py-1 focus:outline-none">' +
@@ -2760,16 +2761,16 @@ function renderCombo() {
                     ${opts}
                 </select>
             </div>
-            <div class="flex items-center flex-shrink-0 border border-green-600 rounded-lg overflow-hidden">
+            <div class="flex items-center shrink-0 border border-green-600 rounded-lg overflow-hidden">
                 <button type="button" onclick="setComboQty(${item.uid}, ${comboQty(item) - 1})" ${comboQty(item) <= 1 ? 'disabled' : ''} aria-label="কমান"
                         class="w-6 h-6 text-green-200 hover:bg-green-800 disabled:opacity-30">−</button>
                 <span class="w-6 text-center text-xs font-bold text-[#fef9ee]">${comboQty(item)}</span>
                 <button type="button" onclick="setComboQty(${item.uid}, ${comboQty(item) + 1})" aria-label="বাড়ান"
                         class="w-6 h-6 text-green-200 hover:bg-green-800">+</button>
             </div>
-            <div class="text-[#c9a227] font-bold font-serif-bn text-sm flex-shrink-0 min-w-[52px] text-right">৳${fmt(item.price * comboQty(item))}</div>
+            <div class="text-[#c9a227] font-bold font-serif-bn text-sm shrink-0 min-w-[52px] text-right">৳${fmt(item.price * comboQty(item))}</div>
             <button onclick="removeFromCombo(${item.uid})"
-                    class="flex-shrink-0 w-6 h-6 rounded-full bg-green-800 hover:bg-red-900 text-green-300 hover:text-red-300 flex items-center justify-center text-base leading-none transition-colors">&times;</button>
+                    class="shrink-0 w-6 h-6 rounded-full bg-green-800 hover:bg-red-900 text-green-300 hover:text-red-300 flex items-center justify-center text-base leading-none transition-colors">&times;</button>
         </div>`;
     }).join('');
 
@@ -2968,7 +2969,7 @@ function openOrderForm() {
                     <span class="text-gray-700 font-serif-bn font-medium truncate">${item.product_name}
                         <span class="text-gray-400 text-[11px] font-sans">(${item.label})</span>
                     </span>
-                    <span class="text-[#c9a227] font-bold font-serif-bn flex-shrink-0">৳${fmt(item.unit_price)}</span>
+                    <span class="text-[#c9a227] font-bold font-serif-bn shrink-0">৳${fmt(item.unit_price)}</span>
                 </div>`
             ).join('');
             preview.innerHTML = nameRow + itemRows;
@@ -2978,7 +2979,7 @@ function openOrderForm() {
                     <span class="text-gray-700 font-serif-bn font-medium truncate">${item.nameBn}
                         <span class="text-gray-400 text-[11px] font-sans">(${item.label}${comboQty(item) > 1 ? ' × ' + comboQty(item) : ''})</span>
                     </span>
-                    <span class="text-[#c9a227] font-bold font-serif-bn flex-shrink-0">৳${fmt(item.price * comboQty(item))}</span>
+                    <span class="text-[#c9a227] font-bold font-serif-bn shrink-0">৳${fmt(item.price * comboQty(item))}</span>
                 </div>`
             ).join('');
         }
@@ -3288,7 +3289,7 @@ function renderLocations(query) {
                    onchange="onLocationSelect(${l.id})"${isSelected ? ' checked' : ''}>
             <div id="loc-display-${l.id}" class="${isSelected ? LOC_CARD_SELECTED : LOC_CARD_DEFAULT}">
                 <span class="text-sm font-medium text-[#14532d]">${l.location_name}</span>
-                <span class="text-xs text-gray-400 flex-shrink-0">৳${fmt(charge)}</span>
+                <span class="text-xs text-gray-400 shrink-0">৳${fmt(charge)}</span>
             </div>
         </label>`;
     }).join('');

@@ -32,7 +32,7 @@
                         ->filter()->values();
                 @endphp
                 <a href="{{ $detailUrl }}" class="block">
-                <div class="relative h-52 overflow-hidden flex-shrink-0" data-slideshow="{{ $product->id }}">
+                <div class="relative h-52 overflow-hidden shrink-0" data-slideshow="{{ $product->id }}">
                     @if($cardSlides->isNotEmpty())
                         @foreach($cardSlides as $si => $slide)
                         <img src="{{ \App\Support\ProductMedia::url($slide) }}" alt="{{ $product->imageAlt($slide, $si + 1) }}" loading="lazy" decoding="async" @if($si === 0) width="400" height="300" @endif

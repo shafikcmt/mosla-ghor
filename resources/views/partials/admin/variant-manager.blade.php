@@ -24,7 +24,7 @@
         <div class="variant-card bg-white border border-purple-100 rounded-xl p-3">
             <div class="flex items-start gap-3">
                 {{-- Image --}}
-                <div class="flex-shrink-0 w-16">
+                <div class="shrink-0 w-16">
                     <div class="w-16 h-16 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center">
                         <img class="vm-preview w-full h-full object-cover {{ $vurl ? '' : 'hidden' }}" src="{{ $vurl ?: '' }}" alt="">
                         <span class="vm-noimg text-[10px] text-gray-300 {{ $vurl ? 'hidden' : '' }}">ছবি নেই</span>
@@ -107,7 +107,7 @@ function addProductVariant() {
     card.className = 'variant-card bg-white border border-purple-100 rounded-xl p-3';
     card.innerHTML =
         '<div class="flex items-start gap-3">' +
-            '<div class="flex-shrink-0 w-16">' +
+            '<div class="shrink-0 w-16">' +
                 '<div class="w-16 h-16 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex items-center justify-center">' +
                     '<img class="vm-preview w-full h-full object-cover hidden" src="" alt="">' +
                     '<span class="vm-noimg text-[10px] text-gray-300">ছবি নেই</span>' +

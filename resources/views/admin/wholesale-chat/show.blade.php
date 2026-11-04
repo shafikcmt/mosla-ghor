@@ -62,7 +62,7 @@
                           placeholder="Admin হিসেবে বার্তা পাঠান..."
                           class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white"></textarea>
                 <button type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-xl text-sm transition-colors self-end flex-shrink-0">
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-xl text-sm transition-colors self-end shrink-0">
                     পাঠান →
                 </button>
             </form>

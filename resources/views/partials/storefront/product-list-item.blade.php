@@ -17,7 +17,7 @@
             <article data-list-product="{{ $product->id }}" style="{{ $visibleInMode ? '' : 'display:none;' }}" class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
 
                 {{-- Thumb --}}
-                <div class="w-28 sm:w-36 flex-shrink-0 relative h-36 bg-gray-50">
+                <div class="w-28 sm:w-36 shrink-0 relative h-36 bg-gray-50">
                     @if($listCover = $product->coverImage($listMode))
                         <img src="{{ \App\Support\ProductMedia::url($listCover) }}" alt="{{ $product->coverImageAlt($listMode) }}" loading="lazy" decoding="async"
                              @if(filled($product->wholesale_main_image) && $product->main_image) data-cover-retail="{{ \App\Support\ProductMedia::url($product->main_image) }}" data-cover-wholesale="{{ \App\Support\ProductMedia::url($product->wholesale_main_image) }}" data-alt-retail="{{ $product->coverImageAlt('retail') }}" data-alt-wholesale="{{ $product->coverImageAlt('wholesale') }}" @endif
@@ -67,7 +67,7 @@
                     </div>
 
                     {{-- Price + buttons --}}
-                    <div class="flex sm:flex-col items-center sm:items-end justify-between gap-2 flex-shrink-0">
+                    <div class="flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
                         @if($product->activePrices->isNotEmpty() && ! $wholesaleOnly)
                             <div class="text-right">
                                 <div id="list-from-{{ $product->id }}" class="text-[#c9a227] font-bold text-xl font-serif-bn">

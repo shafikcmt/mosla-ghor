@@ -83,9 +83,9 @@
                             @unless($sa->isCheckoutReady())<p class="text-amber-600 text-[11px] mt-0.5">⚠ ডেলিভারি এলাকা সেট করা নেই</p>@endunless
                         </div>
                         @if($sa->id === $address->id)
-                            <span class="flex-shrink-0 ml-3 text-xs text-[#14532d] font-semibold">✓ নির্বাচিত</span>
+                            <span class="shrink-0 ml-3 text-xs text-[#14532d] font-semibold">✓ নির্বাচিত</span>
                         @elseif($sa->isCheckoutReady())
-                        <form action="{{ route('checkout.address.select', $sa->id) }}" method="POST" class="flex-shrink-0 ml-3">
+                        <form action="{{ route('checkout.address.select', $sa->id) }}" method="POST" class="shrink-0 ml-3">
                             @csrf
                             <button class="text-xs bg-[#14532d] text-white px-3 py-1.5 rounded-lg">নির্বাচন</button>
                         </form>
@@ -113,7 +113,7 @@
         <div class="divide-y divide-gray-50">
             @foreach($items as $item)
             <div class="flex items-center gap-3 py-3">
-                <div class="w-14 h-14 rounded-lg bg-gray-50 border border-gray-100 flex-shrink-0 overflow-hidden">
+                <div class="w-14 h-14 rounded-lg bg-gray-50 border border-gray-100 shrink-0 overflow-hidden">
                     @if(!empty($item['image']))
                     <img src="{{ asset($item['image']) }}" alt="" class="w-full h-full object-cover">
                     @endif
@@ -122,7 +122,7 @@
                     <p class="text-sm font-semibold text-gray-800 truncate">{{ $item['product_name'] }}</p>
                     <p class="text-xs text-gray-400">{{ $item['label'] ?? '' }}@if(($item['qty'] ?? 1) > 1) × {{ $item['qty'] }}@endif{{ !empty($item['variant_name']) ? ' · '.$item['variant_name'] : '' }}</p>
                 </div>
-                <div class="text-sm font-bold text-[#14532d] flex-shrink-0">৳{{ number_format($item['line_total'], 0) }}</div>
+                <div class="text-sm font-bold text-[#14532d] shrink-0">৳{{ number_format($item['line_total'], 0) }}</div>
             </div>
             @endforeach
         </div>

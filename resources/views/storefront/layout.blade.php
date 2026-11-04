@@ -6,8 +6,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @include('partials.storefront.seo', ['pageTitle' => trim($__env->yieldContent('title')), 'fullTitle' => trim($__env->yieldContent('seo_title')), 'pageDescription' => trim($__env->yieldContent('meta_description'))])
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    @include('partials.tw3-compat')
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;600;700&family=Noto+Sans+Bengali:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {

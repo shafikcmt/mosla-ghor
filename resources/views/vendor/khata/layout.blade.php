@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#0f7a3e">
     <title>@yield('title', 'দোকানের খাতা') — {{ $vendor->shop_name ?? 'খাতা' }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    @include('partials.tw3-compat')
     <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Hind Siliguri', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
