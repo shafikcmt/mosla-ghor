@@ -115,6 +115,9 @@ Route::get('/sitemap.xml', function () {
     return response($xml.'</urlset>', 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
 })->name('sitemap');
 
+// Meta (Facebook / Instagram) catalog feed — set this URL in Commerce Manager → Catalog → Data sources.
+Route::get('/feeds/meta.xml', [\App\Http\Controllers\MetaFeedController::class, 'show'])->name('feeds.meta');
+
 Route::get('/robots.txt', function () {
     $body = "User-agent: *\nDisallow: /admin\nDisallow: /vendor\nDisallow: /customer\nDisallow: /checkout\nDisallow: /order\nDisallow: /invoice\nDisallow: /v/\nAllow: /\n\nSitemap: ".url('/sitemap.xml')."\n";
     return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
