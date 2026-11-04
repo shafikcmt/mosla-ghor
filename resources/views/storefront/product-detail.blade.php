@@ -317,7 +317,7 @@
                 @foreach($retailPacks as $i => $price)
                 <button type="button"
                         class="pd-pack {{ $i === 0 ? 'active' : '' }} border border-green-100 bg-[#f0faf4] rounded-lg p-2 text-center transition-colors"
-                        data-price-id="{{ $price->id }}" data-price="{{ (float) $price->final_price }}"
+                        data-price-id="{{ $price->id }}" data-price="{{ (float) $price->final_price }}" data-gram="{{ (int) $price->quantity_gram }}"
                         onclick="pdSelectPack(this)">
                     <div class="pd-pack-lbl text-gray-500 text-[11px] leading-tight">{{ $price->label }}</div>
                     <div class="pd-pack-val text-[#14532d] text-sm font-semibold leading-tight mt-0.5">৳{{ number_format($price->final_price, 0) }}</div>
@@ -325,8 +325,30 @@
                 @endforeach
             </div>
 
+            {{-- Custom weight: customer types any grams (e.g. 200) — we combine the cheapest packs automatically. --}}
+            <div id="pd-custom" class="mt-4 rounded-xl border border-dashed border-[#14532d]/40 bg-[#f0faf4]/60 p-3 hidden">
+                <label for="pd-grams" class="block text-sm font-semibold text-[#14532d]">অন্য পরিমাণ লাগবে? গ্রামে লিখুন</label>
+                <div class="flex items-center gap-2 mt-2">
+                    <div class="flex items-center border border-gray-300 bg-white rounded-xl overflow-hidden flex-1 max-w-[190px]">
+                        <input type="number" id="pd-grams" inputmode="numeric" min="1" placeholder="যেমন: ২০০" oninput="pdCustomGrams(this.value)"
+                               class="w-full h-10 px-3 font-semibold text-gray-800 focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none">
+                        <span class="px-3 text-sm text-gray-500 bg-gray-50 h-10 flex items-center border-l border-gray-200">গ্রাম</span>
+                    </div>
+                    <button type="button" id="pd-grams-clear" onclick="pdClearCustom()" class="text-xs text-gray-500 underline hidden">মুছুন</button>
+                </div>
+                <div class="flex flex-wrap gap-1.5 mt-2" id="pd-grams-chips">
+                    @foreach([200, 300, 400, 750, 1500, 2000] as $chip)
+                    <button type="button" onclick="pdCustomGrams({{ $chip }}, true)"
+                            class="text-xs px-2.5 py-1 rounded-full border border-[#14532d]/30 bg-white text-[#14532d] hover:bg-[#14532d] hover:text-white transition-colors"
+                            data-chip="{{ $chip }}">{{ strtr($chip >= 1000 ? rtrim(rtrim(number_format($chip / 1000, 1), '0'), '.').' কেজি' : $chip.' গ্রাম', ['0'=>'০','1'=>'১','2'=>'২','3'=>'৩','4'=>'৪','5'=>'৫','6'=>'৬','7'=>'৭','8'=>'৮','9'=>'৯']) }}</button>
+                    @endforeach
+                </div>
+                <div id="pd-grams-result" class="mt-2 text-sm text-[#14532d] font-medium hidden"></div>
+                <div id="pd-grams-error" class="mt-2 text-xs text-red-600 hidden"></div>
+            </div>
+
             {{-- Quantity: how many of the selected pack (2 × 1kg = 2kg) --}}
-            <div class="flex items-center gap-4 mt-5">
+            <div id="pd-qty-row" class="flex items-center gap-4 mt-5">
                 <span class="text-sm font-semibold text-gray-700 w-20">পরিমাণ:</span>
                 <div class="flex items-center border border-gray-300 rounded-xl overflow-hidden">
                     <button type="button" onclick="pdChangeQty(-1)" aria-label="কমান"
@@ -834,6 +856,11 @@
         document.querySelectorAll('.pd-pack').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         pdSelectedPriceId = parseInt(btn.dataset.priceId, 10);
+        if (pdCustomPlan || document.getElementById('pd-grams')?.value) {
+            const gi = document.getElementById('pd-grams'); if (gi) gi.value = '';
+            pdCustomGrams('');
+            btn.classList.add('active'); // pdCustomGrams('') cleared nothing, keep the chosen pack highlighted
+        }
         pdRefreshPrice();
     }
 
@@ -849,8 +876,119 @@
     }
     function pdChangeQty(d) { pdSetPackQty(pdQty + d); }
 
+    // ── Custom weight (grams) ─────────────────────────────────────────────
+    // The customer types any weight; we pick the cheapest exact combination of the
+    // product's packs (min total price, then fewest packs) and add each pack as a cart line.
+    const PD_MAX_GRAMS = 50000;
+    let pdCustomPlan = null; // [{btn, priceId, label, price, gram, qty}] while a custom weight is active
+    const pdBn = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+    function pdPacks() {
+        return Array.from(document.querySelectorAll('.pd-pack')).map(b => ({
+            btn: b, priceId: parseInt(b.dataset.priceId, 10), price: parseFloat(b.dataset.price) || 0,
+            gram: parseInt(b.dataset.gram, 10) || 0,
+            label: ((b.querySelector('.pd-pack-lbl') || {}).textContent || '').trim()
+        })).filter(p => p.gram > 0 && p.price > 0);
+    }
+    function pdGcd(a, b) { return b ? pdGcd(b, a % b) : a; }
+    function pdFmtWeight(g) {
+        const kg = Math.floor(g / 1000), r = g % 1000, out = [];
+        if (kg) out.push(pdBn(kg) + ' কেজি');
+        if (r) out.push(pdBn(r) + ' গ্রাম');
+        return out.join(' ');
+    }
+    // Cheapest exact combination for `grams` (multiple of the step); null when impossible.
+    function pdPlan(grams, packs) {
+        const step = packs.reduce((g, p) => pdGcd(g, p.gram), 0);
+        if (!step || grams % step) return null;
+        const n = grams / step, INF = 1e15, cost = new Array(n + 1).fill(INF), cnt = new Array(n + 1).fill(0), pick = new Array(n + 1).fill(-1);
+        cost[0] = 0;
+        for (let i = 1; i <= n; i++) {
+            packs.forEach((p, k) => {
+                const j = i - p.gram / step;
+                if (j < 0 || cost[j] >= INF) return;
+                const c = cost[j] + p.price, q = cnt[j] + 1;
+                if (c < cost[i] - 1e-9 || (Math.abs(c - cost[i]) < 1e-9 && q < cnt[i])) { cost[i] = c; cnt[i] = q; pick[i] = k; }
+            });
+        }
+        if (cost[n] >= INF) return null;
+        const counts = {};
+        for (let i = n; i > 0; i -= packs[pick[i]].gram / step) counts[pick[i]] = (counts[pick[i]] || 0) + 1;
+        return Object.keys(counts).map(k => Object.assign({}, packs[k], { qty: counts[k] }))
+            .sort((a, b) => b.gram - a.gram);
+    }
+    function pdCustomGrams(val, fromChip) {
+        const inp = document.getElementById('pd-grams');
+        if (fromChip && inp) inp.value = val;
+        const res = document.getElementById('pd-grams-result'), err = document.getElementById('pd-grams-error');
+        const clr = document.getElementById('pd-grams-clear'), qtyRow = document.getElementById('pd-qty-row');
+        const grams = parseInt(val, 10);
+        res.classList.add('hidden'); err.classList.add('hidden'); pdCustomPlan = null;
+        if (clr) clr.classList.toggle('hidden', !(grams > 0));
+        if (!(grams > 0)) {
+            if (qtyRow) qtyRow.classList.remove('hidden');
+            if (!document.querySelector('.pd-pack.active')) {
+                const cur = document.querySelector('.pd-pack[data-price-id="' + pdSelectedPriceId + '"]') || document.querySelector('.pd-pack');
+                if (cur) cur.classList.add('active');
+            }
+            pdRefreshPrice(); return;
+        }
+        if (qtyRow) qtyRow.classList.add('hidden');
+        const packs = pdPacks();
+        const step = packs.reduce((g, p) => pdGcd(g, p.gram), 0);
+        let msg = '';
+        if (grams > PD_MAX_GRAMS) msg = 'সর্বোচ্চ ' + pdFmtWeight(PD_MAX_GRAMS) + ' পর্যন্ত লিখতে পারবেন। এর বেশি হলে পাইকারি অর্ডার করুন।';
+        else if (grams % step) msg = pdBn(step) + ' গ্রামের গুণিতকে লিখুন (যেমন ' + pdBn(Math.ceil(grams / step) * step) + ' গ্রাম)।';
+        const plan = msg ? null : pdPlan(grams, packs);
+        if (!msg && (!plan || plan.some(p => p.qty > PD_MAX_QTY))) msg = 'এই পরিমাণ সরাসরি যোগ করা যাচ্ছে না — অন্য পরিমাণ লিখুন।';
+        if (msg) {
+            err.textContent = msg; err.classList.remove('hidden');
+            document.querySelectorAll('.pd-pack').forEach(b => b.classList.remove('active'));
+            const sp = document.getElementById('pd-sel-price'); if (sp) sp.textContent = '—';
+            return;
+        }
+        pdCustomPlan = plan;
+        const total = plan.reduce((s, p) => s + p.price * p.qty, 0);
+        document.querySelectorAll('.pd-pack').forEach(b => b.classList.remove('active'));
+        plan.forEach(p => { if (p.qty) p.btn.classList.add('active'); });
+        res.innerHTML = pdFmtWeight(grams) + ' = ' + plan.map(p => p.label + (p.qty > 1 ? ' × ' + pdBn(p.qty) : '')).join(' + ') +
+            ' → <b>' + pdTaka(total) + '</b>';
+        res.classList.remove('hidden');
+        pdRefreshPrice();
+    }
+    function pdClearCustom() {
+        const inp = document.getElementById('pd-grams'); if (inp) inp.value = '';
+        pdCustomGrams('');
+        const first = document.querySelector('.pd-pack'); if (first && !document.querySelector('.pd-pack.active')) pdSelectPack(first);
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        const box = document.getElementById('pd-custom');
+        const packs = pdPacks();
+        // Needs at least 2 weight-based packs, otherwise a plain quantity stepper is enough.
+        if (box && packs.length >= 2) box.classList.remove('hidden');
+        // Hide quick chips this product's pack sizes cannot make exactly.
+        document.querySelectorAll('#pd-grams-chips [data-chip]').forEach(function (c) {
+            const g = parseInt(c.dataset.chip, 10), plan = pdPlan(g, packs);
+            if (!plan || plan.some(p => p.qty > PD_MAX_QTY)) c.classList.add('hidden');
+        });
+    });
+
     // Big price = pack price × quantity; keeps the WhatsApp order text in sync.
     function pdRefreshPrice() {
+        if (pdCustomPlan) {
+            const total = pdCustomPlan.reduce((s, p) => s + p.price * p.qty, 0);
+            const grams = pdCustomPlan.reduce((s, p) => s + p.gram * p.qty, 0);
+            const sp = document.getElementById('pd-sel-price'); if (sp) sp.textContent = pdTaka(total);
+            const note = document.getElementById('pd-unit-note');
+            if (note) { note.textContent = '(' + pdFmtWeight(grams) + ')'; note.classList.remove('hidden'); }
+            const wa = document.getElementById('pd-wa-order');
+            if (wa) {
+                wa.href = wa.href.split('?')[0] + '?text=' + encodeURIComponent(
+                    'আসসালামু আলাইকুম, আমি অর্ডার করতে চাই:\n' + @json($product->name_bn ?: $product->name_en) +
+                    ' — ' + pdFmtWeight(grams) + ' (' + pdCustomPlan.map(p => p.label + ' × ' + p.qty).join(' + ') + ') = ' + pdTaka(total) +
+                    '\n' + @json(url()->current()));
+            }
+            return;
+        }
         const active = document.querySelector('.pd-pack.active');
         if (!active) return;
         const unit  = parseFloat(active.dataset.price) || 0;
@@ -877,6 +1015,28 @@
     // store is somehow unavailable.
     function pdAddToCart(buyNow) {
         if (!pdSelectedPriceId) return;
+
+        // Custom weight: one cart line per pack size (e.g. 200g = 2 × 100g).
+        if (window.msCart && pdCustomPlan) {
+            pdCustomPlan.forEach(function (p) {
+                msCart.add({
+                    productId:   @json($product->id),
+                    priceId:     p.priceId,
+                    variantId:   null,
+                    variantName: null,
+                    sellType:    'retail',
+                    nameBn:      @json($product->name),
+                    label:       p.label,
+                    price:       p.price,
+                    qty:         p.qty
+                });
+            });
+            if (buyNow) { msCartCheckout(); return; }
+            msToast('🛒 কার্টে যোগ হয়েছে');
+            msCartOpen('retail');
+            return;
+        }
+        if (!pdCustomPlan && document.getElementById('pd-grams')?.value) { msToast('সঠিক গ্রাম লিখুন'); return; }
 
         if (window.msCart) {
             const active = document.querySelector('.pd-pack.active');
