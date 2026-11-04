@@ -66,7 +66,7 @@
                         <div class="flex items-center gap-2 min-w-0">
                             @php $vThumb = $item->variant?->imageUrl(); @endphp
                             @if($vThumb)
-                            <img src="{{ $vThumb }}" alt="{{ $item->variant_name }}" class="w-9 h-9 rounded-md object-cover border border-gray-100 flex-shrink-0">
+                            <img src="{{ $vThumb }}" alt="{{ $item->variant_name }}" class="w-9 h-9 rounded-md object-cover border border-gray-100 shrink-0">
                             @endif
                             <div class="min-w-0">
                                 <span class="font-serif-bn font-bold text-gray-800">{{ $item->product_name }}</span>

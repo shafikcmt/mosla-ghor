@@ -40,7 +40,7 @@
             <p class="text-gray-500 text-sm">{{ rtrim(rtrim(number_format((float)$enquiry->quantity_kg,2),'0'),'.') }} {{ $enquiry->quantity_unit ?: 'kg' }} · {{ $enquiry->delivery_location }} · {{ $enquiry->businessTypeLabel() }}</p>
             <p class="text-gray-400 text-xs mt-1">{{ $enquiry->created_at->format('d M Y') }}</p>
         </div>
-        <div class="flex gap-2 flex-shrink-0">
+        <div class="flex gap-2 shrink-0">
             @if($enquiry->customerVisibleQuote && $enquiry->customerVisibleQuote->status === 'sent_to_customer')
             <a href="{{ route('customer.wholesale.enquiry.show', $enquiry->id) }}"
                class="text-sm bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl transition-colors font-semibold">
