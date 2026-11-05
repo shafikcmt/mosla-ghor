@@ -28,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Meta's first-party cookies are set by fbevents.js, not Laravel — never try to decrypt them.
         $middleware->encryptCookies(except: ['_fbp', '_fbc']);
         // Admin-controlled maintenance mode (after session/auth so admins can be recognised).
-        $middleware->web(append: [\App\Http\Middleware\MaintenanceMode::class]);
+        $middleware->web(append: [\App\Http\Middleware\MaintenanceMode::class, \App\Http\Middleware\CaptureMarketingSource::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // The Meta Conversions API token must never be flashed back into the session after a failed validation.

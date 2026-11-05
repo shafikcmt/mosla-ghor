@@ -55,7 +55,7 @@ class PaykariComboEnquiryController extends Controller
             'customer_phone.regex' => 'সঠিক ফোন নম্বর দিন।',
         ]);
 
-        $enquiry = PaykariComboEnquiry::create([
+        $enquiry = PaykariComboEnquiry::create(\App\Support\MarketingSource::fromRequest($request) + [
             'customer_id'       => $customer?->id,
             'customer_name'     => $validated['customer_name'],
             'customer_phone'    => $validated['customer_phone'],

@@ -19,6 +19,7 @@ class OrderController extends Controller
     {
         $status = $request->query('status', 'all');
         $search = trim((string) $request->query('q', ''));
+        $src    = trim((string) $request->query('src', ''));
 
         $orders = Order::with('selectedCourier')
             ->when($status === 'pending',   fn ($q) => $q->where('order_status', 'pending'))
@@ -32,13 +33,14 @@ class OrderController extends Controller
                         ->orWhere('mobile_number', 'like', "%{$search}%");
                 });
             })
+            ->when($src !== '', fn ($q) => $q->where(fn ($s) => $s->where('utm_source', $src)->orWhere('utm_campaign', $src)))
             ->latest()
             ->paginate(25)
             ->withQueryString();
 
         $trashCount = Order::onlyTrashed()->count();
 
-        return view('admin.orders.index', compact('orders', 'status', 'search', 'trashCount'));
+        return view('admin.orders.index', compact('orders', 'status', 'search', 'src', 'trashCount'));
     }
 
     public function show(Order $order)

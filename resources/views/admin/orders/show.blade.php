@@ -73,6 +73,7 @@
         <div>
             <h2 class="text-lg font-bold text-gray-800">অর্ডার #{{ $order->order_number }}</h2>
             <p class="text-xs text-gray-400 mt-0.5">{{ $order->created_at->format('d M Y, h:i A') }}</p>
+            <p class="text-xs text-gray-500 mt-1">সোর্স: @include('admin.partials.source-badge', ['model' => $order])@if($order->landing_path) <span class="text-gray-400">· {{ $order->landing_path }}</span>@endif</p>
         </div>
         <div class="text-right space-y-1">
             <span class="inline-block px-2.5 py-1 rounded text-xs font-semibold {{ $oColors[$order->order_status] ?? 'bg-gray-100 text-gray-600' }}">

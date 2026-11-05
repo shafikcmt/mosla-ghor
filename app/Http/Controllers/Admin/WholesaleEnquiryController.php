@@ -16,8 +16,13 @@ class WholesaleEnquiryController extends Controller
         $enquiries = WholesaleEnquiry::with(['customer', 'product', 'vendor', 'latestQuote'])
             ->withCount(['chatMessages as unread_count' => fn($q) => $q->where('sender_type', '!=', 'admin')->where('is_read_by_admin', false)])
             ->when($status, fn($q) => $q->where('status', $status))
+            ->when(trim((string) $request->get('src')) !== '', function ($q) use ($request) {
+                $src = trim((string) $request->get('src'));
+                $q->where(fn ($s) => $s->where('utm_source', $src)->orWhere('utm_campaign', $src));
+            })
             ->latest()
-            ->paginate(25);
+            ->paginate(25)
+            ->withQueryString();
 
         return view('admin.wholesale-enquiries.index', compact('enquiries'));
     }

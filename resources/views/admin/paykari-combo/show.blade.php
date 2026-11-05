@@ -201,6 +201,7 @@
             </div>
 
             <div class="bg-gray-50 rounded-2xl border border-gray-200 p-5 text-xs text-gray-500 space-y-1">
+                <p><span class="font-semibold">সোর্স:</span> @include('admin.partials.source-badge', ['model' => $enquiry])@if($enquiry->landing_path) <span class="text-gray-400">· {{ $enquiry->landing_path }}</span>@endif</p>
                 <p><span class="font-semibold">Created:</span> {{ $enquiry->created_at->format('d M Y h:i A') }}</p>
                 <p><span class="font-semibold">Updated:</span> {{ $enquiry->updated_at->format('d M Y h:i A') }}</p>
                 <p><span class="font-semibold">Items:</span> {{ $enquiry->items->count() }}</p>

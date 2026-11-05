@@ -89,7 +89,15 @@ Route::get('/products', function (\Illuminate\Http\Request $request) {
     if ($mode === 'paykari') {
         $mode = 'wholesale';
     }
-    $q = in_array($mode, ['wholesale', 'retail'], true) ? '?mode=' . $mode : '';
+    $params = in_array($mode, ['wholesale', 'retail'], true) ? ['mode' => $mode] : [];
+    // Carry over only whitelisted marketing / filter parameters (UTM, fbclid, category).
+    foreach (['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'category'] as $key) {
+        $value = $request->query($key);
+        if (is_string($value) && $value !== '') {
+            $params[$key] = $value;
+        }
+    }
+    $q = $params ? '?' . http_build_query($params) : '';
     return redirect('/' . $q . '#products');
 })->name('products.index');
 

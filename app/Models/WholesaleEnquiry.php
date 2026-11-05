@@ -14,6 +14,7 @@ class WholesaleEnquiry extends Model
         'quantity_kg', 'quantity_unit', 'delivery_location', 'business_type', 'contact_channel', 'message',
         'customer_name', 'customer_phone', 'customer_whatsapp', 'customer_email',
         'product_name', 'variant_name', 'status', 'vendor_note', 'admin_note',
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'landing_path', 'referrer_host',
     ];
 
     /** contact_channel → Bangla badge label. */

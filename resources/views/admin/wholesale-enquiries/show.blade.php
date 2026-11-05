@@ -132,6 +132,7 @@
     {{-- Right: Status change --}}
     <div class="space-y-4">
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <p class="text-xs text-gray-500 mb-3">সোর্স: @include('admin.partials.source-badge', ['model' => $enquiry])@if($enquiry->landing_path) <span class="text-gray-400">· {{ $enquiry->landing_path }}</span>@endif</p>
             <h4 class="font-semibold text-gray-700 text-sm mb-3">Status পরিবর্তন</h4>
             <form action="{{ route('admin.wholesale.enquiry.status', $enquiry->id) }}" method="POST" class="space-y-3">
                 @csrf

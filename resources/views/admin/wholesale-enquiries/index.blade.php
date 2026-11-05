@@ -15,6 +15,13 @@
     </div>
 </div>
 
+<form method="GET" action="{{ route('admin.wholesale.enquiry.index') }}" class="flex gap-1.5 mb-4">
+    @if(request('status'))<input type="hidden" name="status" value="{{ request('status') }}">@endif
+    <input type="text" name="src" value="{{ request('src') }}" placeholder="সোর্স / ক্যাম্পেইন (utm)"
+           class="text-sm border border-gray-300 rounded px-3 py-1.5 w-56 focus:outline-none focus:ring-1 focus:ring-gray-400">
+    <button type="submit" class="bg-gray-800 text-white text-xs px-3 py-1.5 rounded hover:bg-gray-700">ফিল্টার</button>
+</form>
+
 @if($enquiries->isEmpty())
 <div class="bg-white rounded-2xl border border-gray-100 p-12 text-center text-gray-400">
     <p class="text-4xl mb-3">📭</p>
@@ -44,6 +51,7 @@
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">পরিমাণ</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden lg:table-cell">Quote</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">বার্তা</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">সোর্স</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">কার্যক্রম</th>
             </tr>
@@ -73,6 +81,7 @@
                     <span class="text-xs text-gray-300">0</span>
                     @endif
                 </td>
+                <td class="px-4 py-3">@include('admin.partials.source-badge', ['model' => $enquiry])</td>
                 <td class="px-4 py-3">
                     <span class="text-xs px-2 py-0.5 rounded-full font-medium
                         @if($enquiry->status === 'pending') bg-yellow-100 text-yellow-700

@@ -13,6 +13,8 @@ class Order extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        // Marketing source (UTM) — see App\Support\MarketingSource
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'landing_path', 'referrer_host',
         'order_number', 'customer_name', 'mobile_number', 'alternative_number',
         'full_address', 'district', 'area', 'delivery_area',
         'delivery_zone_id', 'delivery_location_id', 'delivery_zone_name', 'delivery_location_name',

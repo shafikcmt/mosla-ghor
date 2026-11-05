@@ -242,7 +242,7 @@ class ProductController extends Controller
             $customer = $account['customer'];
         }
 
-        $enquiry = WholesaleEnquiry::create([
+        $enquiry = WholesaleEnquiry::create(\App\Support\MarketingSource::fromRequest($request) + [
             'customer_id'        => $customer?->id,
             'product_id'         => $product->id,
             'product_variant_id' => $variant?->id,

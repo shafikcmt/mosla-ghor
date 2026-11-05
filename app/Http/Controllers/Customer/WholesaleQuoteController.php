@@ -56,7 +56,7 @@ class WholesaleQuoteController extends Controller
 
             $location = $enquiry->delivery_location ?: '—';
 
-            $order = Order::create([
+            $order = Order::create(\App\Support\MarketingSource::fromModel($enquiry) + [
                 'order_number'    => $orderNumber,
                 'customer_name'   => $enquiry->customer_name ?: $customer->name,
                 'mobile_number'   => $enquiry->customer_phone ?: $customer->mobile_number,

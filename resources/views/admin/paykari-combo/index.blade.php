@@ -27,6 +27,7 @@
                     <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Products</th>
                     <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
                     <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Vendor</th>
+                    <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">সোর্স</th>
                     <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                     <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
                     <th class="px-5 py-3"></th>
@@ -54,6 +55,7 @@
                     <td class="px-5 py-3 text-gray-600 text-xs">
                         {{ $enq->vendor?->business_name ?? '—' }}
                     </td>
+                    <td class="px-5 py-3">@include('admin.partials.source-badge', ['model' => $enq])</td>
                     <td class="px-5 py-3">
                         <span class="text-xs px-2 py-0.5 rounded-full font-semibold {{ $enq->statusBadgeClass() }}">
                             {{ $enq->statusLabel() }}
@@ -69,7 +71,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="px-5 py-10 text-center text-gray-400">কোনো enquiry নেই।</td>
+                    <td colspan="9" class="px-5 py-10 text-center text-gray-400">কোনো enquiry নেই।</td>
                 </tr>
                 @endforelse
             </tbody>

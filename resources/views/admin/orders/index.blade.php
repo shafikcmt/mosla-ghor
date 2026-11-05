@@ -62,8 +62,10 @@
             <input type="text" name="q" value="{{ $search }}"
                    placeholder="অর্ডার নং / নাম / মোবাইল"
                    class="text-sm border border-gray-300 rounded px-3 py-1.5 w-56 focus:outline-none focus:ring-1 focus:ring-gray-400">
+            <input type="text" name="src" value="{{ $src ?? '' }}" placeholder="সোর্স / ক্যাম্পেইন"
+                   class="text-sm border border-gray-300 rounded px-3 py-1.5 w-40 focus:outline-none focus:ring-1 focus:ring-gray-400">
             <button type="submit" class="bg-gray-800 text-white text-xs px-3 py-1.5 rounded hover:bg-gray-700">খুঁজুন</button>
-            @if($search)
+            @if($search || ($src ?? ''))
                 <a href="{{ route('admin.orders.index', array_filter(['status' => $status === 'all' ? null : $status])) }}"
                    class="text-xs px-3 py-1.5 rounded border border-gray-200 text-gray-500 hover:bg-gray-50">রিসেট</a>
             @endif
@@ -98,6 +100,7 @@
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">পেমেন্ট</th>
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">পেমেন্ট স্ট্যাটাস</th>
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">অর্ডার স্ট্যাটাস</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">সোর্স</th>
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">তারিখ</th>
                     <th class="px-4 py-3 text-right font-semibold text-gray-600">অ্যাকশন</th>
                 </tr>
@@ -160,6 +163,7 @@
                             {{ $oLabels[$order->order_status] ?? $order->order_status }}
                         </span>
                     </td>
+                    <td class="px-4 py-3">@include('admin.partials.source-badge', ['model' => $order])</td>
                     <td class="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                         {{ $order->created_at->format('d M Y, h:i A') }}
                     </td>
@@ -185,7 +189,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="11" class="px-4 py-8 text-center text-gray-400">কোনো অর্ডার নেই।</td>
+                    <td colspan="12" class="px-4 py-8 text-center text-gray-400">কোনো অর্ডার নেই।</td>
                 </tr>
                 @endforelse
             </tbody>

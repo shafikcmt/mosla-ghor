@@ -65,7 +65,7 @@ class WholesaleEnquiryController extends Controller
                 ->withErrors(['quantity_kg' => "এই পণ্যের জন্য সর্বনিম্ন অর্ডার পরিমাণ {$qty} {$unit}।"]);
         }
 
-        $enquiry = WholesaleEnquiry::create([
+        $enquiry = WholesaleEnquiry::create(\App\Support\MarketingSource::fromRequest($request) + [
             'customer_id'        => $customer->id,
             'product_id'         => $product->id,
             'product_variant_id' => $variant?->id,

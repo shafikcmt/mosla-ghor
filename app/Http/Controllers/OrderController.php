@@ -291,8 +291,9 @@ class OrderController extends Controller
 
         // ── Persist order + items + stock deduction in a transaction ────────────
         try {
+            $marketingSource = \App\Support\MarketingSource::fromRequest($request);
             $order = DB::transaction(function () use (
-                $validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge,
+                $marketingSource, $validated, $processedItems, $subtotal, $packagingCost, $deliveryCharge,
                 $grandTotal, $orderNumber, $isManualPayment, $orderType, $zone, $location,
                 $orderComboId, $bdDivision, $bdDistrict, $bdUpazila, $bdUnion, $neededByProduct,
                 $paymentMode, $paymentDiscount, $estimatedDelivery, $customerAddressId
@@ -306,7 +307,7 @@ class OrderController extends Controller
                     }
                 }
 
-                $order = Order::create([
+                $order = Order::create($marketingSource + [
                     'order_number'          => $orderNumber,
                     'customer_name'         => $validated['full_name'],
                     'mobile_number'         => $validated['mobile_number'],
