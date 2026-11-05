@@ -14,10 +14,13 @@ class CourierProviderConfiguration
         public readonly bool $canTestConnection = true,
     ) {
         foreach ($fields as $field => $schema) {
-            // This first iteration deliberately uses the existing storage only.
-            // Secrets must stay in encrypted, hidden columns; endpoints are selects.
-            if (! in_array($field, ['api_key', 'api_secret', 'base_url'], true)
-                || (($schema['secret'] ?? false) !== ($field !== 'base_url'))
+            // Storage is limited to the existing columns plus the encrypted
+            // api_extra bag. Secrets stay encrypted/hidden; endpoints are selects.
+            $secretFields = ['api_key', 'api_secret', 'username', 'password'];
+            $plainFields = ['base_url', 'store_id'];
+            $isSecret = in_array($field, $secretFields, true);
+            if (! ($isSecret || in_array($field, $plainFields, true))
+                || (($schema['secret'] ?? false) !== $isSecret)
                 || ($field === 'base_url' && ($schema['type'] !== 'select' || empty($schema['options'])))) {
                 throw new \InvalidArgumentException('Unsupported courier configuration storage or field type.');
             }

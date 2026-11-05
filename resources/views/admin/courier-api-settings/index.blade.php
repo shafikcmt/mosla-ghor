@@ -185,6 +185,9 @@
                                 <input id="courier-{{ $courier->id }}-{{ $field }}" type="password" name="{{ $field }}" autocomplete="new-password"
                                        :disabled="!replaceCreds" placeholder="{{ filled($courier->{$field}) ? '••••••••' : 'Not configured' }}"
                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                @elseif(($schema['type'] ?? '') === 'text')
+                                <input id="courier-{{ $courier->id }}-{{ $field }}" type="text" name="{{ $field }}" value="{{ old($field, $courier->{$field}) }}"
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                                 @else
                                 <select id="courier-{{ $courier->id }}-{{ $field }}" name="{{ $field === 'base_url' ? 'base_url_select' : $field }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                                     @foreach($schema['options'] as $value => $label)

@@ -169,7 +169,7 @@ class CourierManagementTest extends TestCase
 
     public function test_manual_provider_has_no_credential_fields_or_api_calls(): void
     {
-        $courier = $this->courier(['name' => 'Pathao', 'slug' => 'pathao']);
+        $courier = $this->courier(['name' => 'Sundarban', 'slug' => 'sundarban']);
         $this->get(route('admin.courier-api-settings.index', ['courier' => $courier->id]))
             ->assertOk()->assertSee('API integration is not available for this provider')
             ->assertDontSee('name="api_key"', false)->assertDontSee('>Test Connection</button>', false);
@@ -226,7 +226,7 @@ class CourierManagementTest extends TestCase
 
     public function test_existing_manual_order_booking_remains_manual(): void
     {
-        $courier = $this->courier(['name' => 'Pathao', 'slug' => 'pathao']);
+        $courier = $this->courier(['name' => 'Sundarban', 'slug' => 'sundarban']);
         $order = $this->order($courier);
         $result = app(CourierService::class)->send($order, 'manual-tracking');
         $this->assertTrue($result['manual']);
@@ -507,7 +507,7 @@ class CourierManagementTest extends TestCase
 
     public function test_manual_placeholders_stay_manual_in_registry(): void
     {
-        foreach (['pathao', 'sundarban'] as $slug) {
+        foreach (['sundarban'] as $slug) {
             $courier = $this->courier(['slug' => $slug]);
             $this->assertFalse($courier->supportsApi());
             $this->assertNull(app(CourierDriverFactory::class)->configuration($courier));
@@ -533,6 +533,81 @@ class CourierManagementTest extends TestCase
             'payment_method' => 'cash_on_delivery', 'selected_courier_id' => $courier->id,
             'order_status' => 'pending',
         ]);
+    }
+
+    private function pathao(array $attributes = []): Courier
+    {
+        return $this->courier(array_merge([
+            'name' => 'Pathao', 'slug' => 'pathao', 'api_enabled' => true,
+            'api_key' => 'cid', 'api_secret' => 'csecret',
+            'username' => 'me@example.com', 'password' => 'pw-secret', 'store_id' => '77',
+            'base_url' => 'https://courier-api-sandbox.pathao.com',
+        ], $attributes));
+    }
+
+    public function test_pathao_is_an_api_courier_and_stores_extra_credentials_encrypted(): void
+    {
+        $courier = $this->pathao();
+        $this->assertTrue($courier->supportsApi());
+        $this->assertTrue($courier->apiUsable());
+        $this->assertSame('77', $courier->fresh()->store_id);
+        $this->assertStringNotContainsString('pw-secret', (string) DB::table('couriers')->value('api_extra'));
+        $this->assertArrayNotHasKey('api_extra', $courier->toArray());
+        $courier->store_id = null;
+        $this->assertFalse($courier->isConfigured());
+    }
+
+    public function test_pathao_test_connection_issues_token_and_checks_store(): void
+    {
+        $courier = $this->pathao();
+        Http::fake([
+            '*/issue-token' => Http::response(['access_token' => 'tok', 'expires_in' => 432000]),
+            '*/stores' => Http::response(['data' => ['data' => [['store_id' => 77, 'store_name' => 'Main', 'is_active' => 1]]]]),
+        ]);
+        $this->post(route('admin.courier-api-settings.test', $courier))->assertSessionHas('success');
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/issue-token') && $r['grant_type'] === 'password' && $r['client_id'] === 'cid');
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/stores') && $r->hasHeader('Authorization', 'Bearer tok'));
+    }
+
+    public function test_pathao_test_connection_reports_wrong_store_and_bad_credentials(): void
+    {
+        $courier = $this->pathao(['store_id' => '999']);
+        Http::fake([
+            '*/issue-token' => Http::response(['access_token' => 'tok']),
+            '*/stores' => Http::response(['data' => ['data' => [['store_id' => 77, 'is_active' => 1]]]]),
+        ]);
+        $this->post(route('admin.courier-api-settings.test', $courier))->assertSessionHas('warning');
+
+        Http::fake(['*/issue-token' => Http::response(['message' => 'invalid'], 401)]);
+        \Illuminate\Support\Facades\Cache::flush();
+        $this->post(route('admin.courier-api-settings.test', $courier))->assertSessionHas('warning');
+    }
+
+    public function test_pathao_booking_sends_order_and_saves_consignment(): void
+    {
+        $courier = $this->pathao();
+        $order = $this->order($courier);
+        $order->update(['mobile_number' => '+8801712345678', 'customer_name' => 'Rahim Uddin', 'full_address' => 'House 1, Road 2, Mirpur', 'payment_method' => 'cash_on_delivery']);
+        Http::fake([
+            '*/issue-token' => Http::response(['access_token' => 'tok', 'expires_in' => 432000]),
+            '*/orders' => Http::response(['code' => 200, 'data' => ['consignment_id' => 'DL123', 'order_status' => 'Pending']]),
+        ]);
+        $result = app(CourierService::class)->send($order->fresh());
+        $this->assertTrue($result['success'], $result['message']);
+        $this->assertSame('DL123', $order->fresh()->consignment_id);
+        $this->assertSame('DL123', $order->fresh()->tracking_id);
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), '/orders')
+            && $r['store_id'] === 77 && $r['recipient_phone'] === '01712345678'
+            && $r['delivery_type'] === 48 && $r['item_type'] === 2
+            && $r['amount_to_collect'] === (int) round((float) $order->grand_total));
+    }
+
+    public function test_pathao_rejects_invalid_recipient_before_calling_api(): void
+    {
+        $courier = $this->pathao();
+        $result = app(CourierService::class)->send(tap($this->order($courier), fn ($o) => $o->update(['mobile_number' => '12345']))->fresh());
+        $this->assertFalse($result['success']);
+        Http::assertNothingSent();
     }
 }
 
