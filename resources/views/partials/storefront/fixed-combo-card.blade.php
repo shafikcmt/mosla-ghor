@@ -27,7 +27,7 @@
             @php if ($item->product) \App\Support\MetaPixel::registerProduct($item->product); @endphp
             <li class="flex justify-between items-baseline text-sm">
                 <span class="font-medium text-[#14532d]">{{ $item->product?->name_bn ?? 'পণ্য' }}</span>
-                <span class="text-gray-400 text-xs ml-2 flex-shrink-0">
+                <span class="text-gray-400 text-xs ml-2 shrink-0">
                     {{ $item->quantity_gram >= 1000 ? ($item->quantity_gram / 1000).' কেজি' : $item->quantity_gram.' গ্রাম' }}
                 </span>
             </li>

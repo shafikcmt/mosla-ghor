@@ -10,6 +10,9 @@
         <p class="text-xs text-gray-500 mt-0.5">{{ $order->customer_name }} · {{ $order->mobile_number }} · {{ $order->created_at->format('d M Y, h:i A') }}</p>
     </div>
     <div class="flex gap-2 text-sm">
+        @if($order->order_source === 'admin_manual_order')
+        <a href="{{ route('admin.orders.manual.edit', $order) }}" class="border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 font-semibold px-3 py-2 rounded-lg">✏️ ভাউচার এডিট / পণ্য যোগ</a>
+        @endif
         <a href="{{ route('admin.orders.show', $order) }}" class="border border-gray-200 text-gray-600 hover:bg-gray-50 px-3 py-2 rounded-lg">অর্ডার বিস্তারিত</a>
         <a href="{{ route('admin.orders.manual.create') }}" class="bg-[#14532d] hover:bg-[#0d3520] text-white font-semibold px-3 py-2 rounded-lg">+ নতুন অর্ডার</a>
     </div>

@@ -13,11 +13,13 @@ class Courier extends Model
         'base_url', 'is_default', 'vendor_allowed', 'notes',
         'courier_api_last_checked_at', 'courier_api_last_status', 'courier_api_last_error',
         'courier_api_last_message',
+        'api_extra', 'username', 'password', 'store_id',
     ];
 
     protected $casts = [
         'api_key' => 'encrypted',
         'api_secret' => 'encrypted',
+        'api_extra' => 'encrypted:array',
         'api_enabled' => 'boolean',
         'is_default' => 'boolean',
         'vendor_allowed' => 'boolean',
@@ -32,8 +34,41 @@ class Courier extends Model
      * JSON responses or toArray() leaks reaching a vendor view).
      */
     protected $hidden = [
-        'api_key', 'api_secret',
+        'api_key', 'api_secret', 'api_extra',
     ];
+
+    /** Provider fields stored inside the encrypted api_extra bag. */
+    public const EXTRA_FIELDS = ['username', 'password', 'store_id'];
+
+    protected function extra(string $key): ?string
+    {
+        $value = ($this->api_extra ?? [])[$key] ?? null;
+
+        return filled($value) ? (string) $value : null;
+    }
+
+    protected function setExtra(string $key, $value): void
+    {
+        $bag = $this->api_extra ?? [];
+        if (filled($value)) {
+            $bag[$key] = trim((string) $value);
+        } else {
+            unset($bag[$key]);
+        }
+        $this->api_extra = $bag ?: null;
+    }
+
+    public function getUsernameAttribute(): ?string { return $this->extra('username'); }
+
+    public function getPasswordAttribute(): ?string { return $this->extra('password'); }
+
+    public function getStoreIdAttribute(): ?string { return $this->extra('store_id'); }
+
+    public function setUsernameAttribute($value): void { $this->setExtra('username', $value); }
+
+    public function setPasswordAttribute($value): void { $this->setExtra('password', $value); }
+
+    public function setStoreIdAttribute($value): void { $this->setExtra('store_id', $value); }
 
     public function rates(): HasMany
     {

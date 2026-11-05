@@ -107,7 +107,7 @@
                     <span class="text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block {{ $qBadge }}">{{ $quote->statusLabel() }}</span>
                 </div>
                 <a href="{{ route('admin.wholesale.quote.show', $quote->id) }}"
-                   class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-medium flex-shrink-0">
+                   class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-medium shrink-0">
                     দেখুন
                 </a>
             </div>

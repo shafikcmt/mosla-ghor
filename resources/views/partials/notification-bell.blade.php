@@ -38,7 +38,7 @@
                 @php $d = $n->data; $dot = $levelDot[$d['level'] ?? 'info'] ?? 'bg-indigo-500'; @endphp
                 <a href="{{ route($rRead, $n->id) }}"
                    class="flex gap-3 px-4 py-3 hover:bg-gray-50 transition-colors {{ $n->read_at ? 'opacity-60' : '' }}">
-                    <span class="mt-1.5 w-2 h-2 rounded-full flex-shrink-0 {{ $dot }}"></span>
+                    <span class="mt-1.5 w-2 h-2 rounded-full shrink-0 {{ $dot }}"></span>
                     <div class="min-w-0">
                         <div class="text-sm font-medium text-gray-800 truncate">{{ $d['title_bn'] ?? 'নোটিফিকেশন' }}</div>
                         <div class="text-xs text-gray-500 line-clamp-2">{{ $d['body_bn'] ?? '' }}</div>

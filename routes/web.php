@@ -115,6 +115,9 @@ Route::get('/sitemap.xml', function () {
     return response($xml.'</urlset>', 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
 })->name('sitemap');
 
+// Meta (Facebook / Instagram) catalog feed — set this URL in Commerce Manager → Catalog → Data sources.
+Route::get('/feeds/meta.xml', [\App\Http\Controllers\MetaFeedController::class, 'show'])->name('feeds.meta');
+
 Route::get('/robots.txt', function () {
     $body = "User-agent: *\nDisallow: /admin\nDisallow: /vendor\nDisallow: /customer\nDisallow: /checkout\nDisallow: /order\nDisallow: /invoice\nDisallow: /v/\nAllow: /\n\nSitemap: ".url('/sitemap.xml')."\n";
     return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
@@ -522,6 +525,8 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('orders/manual/create', [\App\Http\Controllers\Admin\ManualOrderController::class, 'create'])->name('orders.manual.create');
     Route::post('orders/manual', [\App\Http\Controllers\Admin\ManualOrderController::class, 'store'])->name('orders.manual.store');
     Route::get('orders/{order}/voucher', [\App\Http\Controllers\Admin\ManualOrderController::class, 'share'])->name('orders.manual.share');
+    Route::get('orders/{order}/voucher/edit', [\App\Http\Controllers\Admin\ManualOrderController::class, 'edit'])->name('orders.manual.edit');
+    Route::put('orders/{order}/voucher', [\App\Http\Controllers\Admin\ManualOrderController::class, 'update'])->name('orders.manual.update');
     Route::post('orders/{order}/voucher/email', [\App\Http\Controllers\Admin\ManualOrderController::class, 'email'])->name('orders.manual.email');
     Route::delete('orders/bulk-destroy', [AdminOrderController::class, 'bulkDestroy'])->name('orders.bulkDestroy');
     Route::post('orders/{id}/restore', [AdminOrderController::class, 'restore'])->name('orders.restore');

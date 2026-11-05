@@ -23,7 +23,7 @@
             '৬' => 'Order Parcel ব্যবহার করুন',
         ] as $n => $label)
         <div class="flex items-center gap-2 md:flex-1">
-            <span class="flex-shrink-0 w-7 h-7 rounded-full bg-[#14532d] text-white text-xs font-bold flex items-center justify-center">{{ $n }}</span>
+            <span class="shrink-0 w-7 h-7 rounded-full bg-[#14532d] text-white text-xs font-bold flex items-center justify-center">{{ $n }}</span>
             <span class="text-xs text-gray-600 leading-tight">{{ $label }}</span>
             @if(! $loop->last)<div class="hidden md:block flex-1 h-px bg-gray-200 mx-2"></div>@endif
         </div>
@@ -184,6 +184,9 @@
                                 @if($schema['secret'])
                                 <input id="courier-{{ $courier->id }}-{{ $field }}" type="password" name="{{ $field }}" autocomplete="new-password"
                                        :disabled="!replaceCreds" placeholder="{{ filled($courier->{$field}) ? '••••••••' : 'Not configured' }}"
+                                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                @elseif(($schema['type'] ?? '') === 'text')
+                                <input id="courier-{{ $courier->id }}-{{ $field }}" type="text" name="{{ $field }}" value="{{ old($field, $courier->{$field}) }}"
                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                                 @else
                                 <select id="courier-{{ $courier->id }}-{{ $field }}" name="{{ $field === 'base_url' ? 'base_url_select' : $field }}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">

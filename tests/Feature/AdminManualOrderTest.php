@@ -68,6 +68,35 @@ class AdminManualOrderTest extends TestCase
             ->assertSee($order->invoicePdfUrl(), false);
     }
 
+    public function test_voucher_can_be_edited_to_add_products_and_restock(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.orders.manual.store'), $this->payload());
+        $order = Order::sole();
+        $this->assertEquals(45, $this->product->fresh()->onHand());
+
+        $this->get(route('admin.orders.manual.edit', $order))->assertOk()->assertSee('ভাউচার এডিট');
+        $this->get(route('admin.orders.manual.share', $order))->assertSee('ভাউচার এডিট');
+
+        $second = Product::create(['name_bn' => 'এলাচ', 'slug' => 'cardamom', 'stock' => 20, 'retail_price_1kg' => 2000,
+            'is_active' => true, 'show_in_retail' => true, 'unit' => 'kg']);
+        $res = $this->put(route('admin.orders.manual.update', $order), $this->payload([
+            'items' => [
+                ['product_id' => $this->product->id, 'quantity' => 2, 'unit_price' => 850],
+                ['product_id' => $second->id, 'quantity' => 1, 'unit_price' => 2000],
+            ],
+        ]));
+        $res->assertRedirect(route('admin.orders.manual.share', $order));
+
+        $order->refresh();
+        $this->assertSame(1, Order::count());
+        $this->assertCount(2, $order->items()->get());
+        $this->assertEquals(3700, $order->subtotal);
+        $this->assertEquals(3800, $order->grand_total);
+        $this->assertEquals(48, $this->product->fresh()->onHand());
+        $this->assertEquals(19, $second->fresh()->onHand());
+        $this->assertEquals(3800, (float) Customer::where('mobile_number', '01712345678')->sole()->total_spent);
+    }
+
     public function test_voucher_email_is_sent_with_registration_link(): void
     {
         Notification::fake();

@@ -30,7 +30,7 @@
         <input type="checkbox" name="items[{{ $product->id }}][include]" value="1"
                id="item_{{ $product->id }}"
                {{ $isIncluded ? 'checked' : '' }}
-               class="item-checkbox mt-1 w-4 h-4 rounded flex-shrink-0"
+               class="item-checkbox mt-1 w-4 h-4 rounded shrink-0"
                data-product="{{ $product->id }}">
         <div class="flex-1">
             <label for="item_{{ $product->id }}" class="font-medium text-sm text-gray-800 cursor-pointer">

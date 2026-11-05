@@ -1,5 +1,5 @@
 @extends('admin.layout')
-@section('title', 'ফোন / WhatsApp অর্ডার')
+@section('title', isset($order) ? 'ভাউচার এডিট — #'.$order->order_number : 'ফোন / WhatsApp অর্ডার')
 
 @section('content')
 @php
@@ -16,16 +16,25 @@
     $customerData = $customers->mapWithKeys(fn ($c) => [$c->mobile_number => [
         'name' => $c->name, 'email' => $c->email, 'address' => $c->last_full_address,
     ]]);
-    $oldItems = old('items', [['product_id' => $prefill['product_id'] ?? '', 'quantity' => $prefill['qty'] ?? 1, 'unit_price' => '']]);
+    $editing = isset($order);
+    if ($editing) {
+        $note = trim(preg_replace('/^.*?-এ নেওয়া অর্ডার।\s*/u', '', (string) $order->order_note));
+        $prefill = ['name' => $order->customer_name, 'phone' => $order->mobile_number, 'email' => $order->customer?->email,
+            'address' => $order->full_address, 'type' => $order->order_type,
+            'channel' => collect($channels)->search(fn ($l) => str_starts_with((string) $order->order_note, $l)) ?: 'phone'];
+        $e = ['district' => $order->district !== '—' ? $order->district : '', 'delivery' => $order->delivery_charge, 'discount' => $order->discount_amount,
+            'paid' => $order->paid_amount, 'method' => $order->payment_method, 'note' => $note];
+    } else { $e = []; }
+    $oldItems = old('items', $editing ? $editItems : [['product_id' => $prefill['product_id'] ?? '', 'quantity' => $prefill['qty'] ?? 1, 'unit_price' => '']]);
     $inp = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#14532d] bg-white';
 @endphp
 
 <div class="flex items-center justify-between mb-5">
     <div>
-        <h1 class="text-xl font-bold text-gray-800">ফোন / WhatsApp অর্ডার</h1>
-        <p class="text-xs text-gray-500 mt-0.5">কল বা চ্যাটে পাওয়া অর্ডার এখানে তুলুন — অর্ডার তৈরি হলে ভাউচার WhatsApp / ইমেইলে শেয়ার করতে পারবেন।</p>
+        <h1 class="text-xl font-bold text-gray-800">{{ $editing ? 'ভাউচার এডিট — #'.$order->order_number : 'ফোন / WhatsApp অর্ডার' }}</h1>
+        <p class="text-xs text-gray-500 mt-0.5">@if($editing)পণ্য যোগ / বাদ, দাম বা পেমেন্ট বদলান — সেভ করলে স্টক নতুন করে হিসাব হবে ও ভাউচার আপডেট হবে।@else কল বা চ্যাটে পাওয়া অর্ডার এখানে তুলুন — অর্ডার তৈরি হলে ভাউচার WhatsApp / ইমেইলে শেয়ার করতে পারবেন।@endif</p>
     </div>
-    <a href="{{ route('admin.orders.index') }}" class="text-sm text-gray-500 hover:text-gray-700">← অর্ডার তালিকা</a>
+    <a href="{{ $editing ? route('admin.orders.manual.share', $order) : route('admin.orders.index') }}" class="text-sm text-gray-500 hover:text-gray-700">← {{ $editing ? 'ভাউচারে ফিরুন' : 'অর্ডার তালিকা' }}</a>
 </div>
 
 @if($errors->any())
@@ -34,8 +43,9 @@
 </div>
 @endif
 
-<form method="POST" action="{{ route('admin.orders.manual.store') }}" id="mo-form" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+<form method="POST" action="{{ $editing ? route('admin.orders.manual.update', $order) : route('admin.orders.manual.store') }}" id="mo-form" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
     @csrf
+    @if($editing) @method('PUT') @endif
     @if(old('enquiry_id', $prefill['enquiry_id'] ?? null))
     <input type="hidden" name="enquiry_id" value="{{ old('enquiry_id', $prefill['enquiry_id'] ?? '') }}">
     <div class="lg:col-span-3 text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-2.5">
@@ -67,7 +77,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">জেলা / এলাকা</label>
-                    <input type="text" name="district" maxlength="80" value="{{ old('district') }}" placeholder="যেমন: ঢাকা, মিরপুর" class="{{ $inp }}">
+                    <input type="text" name="district" maxlength="80" value="{{ old('district', $e['district'] ?? '') }}" placeholder="যেমন: ঢাকা, মিরপুর" class="{{ $inp }}">
                 </div>
                 <div class="sm:col-span-2">
                     <label class="block text-xs font-semibold text-gray-600 mb-1">ডেলিভারি ঠিকানা</label>
@@ -142,33 +152,33 @@
                 <div class="flex justify-between"><span class="text-gray-500">পণ্যের মোট</span><span id="mo-sub" class="font-semibold">৳0</span></div>
                 <div class="flex items-center justify-between gap-3">
                     <label class="text-gray-500" for="mo-delivery">ডেলিভারি চার্জ</label>
-                    <input type="number" name="delivery_charge" id="mo-delivery" value="{{ old('delivery_charge', 0) }}" min="0" step="1" class="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-right">
+                    <input type="number" name="delivery_charge" id="mo-delivery" value="{{ old('delivery_charge', $e['delivery'] ?? 0) }}" min="0" step="1" class="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-right">
                 </div>
                 <div class="flex items-center justify-between gap-3">
                     <label class="text-gray-500" for="mo-discount">ছাড়</label>
-                    <input type="number" name="discount" id="mo-discount" value="{{ old('discount', 0) }}" min="0" step="1" class="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-right">
+                    <input type="number" name="discount" id="mo-discount" value="{{ old('discount', $e['discount'] ?? 0) }}" min="0" step="1" class="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-right">
                 </div>
                 <div class="flex justify-between border-t pt-3 text-base"><span class="font-bold">সর্বমোট</span><span id="mo-grand" class="font-bold text-[#14532d]">৳0</span></div>
                 <div class="flex items-center justify-between gap-3">
                     <label class="text-gray-500" for="mo-paid">অগ্রিম / পরিশোধ</label>
-                    <input type="number" name="paid_amount" id="mo-paid" value="{{ old('paid_amount', 0) }}" min="0" step="1" class="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-right">
+                    <input type="number" name="paid_amount" id="mo-paid" value="{{ old('paid_amount', $e['paid'] ?? 0) }}" min="0" step="1" class="w-28 border border-gray-200 rounded-lg px-2 py-1.5 text-right">
                 </div>
                 <div class="flex justify-between"><span class="text-gray-500">বাকি</span><span id="mo-due" class="font-semibold text-red-600">৳0</span></div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">পেমেন্ট পদ্ধতি</label>
                     <select name="payment_method" class="{{ $inp }}">
-                        @foreach($payments as $val => $lbl)<option value="{{ $val }}" @selected(old('payment_method', 'cash_on_delivery') === $val)>{{ $lbl }}</option>@endforeach
+                        @foreach($payments as $val => $lbl)<option value="{{ $val }}" @selected(old('payment_method', $e['method'] ?? 'cash_on_delivery') === $val)>{{ $lbl }}</option>@endforeach
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">নোট</label>
-                    <textarea name="order_note" rows="2" maxlength="1000" class="{{ $inp }}" placeholder="ডেলিভারির সময়, বিশেষ অনুরোধ...">{{ old('order_note') }}</textarea>
+                    <textarea name="order_note" rows="2" maxlength="1000" class="{{ $inp }}" placeholder="ডেলিভারির সময়, বিশেষ অনুরোধ...">{{ old('order_note', $e['note'] ?? '') }}</textarea>
                 </div>
             </div>
             <button type="submit" class="mt-5 w-full bg-[#14532d] hover:bg-[#0d3520] text-white font-bold py-3 rounded-xl transition-colors">
-                অর্ডার তৈরি করুন → ভাউচার
+                {{ $editing ? 'পরিবর্তন সেভ করুন → ভাউচার' : 'অর্ডার তৈরি করুন → ভাউচার' }}
             </button>
-            <p class="text-[11px] text-gray-400 mt-2 text-center">স্টক কেটে নেওয়া হবে। নতুন নম্বর হলে কাস্টমার অ্যাকাউন্ট নিজে থেকে তৈরি হবে।</p>
+            <p class="text-[11px] text-gray-400 mt-2 text-center">{{ $editing ? 'আগের স্টক ফেরত দিয়ে নতুন পরিমাণ কাটা হবে।' : 'স্টক কেটে নেওয়া হবে।' }} নতুন নম্বর হলে কাস্টমার অ্যাকাউন্ট নিজে থেকে তৈরি হবে।</p>
         </div>
     </div>
 </form>

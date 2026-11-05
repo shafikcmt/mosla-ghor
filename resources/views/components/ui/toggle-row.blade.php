@@ -13,7 +13,7 @@
             <span class="block text-xs text-gray-400 mt-0.5">{{ $help }}</span>
         @endif
     </span>
-    <span class="relative inline-flex flex-shrink-0 mt-0.5">
+    <span class="relative inline-flex shrink-0 mt-0.5">
         <input type="checkbox" name="{{ $name }}" value="{{ $value }}" class="sr-only peer"
                {{ old($name, $checked) ? 'checked' : '' }}>
         <span class="block w-10 h-6 bg-gray-300 rounded-full peer-checked:bg-[#14532d] transition-colors"></span>

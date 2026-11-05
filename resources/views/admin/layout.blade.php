@@ -163,8 +163,8 @@
               -translate-x-full lg:translate-x-0">
 
     {{-- Brand (fixed top) --}}
-    <div class="flex items-center gap-2.5 px-4 py-5 border-b border-[#14532d] flex-shrink-0">
-        <div class="w-7 h-7 rounded-md bg-[#c9a227] flex items-center justify-center flex-shrink-0">
+    <div class="flex items-center gap-2.5 px-4 py-5 border-b border-[#14532d] shrink-0">
+        <div class="w-7 h-7 rounded-md bg-[#c9a227] flex items-center justify-center shrink-0">
             <span class="text-[#0d3520] text-xs font-black">ম</span>
         </div>
         <div>
@@ -179,7 +179,7 @@
         {{-- Dashboard (single) --}}
         <a href="{{ route('admin.dashboard') }}"
            class="nav-link {{ $active('admin.dashboard') ? 'active' : '' }}">
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
             </svg>
@@ -197,7 +197,7 @@
                 <button type="button" @click="open = !open"
                         class="nav-parent {{ $groupActive ? 'active' : '' }}"
                         :class="{ 'open': open }">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $group['icon'] }}"/>
                     </svg>
                     <span>{{ $group['label'] }}</span>
@@ -221,11 +221,11 @@
     </nav>
 
     {{-- Sidebar footer (fixed bottom) --}}
-    <div class="px-4 py-3 border-t border-[#14532d] space-y-2.5 flex-shrink-0">
+    <div class="px-4 py-3 border-t border-[#14532d] space-y-2.5 shrink-0">
 
         {{-- Logged-in user (click to edit profile) --}}
         <a href="{{ route('admin.profile.edit') }}" class="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
-            <div class="w-7 h-7 rounded-full bg-[#1a6b3a] flex items-center justify-center flex-shrink-0">
+            <div class="w-7 h-7 rounded-full bg-[#1a6b3a] flex items-center justify-center shrink-0">
                 <span class="text-white text-xs font-bold">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
             </div>
             <div class="min-w-0">
@@ -237,7 +237,7 @@
         {{-- View website --}}
         <a href="{{ url('/') }}" target="_blank"
            class="flex items-center gap-2 text-[#4d7a5a] hover:text-[#c9a227] text-xs transition-colors">
-            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
             </svg>
@@ -249,7 +249,7 @@
             @csrf
             <button type="submit"
                     class="flex items-center gap-2 text-[#4d7a5a] hover:text-red-400 text-xs transition-colors w-full">
-                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                 </svg>
@@ -268,7 +268,7 @@
     <header class="sticky top-0 z-10 bg-white border-b border-gray-200 flex items-center justify-between px-4 py-3 gap-4">
         {{-- Mobile hamburger --}}
         <button onclick="openSidebar()"
-                class="lg:hidden flex items-center justify-center w-8 h-8 rounded text-gray-500 hover:bg-gray-100 transition-colors flex-shrink-0">
+                class="lg:hidden flex items-center justify-center w-8 h-8 rounded text-gray-500 hover:bg-gray-100 transition-colors shrink-0">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
@@ -280,7 +280,7 @@
         </h1>
 
         {{-- Right side --}}
-        <div class="flex items-center gap-3 flex-shrink-0">
+        <div class="flex items-center gap-3 shrink-0">
             @if(\App\Support\Maintenance::enabled())
                 <a href="{{ route('admin.website-settings.index') }}#maintenance" class="mn-badge"
                    title="{{ \App\Support\Maintenance::expired() ? 'শেষ সময় পেরিয়ে গেছে — মেইনটেন্যান্স এখনও চালু' : 'মেইনটেন্যান্স চালু আছে' }}">
@@ -307,7 +307,7 @@
 
             @if(session('success'))
                 <div class="mb-5 flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm">
-                    <svg class="w-4 h-4 flex-shrink-0 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-4 h-4 shrink-0 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                     </svg>
                     {{ session('success') }}
@@ -316,7 +316,7 @@
 
             @if(session('error'))
                 <div class="mb-5 flex items-center gap-2 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
-                    <svg class="w-4 h-4 flex-shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-4 h-4 shrink-0 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                     </svg>
                     {{ session('error') }}
@@ -325,7 +325,7 @@
 
             @if(session('warning'))
                 <div class="mb-5 flex items-center gap-2 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg text-sm">
-                    <svg class="w-4 h-4 flex-shrink-0 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-4 h-4 shrink-0 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                     </svg>
                     {{ session('warning') }}

@@ -67,9 +67,9 @@
                 <td class="px-4 py-3">
                     <div class="flex items-center gap-3">
                         @if($vendor->logo)
-                        <img src="{{ asset($vendor->logo) }}" alt="" class="w-9 h-9 rounded-full object-cover border flex-shrink-0">
+                        <img src="{{ asset($vendor->logo) }}" alt="" class="w-9 h-9 rounded-full object-cover border shrink-0">
                         @else
-                        <div class="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <div class="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
                             <span class="text-indigo-600 font-bold text-sm">{{ strtoupper(substr($vendor->shop_name, 0, 1)) }}</span>
                         </div>
                         @endif

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>লগইন — {{ $siteName }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    @include('partials.tw3-compat')
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>body { font-family: 'Noto Sans Bengali', sans-serif; }</style>
 </head>

@@ -103,7 +103,7 @@
                 <a href="/#combo-builder" onclick="msCartClose()"
                    class="text-center border border-[#14532d] text-[#14532d] text-xs font-semibold py-2 rounded-lg hover:bg-green-50 transition">+ কম্বো / বক্স</a>
                 <a href="/#products" onclick="msCartClose()"
-                   class="text-center border border-gray-300 text-gray-600 text-xs font-semibold py-2 rounded-lg hover:bg-gray-50 transition">শপিং চালিয়ে যান</a>
+                   class="text-center border border-gray-300 text-gray-600 text-xs font-semibold py-2 rounded-lg hover:bg-gray-50 transition">＋ আরও পণ্য যোগ করুন</a>
             </div>
         </div>
     </div>
@@ -132,14 +132,16 @@
 
         {{-- Footer: quick actions + main CTA --}}
         <div id="ms-bag-foot" class="shrink-0 border-t border-amber-100 bg-white px-4 py-3 space-y-3" style="display:none;">
-            <p class="text-[11px] text-gray-400 leading-snug">পরিমাণ ঠিক করে দর জানতে চান — {{ $siteName }} টিম quote পাঠাবে।</p>
+            <p class="text-xs text-amber-900 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 leading-snug">
+                <b>একবারেই সব পণ্যের দর জানুন।</b> আরও পণ্য লাগলে নিচের "আরও পণ্য" চাপুন — শেষে একটি বাটনে সব একসাথে পাঠান।
+            </p>
             <a href="{{ route('wholesale.enquiry-bag') }}"
                class="block w-full text-center bg-amber-700 hover:bg-amber-800 text-white font-bold text-sm py-3 rounded-xl transition shadow">
-                দর জানতে চাই →
+                ✓ সব পণ্যের দর একসাথে জানতে চাই →
             </a>
             <div class="grid grid-cols-2 gap-2">
                 <a href="/?tab=wholesale#products" onclick="msCartClose()"
-                   class="text-center border border-amber-700 text-amber-800 text-xs font-semibold py-2 rounded-lg hover:bg-amber-50 transition">+ আরও পাইকারি পণ্য</a>
+                   class="text-center border border-amber-700 text-amber-800 text-xs font-semibold py-2 rounded-lg hover:bg-amber-50 transition">＋ আরও পণ্য যোগ করুন</a>
                 <a href="/?combo=paykari#combo-builder"
                    class="text-center border border-gray-300 text-gray-600 text-xs font-semibold py-2 rounded-lg hover:bg-gray-50 transition">পাইকারি কম্বো</a>
             </div>
@@ -209,7 +211,7 @@
             items.push(it);
         }
         msBagSave(items);
-        msToast('🛍️ পাইকারি ব্যাগে যোগ হয়েছে');
+        msToast('🛍️ তালিকায় যোগ হয়েছে — এখন মোট ' + items.length + 'টি পণ্য। আরও যোগ করুন বা উপরের বাটনে একসাথে পাঠান।');
     };
 
     // ── Wholesale quantity rules (unit-aware step/min, honors product MOQ) ──
@@ -337,7 +339,47 @@
         if (pc) { pc.textContent = b; pc.style.display = b > 0 ? 'inline-flex' : 'none'; }
         const fb = document.getElementById('ms-float-cart');
         if (fb) fb.style.display = tot > 0 ? 'flex' : 'none';
+        msListStrip(c, b);
+        msSyncListButtons();
     };
+
+    // ── "Your list" strip under the sticky header (wholesale list + retail bag) ──
+    function msListStrip(c, b) {
+        const strip = document.getElementById('ms-list-strip');
+        if (!strip) return;
+        const hide = strip.dataset.hide === '1';
+        const bag = document.getElementById('ms-strip-bag'), cart = document.getElementById('ms-strip-cart');
+        if (bag)  { bag.style.display  = (!hide && b > 0) ? 'inline-flex' : 'none'; }
+        if (cart) { cart.style.display = (!hide && c > 0) ? 'inline-flex' : 'none'; }
+        const set = function (id, v) { const el = document.getElementById(id); if (el) el.textContent = v; };
+        set('ms-strip-bag-n', msFmt(b));
+        set('ms-strip-cart-n', msFmt(c));
+        set('ms-strip-cart-total', '৳' + msFmt(msCart.subtotal()));
+        strip.classList.toggle('hidden', hide || (c + b) === 0);
+    }
+
+    // ── "+ তালিকায় যোগ করুন" buttons on wholesale cards / list rows ──────────
+    // Adds the product to the shared wholesale list (many products → ONE enquiry).
+    window.msAddToList = function (btn) {
+        const h = (btn.closest && btn.closest('[data-action]')) || btn;
+        const d = h.dataset, id = parseInt(d.id, 10);
+        if (!id) return;
+        if (msBagGet().some(function (x) { return x.product_id === id; })) { msCartOpen('paykari'); return; }
+        const moq = parseFloat(d.moq) || 0, unit = d.unit || 'kg';
+        msBagAdd(id, d.slug, d.name, d.image, moq || 5, unit, moq || null, unit, d.variant || null, null);
+    };
+    function msSyncListButtons() {
+        const ids = msBagGet().map(function (x) { return x.product_id; });
+        document.querySelectorAll('[data-list-btn]').forEach(function (b) {
+            const h = (b.closest && b.closest('[data-action]')) || b;
+            const inList = ids.indexOf(parseInt(h.dataset.id, 10)) !== -1;
+            b.dataset.inList = inList ? '1' : '';
+            const label = b.querySelector('[data-list-label]');
+            if (label) label.textContent = inList ? '✓ তালিকায় আছে — দেখুন' : '＋ তালিকায় যোগ করুন';
+            b.classList.toggle('ms-in-list', inList);
+        });
+    }
+    document.addEventListener('DOMContentLoaded', msSyncListButtons);
 
     // ── Drawer open / close / tab ─────────────────────────────────────────
     const TAB_ON_R  = 'flex-1 px-3 py-3.5 text-[15px] font-bold flex items-center justify-center gap-1.5 bg-[#14532d] text-[#c9a227] border-b-2 border-[#c9a227]';

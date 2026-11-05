@@ -19,7 +19,7 @@
         @php $d = $n->data; $dot = $levelDot[$d['level'] ?? 'info'] ?? 'bg-indigo-500'; @endphp
         <a href="{{ route('customer.notifications.read', $n->id) }}"
            class="flex gap-3 px-5 py-4 hover:bg-gray-50 transition-colors {{ $n->read_at ? 'opacity-60' : 'bg-green-50/30' }}">
-            <span class="mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 {{ $dot }}"></span>
+            <span class="mt-1.5 w-2.5 h-2.5 rounded-full shrink-0 {{ $dot }}"></span>
             <div class="min-w-0 flex-1">
                 <div class="text-sm font-semibold text-gray-800">{{ $d['title_bn'] ?? 'নোটিফিকেশন' }}</div>
                 <div class="text-sm text-gray-500">{{ $d['body_bn'] ?? '' }}</div>
