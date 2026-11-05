@@ -106,7 +106,7 @@ class StockService
     }
 
     /** Restore stock for every line of an order (cancel/return). */
-    public function restoreForOrder(Order $order, string $type = 'cancel', ?int $by = null): void
+    public function restoreForOrder(Order $order, string $type = 'cancel', ?int $by = null, ?string $note = null): void
     {
         foreach ($order->items as $item) {
             if (! $item->product_id) {
@@ -123,7 +123,7 @@ class StockService
             $this->record($product, $type, $qty, [
                 'reference_type' => 'order',
                 'reference_id'   => $order->id,
-                'note'           => ($type === 'return' ? 'ফেরত' : 'বাতিল') . ' #' . $order->order_number,
+                'note'           => $note ?? (($type === 'return' ? 'ফেরত' : 'বাতিল') . ' #' . $order->order_number),
                 'created_by'     => $by,
                 'allow_negative' => true,
             ]);

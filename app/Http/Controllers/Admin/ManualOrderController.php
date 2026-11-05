@@ -61,75 +61,13 @@ class ManualOrderController extends Controller
 
     public function store(Request $request)
     {
-        $request->merge(['customer_phone' => Phone::normalize($request->input('customer_phone')) ?? $request->input('customer_phone')]);
+        $data = $this->validated($request);
 
-        $data = $request->validate([
-            'customer_name'      => ['required', 'string', 'max:150'],
-            'customer_phone'     => ['required', 'regex:/^01[3-9]\d{8}$/'],
-            'customer_email'     => ['nullable', 'email', 'max:150'],
-            'full_address'       => ['nullable', 'string', 'max:500'],
-            'district'           => ['nullable', 'string', 'max:80'],
-            'channel'            => ['required', 'in:'.implode(',', array_keys(self::CHANNELS))],
-            'order_type'         => ['required', 'in:retail,wholesale'],
-            'items'              => ['required', 'array', 'min:1', 'max:30'],
-            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
-            // Optional pack (২৫ গ্রাম, ১ কেজি…): quantity = number of packs, price = pack price.
-            'items.*.price_id'   => ['nullable', 'integer', 'exists:product_prices,id'],
-            'items.*.quantity'   => ['required', 'numeric', 'min:0.001'],
-            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
-            'delivery_charge'    => ['nullable', 'numeric', 'min:0'],
-            'discount'           => ['nullable', 'numeric', 'min:0'],
-            'paid_amount'        => ['nullable', 'numeric', 'min:0'],
-            'payment_method'     => ['required', 'in:'.implode(',', array_keys(self::PAYMENTS))],
-            'order_note'         => ['nullable', 'string', 'max:1000'],
-            'enquiry_id'         => ['nullable', 'integer', 'exists:wholesale_enquiries,id'],
-        ], [
-            'customer_phone.regex' => 'সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)।',
-            'items.required'       => 'অন্তত একটি পণ্য যোগ করুন।',
-        ]);
-
-        $lines    = [];
-        $subtotal = 0.0;
-        foreach ($data['items'] as $row) {
-            $product   = Product::findOrFail($row['product_id']);
-            $qty       = round((float) $row['quantity'], 3);
-            $unitPrice = (float) $row['unit_price'];
-            $lineTotal = round($qty * $unitPrice, 2);
-            $unit      = $product->stockUnit();
-            $grams     = in_array($unit, ['kg', 'কেজি'], true) ? (int) round($qty * 1000) : null;
-            $name      = $product->name_bn ?: $product->name_en;
-
-            $pack = ! empty($row['price_id'])
-                ? $product->activePrices()->whereKey($row['price_id'])->first()
-                : null;
-            if (! empty($row['price_id']) && ! $pack) {
-                return back()->withInput()->with('error', "\"{$name}\"-এর বেছে নেওয়া প্যাকটি আর চালু নেই।");
-            }
-            if ($pack) {
-                // e.g. 3 × "২৫ গ্রাম" → unit "২৫ গ্রাম প্যাক", 75 g for stock.
-                $unit  = mb_substr(($pack->label ?: $pack->quantity_gram.'g').' প্যাক', 0, 20);
-                $grams = (int) $pack->quantity_gram * (int) round($qty);
-                $qty   = (float) (int) round($qty);
-                if ($qty < 1) {
-                    return back()->withInput()->with('error', "\"{$name}\" — প্যাকের সংখ্যা অন্তত ১ দিন।");
-                }
-                $lineTotal = round($qty * $unitPrice, 2);
-            }
-            $subtotal += $lineTotal;
-            $lines[] = [
-                'vendor_id'     => $product->vendor_id,
-                'vendor_name'   => $product->vendor?->shop_name,
-                'product_id'    => $product->id,
-                'product_name'  => $name,
-                'price_id'      => $pack?->id,
-                'sell_type'     => $pack->sell_type ?? $data['order_type'],
-                'quantity'      => $qty,
-                'unit'          => $unit,
-                'quantity_gram' => $grams,
-                'unit_price'    => $unitPrice,
-                'line_total'    => $lineTotal,
-            ];
+        $built = $this->buildLines($data);
+        if (is_string($built)) {
+            return back()->withInput()->with('error', $built);
         }
+        ['lines' => $lines, 'subtotal' => $subtotal] = $built;
 
         $delivery = (float) ($data['delivery_charge'] ?? 0);
         $discount = min((float) ($data['discount'] ?? 0), $subtotal);
@@ -199,6 +137,180 @@ class ManualOrderController extends Controller
 
         return redirect()->route('admin.orders.manual.share', $order)
             ->with('success', 'অর্ডার #'.$order->order_number.' তৈরি হয়েছে — এখন ভাউচার শেয়ার করুন।');
+    }
+
+
+    private function validated(Request $request): array
+    {
+        $request->merge(['customer_phone' => Phone::normalize($request->input('customer_phone')) ?? $request->input('customer_phone')]);
+
+        $data = $request->validate([
+            'customer_name'      => ['required', 'string', 'max:150'],
+            'customer_phone'     => ['required', 'regex:/^01[3-9]\d{8}$/'],
+            'customer_email'     => ['nullable', 'email', 'max:150'],
+            'full_address'       => ['nullable', 'string', 'max:500'],
+            'district'           => ['nullable', 'string', 'max:80'],
+            'channel'            => ['required', 'in:'.implode(',', array_keys(self::CHANNELS))],
+            'order_type'         => ['required', 'in:retail,wholesale'],
+            'items'              => ['required', 'array', 'min:1', 'max:30'],
+            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            // Optional pack (২৫ গ্রাম, ১ কেজি…): quantity = number of packs, price = pack price.
+            'items.*.price_id'   => ['nullable', 'integer', 'exists:product_prices,id'],
+            'items.*.quantity'   => ['required', 'numeric', 'min:0.001'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'delivery_charge'    => ['nullable', 'numeric', 'min:0'],
+            'discount'           => ['nullable', 'numeric', 'min:0'],
+            'paid_amount'        => ['nullable', 'numeric', 'min:0'],
+            'payment_method'     => ['required', 'in:'.implode(',', array_keys(self::PAYMENTS))],
+            'order_note'         => ['nullable', 'string', 'max:1000'],
+            'enquiry_id'         => ['nullable', 'integer', 'exists:wholesale_enquiries,id'],
+        ], [
+            'customer_phone.regex' => 'সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX)।',
+            'items.required'       => 'অন্তত একটি পণ্য যোগ করুন।',
+        ]);
+
+        return $data;
+    }
+
+    /** @return array{lines: array, subtotal: float}|string  string = Bengali error message */
+    private function buildLines(array $data): array|string
+    {
+        $lines    = [];
+        $subtotal = 0.0;
+        foreach ($data['items'] as $row) {
+            $product   = Product::findOrFail($row['product_id']);
+            $qty       = round((float) $row['quantity'], 3);
+            $unitPrice = (float) $row['unit_price'];
+            $lineTotal = round($qty * $unitPrice, 2);
+            $unit      = $product->stockUnit();
+            $grams     = in_array($unit, ['kg', 'কেজি'], true) ? (int) round($qty * 1000) : null;
+            $name      = $product->name_bn ?: $product->name_en;
+
+            $pack = ! empty($row['price_id'])
+                ? $product->activePrices()->whereKey($row['price_id'])->first()
+                : null;
+            if (! empty($row['price_id']) && ! $pack) {
+                return ("\"{$name}\"-এর বেছে নেওয়া প্যাকটি আর চালু নেই।");
+            }
+            if ($pack) {
+                // e.g. 3 × "২৫ গ্রাম" → unit "২৫ গ্রাম প্যাক", 75 g for stock.
+                $unit  = mb_substr(($pack->label ?: $pack->quantity_gram.'g').' প্যাক', 0, 20);
+                $grams = (int) $pack->quantity_gram * (int) round($qty);
+                $qty   = (float) (int) round($qty);
+                if ($qty < 1) {
+                    return ("\"{$name}\" — প্যাকের সংখ্যা অন্তত ১ দিন।");
+                }
+                $lineTotal = round($qty * $unitPrice, 2);
+            }
+            $subtotal += $lineTotal;
+            $lines[] = [
+                'vendor_id'     => $product->vendor_id,
+                'vendor_name'   => $product->vendor?->shop_name,
+                'product_id'    => $product->id,
+                'product_name'  => $name,
+                'price_id'      => $pack?->id,
+                'sell_type'     => $pack->sell_type ?? $data['order_type'],
+                'quantity'      => $qty,
+                'unit'          => $unit,
+                'quantity_gram' => $grams,
+                'unit_price'    => $unitPrice,
+                'line_total'    => $lineTotal,
+            ];
+        }
+
+        return ['lines' => $lines, 'subtotal' => $subtotal];
+    }
+
+
+    /** Re-open a saved voucher in the POS form to change items / prices / payment. */
+    public function edit(Order $order)
+    {
+        abort_unless($order->order_source === 'admin_manual_order', 404);
+        $order->load('items');
+        $view = $this->create(request());
+        $items = $order->items->map(fn ($i) => [
+            'product_id' => $i->product_id, 'price_id' => $i->price_id,
+            'quantity' => (float) $i->quantity, 'unit_price' => (float) $i->unit_price,
+        ])->all();
+
+        return $view->with(['order' => $order, 'editItems' => $items]);
+    }
+
+    public function update(Request $request, Order $order)
+    {
+        abort_unless($order->order_source === 'admin_manual_order', 404);
+        $data  = $this->validated($request);
+        $built = $this->buildLines($data);
+        if (is_string($built)) {
+            return back()->withInput()->with('error', $built);
+        }
+        ['lines' => $lines, 'subtotal' => $subtotal] = $built;
+
+        $delivery = (float) ($data['delivery_charge'] ?? 0);
+        $discount = min((float) ($data['discount'] ?? 0), $subtotal);
+        $grand    = round($subtotal + $delivery - $discount, 2);
+        $paid     = min((float) ($data['paid_amount'] ?? 0), $grand);
+        $due      = round($grand - $paid, 2);
+        $location = trim(($data['district'] ?? '') ?: '—');
+        $account  = GuestWholesaleAccount::findOrCreate($data['customer_name'], $data['customer_phone'], $data['customer_email'] ?? null);
+
+        try {
+            DB::transaction(function () use ($order, $data, $lines, $subtotal, $delivery, $discount, $grand, $paid, $due, $location, $account) {
+                $order->load('items');
+                $oldGrand = (float) $order->grand_total;
+                $oldCust  = $order->customer_id;
+
+                // Put the old quantities back, then take the new ones.
+                if ($order->stock_deducted_at) {
+                    $this->stock->restoreForOrder($order, 'adjustment', Auth::id(), 'ভাউচার এডিট — আগের পরিমাণ ফেরত #'.$order->order_number);
+                }
+                $order->items()->delete();
+
+                $order->update([
+                    'customer_name'   => $data['customer_name'],
+                    'mobile_number'   => $data['customer_phone'],
+                    'full_address'    => ($data['full_address'] ?? '') ?: $location,
+                    'district'        => Str::limit($location, 78, ''),
+                    'area'            => Str::limit($location, 78, ''),
+                    'order_type'      => $data['order_type'],
+                    'customer_id'     => $account['customer']->id,
+                    'subtotal'        => $subtotal,
+                    'discount_amount' => $discount,
+                    'delivery_charge' => $delivery,
+                    'grand_total'     => $grand,
+                    'payment_method'  => $data['payment_method'],
+                    'paid_amount'     => $paid,
+                    'partial_paid_amount' => $paid,
+                    'due_amount'      => $due,
+                    'payment_status'  => $due <= 0 ? 'paid' : ($paid > 0 ? 'partial' : 'pending'),
+                    'order_note'      => trim(self::CHANNELS[$data['channel']].'-এ নেওয়া অর্ডার। '.($data['order_note'] ?? '')),
+                ]);
+                foreach ($lines as $line) {
+                    $order->items()->create($line);
+                }
+                $order->load('items');
+                $this->stock->deductForOrder($order, Auth::id());
+                $order->update(['stock_deducted_at' => now()]);
+
+                if ($oldCust && $oldCust !== $account['customer']->id) {
+                    if ($prev = Customer::find($oldCust)) {
+                        $prev->update(['total_orders' => max(0, (int) $prev->total_orders - 1), 'total_spent' => max(0, (float) $prev->total_spent - $oldGrand)]);
+                    }
+                    Customer::where('id', $account['customer']->id)->update([
+                        'total_orders' => DB::raw('total_orders + 1'),
+                        'total_spent'  => DB::raw('total_spent + '.$grand),
+                    ]);
+                } else {
+                    $cust = $account['customer']->fresh();
+                    $cust->update(['total_spent' => max(0, (float) $cust->total_spent + $grand - $oldGrand)]);
+                }
+            });
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('admin.orders.manual.share', $order)
+            ->with('success', 'অর্ডার #'.$order->order_number.' আপডেট হয়েছে — ভাউচার নতুন করে তৈরি।');
     }
 
     /** Voucher + share page (WhatsApp / email / PDF / link). */

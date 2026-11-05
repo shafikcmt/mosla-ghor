@@ -525,6 +525,8 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('orders/manual/create', [\App\Http\Controllers\Admin\ManualOrderController::class, 'create'])->name('orders.manual.create');
     Route::post('orders/manual', [\App\Http\Controllers\Admin\ManualOrderController::class, 'store'])->name('orders.manual.store');
     Route::get('orders/{order}/voucher', [\App\Http\Controllers\Admin\ManualOrderController::class, 'share'])->name('orders.manual.share');
+    Route::get('orders/{order}/voucher/edit', [\App\Http\Controllers\Admin\ManualOrderController::class, 'edit'])->name('orders.manual.edit');
+    Route::put('orders/{order}/voucher', [\App\Http\Controllers\Admin\ManualOrderController::class, 'update'])->name('orders.manual.update');
     Route::post('orders/{order}/voucher/email', [\App\Http\Controllers\Admin\ManualOrderController::class, 'email'])->name('orders.manual.email');
     Route::delete('orders/bulk-destroy', [AdminOrderController::class, 'bulkDestroy'])->name('orders.bulkDestroy');
     Route::post('orders/{id}/restore', [AdminOrderController::class, 'restore'])->name('orders.restore');
