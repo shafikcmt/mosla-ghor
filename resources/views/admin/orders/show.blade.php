@@ -55,6 +55,10 @@
     <div class="flex gap-2">
         <a href="{{ route('admin.orders.manual.share', $order) }}"
            class="bg-[#25D366] text-white text-sm px-4 py-2 rounded hover:bg-[#1ebe5b] transition-colors">📤 ভাউচার শেয়ার</a>
+        @if($order->order_source === 'admin_manual_order')
+        <a href="{{ route('admin.orders.manual.edit', $order) }}"
+           class="bg-amber-500 text-white text-sm px-4 py-2 rounded hover:bg-amber-600 transition-colors">✏️ এডিট / পণ্য যোগ</a>
+        @endif
         <a href="{{ route('admin.orders.invoice', $order) }}" target="_blank"
            class="bg-gray-800 text-white text-sm px-4 py-2 rounded hover:bg-gray-700 transition-colors">
             🖨️ Print Invoice
