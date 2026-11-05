@@ -122,7 +122,7 @@ class CaptureMarketingSource
             return false;
         }
         $path = trim($request->getPathInfo(), '/');
-        if (preg_match('#^(admin|vendor|api|feeds|storage|build|icons|images|livewire)(/|$)#i', $path)) {
+        if (preg_match('#^(admin|vendor|api|feeds|storage|build|icons|images|livewire|invoice|wholesale-invoice|v|order|checkout|account|set-password|track-order)(/|$)#i', $path)) {
             return false;
         }
         if (in_array($path, ['sitemap.xml', 'robots.txt', 'up'], true)) {

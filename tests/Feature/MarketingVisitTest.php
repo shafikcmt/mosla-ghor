@@ -289,9 +289,38 @@ class MarketingVisitTest extends TestCase
         $this->assertSame(4, MarketingVisit::count());
     }
 
+    public function test_opening_the_report_prunes_old_visits_at_most_once_per_ten_minutes(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'is_admin' => true]);
+        $old = fn () => MarketingVisit::create(['visitor_id' => self::VID, 'landing_path' => '/', 'device' => 'mobile', 'created_at' => now()->subDays(120)]);
+        $old();
+        MarketingVisit::create(['visitor_id' => self::VID, 'landing_path' => '/', 'device' => 'mobile', 'created_at' => now()->subDay()]);
+
+        $this->actingAs($admin)->get(route('admin.marketing-report.index'))->assertOk();
+        $this->assertSame(1, MarketingVisit::count()); // 120-day-old row pruned, recent one kept
+
+        $old();
+        $this->actingAs($admin)->get(route('admin.marketing-report.index'))->assertOk();
+        $this->assertSame(2, MarketingVisit::count()); // throttled: not pruned again within 10 minutes
+    }
+
+    public function test_pages_with_personal_or_transactional_content_are_never_tracked(): void
+    {
+        foreach (['invoice/5', 'wholesale-invoice/9', 'v/abc', 'v', 'order/MSL-1', 'checkout/review', 'account/orders', 'set-password/token', 'track-order', 'admin/x', 'sitemap.xml'] as $path) {
+            $req = \Illuminate\Http\Request::create('/'.$path, 'GET', ['utm_source' => 'facebook']);
+            $this->assertFalse(\App\Http\Middleware\CaptureMarketingSource::shouldTrack($req), $path);
+        }
+        foreach (['', 'faq', 'products/cumin', 'vendors-list', 'orders-info'] as $path) {
+            $req = \Illuminate\Http\Request::create('/'.$path, 'GET', ['utm_source' => 'facebook']);
+            $this->assertTrue(\App\Http\Middleware\CaptureMarketingSource::shouldTrack($req), $path);
+        }
+        $this->get('/track-order?utm_source=facebook')->assertCookieMissing('ms_attr');
+        $this->assertSame(0, MarketingVisit::count());
+    }
+
     public function test_privacy_page_mentions_visit_statistics(): void
     {
-        $this->get(route('legal.privacy'))->assertOk()->assertSee('ভিজিট পরিসংখ্যান')->assertSee('৯০ দিন পর মুছে ফেলা হয়')
+        $this->get(route('legal.privacy'))->assertOk()->assertSee('ভিজিট পরিসংখ্যান')->assertSee('সাধারণত প্রায় ৯০ দিন পর মুছে ফেলা হয়')->assertSee('normally deleted after about 90 days')
             ->assertSee('৭. পরিবর্তন');
     }
 }

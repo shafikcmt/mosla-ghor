@@ -7,8 +7,10 @@ use App\Models\MarketingVisit;
 use App\Models\Order;
 use App\Models\PaykariComboEnquiry;
 use App\Models\WholesaleEnquiry;
+use App\Support\VisitLogger;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 /** Admin → মার্কেটিং রিপোর্ট: visits → orders / enquiries, grouped by utm_source + utm_campaign. */
@@ -90,6 +92,16 @@ class MarketingReportController extends Controller
             'visits' => $rows->sum('visits'), 'visitors' => $rows->sum('visitors'), 'orders' => $rows->sum('orders'),
             'revenue' => $rows->sum('revenue'), 'wholesale' => $rows->sum('wholesale'), 'combo' => $rows->sum('combo'),
         ];
+
+        // Housekeeping: opening the report also prunes old visit rows. Capped at 1000 rows per run
+        // and throttled to once per 10 minutes, so it can never slow the page noticeably.
+        try {
+            if (Cache::add('marketing:visit-prune', 1, now()->addMinutes(10))) {
+                VisitLogger::selfPrune();
+            }
+        } catch (\Throwable $e) {
+            // never break the report
+        }
 
         return view('admin.marketing-report.index', [
             'rows' => $rows, 'totals' => $totals,

@@ -75,7 +75,7 @@
 
 <section>
     <h2>৮. ভিজিট পরিসংখ্যান / Visit statistics</h2>
-    <p>বিজ্ঞাপন কতটা কাজ করছে মাপতে আমরা বিজ্ঞাপন বা লিংকের মাধ্যমে আসা ভিজিটের বেনামি পরিসংখ্যান রাখি — ট্রাফিকের উৎস, যে পেজে এসেছেন, ডিভাইসের ধরন (মোবাইল/ট্যাবলেট/ডেস্কটপ) এবং কুকিতে রাখা একটি এলোমেলো ভিজিটর আইডি। শুধু ভিজিট থেকে আপনার নাম বা ফোন নম্বর সংরক্ষণ হয় না। আপনি অর্ডার বা এনকোয়ারি করলেই কেবল এই আইডি সেই অর্ডার/এনকোয়ারির সাথে যুক্ত হয়। ভিজিটের রেকর্ড ৯০ দিন পর মুছে ফেলা হয়।</p>
-    <p class="en">To measure advertising we keep anonymous statistics for visits that arrive through an ad or tagged link: traffic source, landing page, device type (mobile/tablet/desktop) and a random visitor id stored in a cookie. A visit alone never stores your name or phone number. The id is linked to an order or enquiry only if you place one. Visit records are deleted after 90 days.</p>
+    <p>বিজ্ঞাপন কতটা কাজ করছে মাপতে আমরা বিজ্ঞাপন বা লিংকের মাধ্যমে আসা ভিজিটের বেনামি পরিসংখ্যান রাখি — ট্রাফিকের উৎস, যে পেজে এসেছেন, ডিভাইসের ধরন (মোবাইল/ট্যাবলেট/ডেস্কটপ) এবং কুকিতে রাখা একটি এলোমেলো ভিজিটর আইডি। শুধু ভিজিট থেকে আপনার নাম বা ফোন নম্বর সংরক্ষণ হয় না। আপনি অর্ডার বা এনকোয়ারি করলেই কেবল এই আইডি সেই অর্ডার/এনকোয়ারির সাথে যুক্ত হয়। ভিজিটের রেকর্ড সাধারণত প্রায় ৯০ দিন পর মুছে ফেলা হয়।</p>
+    <p class="en">To measure advertising we keep anonymous statistics for visits that arrive through an ad or tagged link: traffic source, landing page, device type (mobile/tablet/desktop) and a random visitor id stored in a cookie. A visit alone never stores your name or phone number. The id is linked to an order or enquiry only if you place one. Visit records are normally deleted after about 90 days.</p>
 </section>
 @endsection
