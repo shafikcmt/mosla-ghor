@@ -169,6 +169,12 @@
                                class="inline-block bg-gray-800 text-white text-xs px-3 py-1 rounded hover:bg-gray-700 transition-colors">
                                 দেখুন
                             </a>
+                            @if($order->order_source === 'admin_manual_order')
+                            <a href="{{ route('admin.orders.manual.edit', $order) }}"
+                               class="inline-block bg-amber-500 text-white text-xs px-3 py-1 rounded hover:bg-amber-600 transition-colors">
+                                এডিট
+                            </a>
+                            @endif
                             <button type="button"
                                     @click="openSingle('{{ route('admin.orders.destroy', $order) }}', '{{ $order->order_number }}')"
                                     class="inline-block bg-red-600 text-white text-xs px-3 py-1 rounded hover:bg-red-700 transition-colors">
