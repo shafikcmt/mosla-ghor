@@ -141,9 +141,42 @@
         </div>
     </div>
 
+    <div class="bg-white rounded shadow-sm border border-gray-100 mb-6">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h2 class="text-sm font-semibold text-gray-600">ভিজিট পরিসংখ্যান (মার্কেটিং রিপোর্ট)</h2>
+        </div>
+        <div class="px-6 py-5">
+            <input type="hidden" name="visit_logging_enabled" value="0">
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" name="visit_logging_enabled" value="1" class="mt-0.5 rounded border-gray-300"
+                       @checked(old('visit_logging_enabled', \App\Support\VisitLogger::enabled()))>
+                <span>
+                    <span class="block text-sm font-medium text-gray-700">ভিজিট পরিসংখ্যান সংরক্ষণ</span>
+                    <span class="block text-xs text-gray-400 mt-0.5">শুধু UTM লিংক (বিজ্ঞাপন/অটোমেশন) দিয়ে আসা ভিজিট বেনামে সংরক্ষণ হয় — নাম, ফোন বা IP থাকে না। বন্ধ করলে কিছুই সংরক্ষণ হবে না। রেকর্ড ৯০ দিন পর নিজে থেকেই মুছে যায়।</span>
+                </span>
+            </label>
+        </div>
+    </div>
+
     <div class="flex gap-3 mb-8">
         <button type="submit" class="bg-gray-800 text-white px-8 py-2.5 rounded text-sm font-medium hover:bg-gray-700 transition-colors">সংরক্ষণ করুন</button>
     </div>
+</form>
+
+<form action="{{ route('admin.marketing-settings.prune-visits') }}" method="POST" class="mb-8 bg-white rounded shadow-sm border border-gray-100 px-6 py-5"
+      onsubmit="return confirm('নিশ্চিত? এই কাজ ফেরানো যাবে না — শুধু পুরোনো ভিজিট রেকর্ড মুছবে (অর্ডার/এনকোয়ারি নয়)।')">
+    @csrf
+    <p class="text-sm font-medium text-gray-700 mb-1">পুরোনো ভিজিট মুছুন</p>
+    <p class="text-xs text-gray-400 mb-3">এখন সংরক্ষিত ভিজিট: {{ number_format($visitCount ?? 0) }}টি। অর্ডার, এনকোয়ারি বা অন্য কোনো ডাটা মোছা হবে না।</p>
+    <div class="flex items-end gap-2">
+        <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1" for="prune_days">কত দিনের পুরোনো</label>
+            <input id="prune_days" type="number" name="days" value="{{ old('days', 90) }}" min="7" max="3650"
+                   class="w-28 border border-gray-300 rounded px-3 py-1.5 text-sm">
+        </div>
+        <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700">পুরোনো ভিজিট মুছুন</button>
+    </div>
+    @error('days')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
 </form>
 
 <form action="{{ route('admin.marketing-settings.capi-test') }}" method="POST" class="mb-8">

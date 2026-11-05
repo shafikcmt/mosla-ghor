@@ -13,7 +13,7 @@ class MarketingSource
     public const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
 
     /** Columns copied from an enquiry to an order created from it. */
-    public const COLUMNS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'landing_path', 'referrer_host'];
+    public const COLUMNS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'landing_path', 'referrer_host', 'visitor_id'];
 
     public const COOKIE = 'ms_attr';
 
@@ -68,22 +68,28 @@ class MarketingSource
         return $host === '' ? null : mb_substr($host, 0, 100);
     }
 
-    /** Column array from the `ms_attr` cookie; [] when absent or invalid. */
+    /** Column array from the `ms_attr` (+ `ms_vid`) cookies; [] when absent or invalid. */
     public static function fromRequest(Request $request): array
     {
+        $out = [];
         try {
+            $vid = $request->cookie(VisitLogger::COOKIE);
+            if (VisitLogger::validVisitorId($vid)) {
+                $out['visitor_id'] = strtolower($vid);
+            }
             $raw = $request->cookie(self::COOKIE);
             if (! is_string($raw) || $raw === '') {
-                return [];
+                return $out;
             }
             $data = json_decode($raw, true);
             if (! is_array($data)) {
-                return [];
+                return $out;
             }
-            $out = self::utmFromQuery($data);
-            if (! $out) {
-                return [];
+            $utm = self::utmFromQuery($data);
+            if (! $utm) {
+                return $out;
             }
+            $out += $utm;
             if (($p = self::cleanPath($data['landing_path'] ?? null)) !== null) {
                 $out['landing_path'] = $p;
             }
@@ -93,7 +99,7 @@ class MarketingSource
 
             return $out;
         } catch (\Throwable $e) {
-            return [];
+            return $out;
         }
     }
 

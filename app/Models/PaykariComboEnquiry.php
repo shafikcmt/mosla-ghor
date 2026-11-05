@@ -14,7 +14,7 @@ class PaykariComboEnquiry extends Model
         'customer_name', 'customer_phone', 'customer_whatsapp',
         'delivery_location', 'business_type', 'message',
         'status', 'admin_note', 'vendor_note',
-        'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'landing_path', 'referrer_host',
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'landing_path', 'referrer_host', 'visitor_id',
     ];
 
     public function customer(): BelongsTo

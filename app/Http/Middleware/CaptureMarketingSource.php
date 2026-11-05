@@ -3,6 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Support\MarketingSource;
+use App\Support\MetaPixel;
+use App\Support\VisitLogger;
+use Illuminate\Support\Str;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Cookie;
@@ -54,7 +57,62 @@ class CaptureMarketingSource
             // Tracking must never break a page.
         }
 
+        // Anonymous visit logging is independent: a failure here must not drop the attribution cookie.
+        try {
+            if (isset($utm, $payload)) {
+                $this->prepareVisit($request, $response, $payload);
+            }
+        } catch (\Throwable $e) {
+            // fail silently
+        }
+
         return $response;
+    }
+
+    /** Runs after the response has been sent; inserts the row stashed by prepareVisit(). */
+    public function terminate(Request $request, Response $response): void
+    {
+        try {
+            $row = $request->attributes->get('ms_visit');
+            if (is_array($row)) {
+                VisitLogger::record($row);
+            }
+        } catch (\Throwable $e) {
+            // A logging failure can never break a page.
+        }
+    }
+
+    private function prepareVisit(Request $request, Response $response, array $payload): void
+    {
+        $ua = (string) $request->userAgent();
+        if (! VisitLogger::enabled() || VisitLogger::isBot($ua)) {
+            return;
+        }
+        // Same exclusions as the Meta Pixel: META_EXCLUDE_IPS and logged-in admins.
+        if (! MetaPixel::trackingAllowed()) {
+            return;
+        }
+
+        $visitorId = $request->cookie(VisitLogger::COOKIE);
+        if (! VisitLogger::validVisitorId($visitorId)) {
+            $visitorId = (string) Str::uuid();
+            $response->headers->setCookie(new Cookie(
+                VisitLogger::COOKIE, $visitorId, now()->addDays(180), '/', null,
+                $request->isSecure(), true, false, Cookie::SAMESITE_LAX,
+            ));
+        }
+
+        $request->attributes->set('ms_visit', [
+            'visitor_id'    => strtolower($visitorId),
+            'utm_source'    => $payload['utm_source'] ?? null,
+            'utm_medium'    => $payload['utm_medium'] ?? null,
+            'utm_campaign'  => $payload['utm_campaign'] ?? null,
+            'utm_content'   => $payload['utm_content'] ?? null,
+            'utm_term'      => $payload['utm_term'] ?? null,
+            'landing_path'  => $payload['landing_path'],
+            'referrer_host' => $payload['referrer_host'] ?? null,
+            'device'        => VisitLogger::device($ua),
+        ]);
     }
 
     /** GET, non-AJAX, public storefront pages only. */

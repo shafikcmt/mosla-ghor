@@ -19,7 +19,9 @@ class MarketingSettingController extends Controller
         $vendorPixels = VendorMarketingSetting::with('vendor:id,shop_name,status,is_active')
             ->whereNotNull('pixel_id')->orderByDesc('pixel_enabled')->orderBy('vendor_id')->get();
 
-        return view('admin.marketing-settings', compact('settings', 'vendorPixels'));
+        $visitCount = \Illuminate\Support\Facades\Schema::hasTable('marketing_visits') ? \App\Models\MarketingVisit::count() : 0;
+
+        return view('admin.marketing-settings', compact('settings', 'vendorPixels', 'visitCount'));
     }
 
     public function update(Request $request)
@@ -46,6 +48,7 @@ class MarketingSettingController extends Controller
             'capi_enabled'          => 'nullable|boolean',
             'capi_access_token'     => ['nullable', 'string', 'max:1000', 'regex:/^[A-Za-z0-9_\-]+$/'],
             'capi_token_clear'      => 'nullable|boolean',
+            'visit_logging_enabled' => 'nullable|boolean',
         ], [
             'capi_access_token.regex'       => 'Access token-এ শুধু অক্ষর/সংখ্যা থাকে — স্পেস বা অন্য কিছু পেস্ট হয়েছে কিনা দেখুন।',
             'test_event_code.regex'         => 'Test event code-এ শুধু ইংরেজি অক্ষর ও সংখ্যা দিন।',
@@ -87,10 +90,27 @@ class MarketingSettingController extends Controller
             $update['capi_access_token'] = null;
         }
         $settings->update($update);
+        \App\Models\WebsiteSetting::updateOrCreate(
+            ['key' => \App\Support\VisitLogger::SETTING],
+            ['value' => $request->boolean('visit_logging_enabled') ? '1' : '0']
+        );
 
         Log::info('Marketing settings updated', ['user_id' => $request->user()?->id]);
 
         return redirect()->route('admin.marketing-settings.index')->with('success', 'মার্কেটিং / ট্র্যাকিং সেটিং সংরক্ষণ হয়েছে।');
+    }
+
+    /** Delete old rows from marketing_visits ONLY (never orders, enquiries or any other table). */
+    public function pruneVisits(Request $request)
+    {
+        $data = $request->validate(['days' => 'required|integer|min:7|max:3650'], [
+            'days.min' => 'কমপক্ষে ৭ দিনের পুরোনো রেকর্ড মোছা যাবে।',
+        ]);
+        $removed = \App\Models\MarketingVisit::pruneOlderThan((int) $data['days']);
+        Log::info('Marketing visits pruned', ['user_id' => $request->user()?->id, 'days' => (int) $data['days'], 'removed' => $removed]);
+
+        return redirect()->route('admin.marketing-settings.index')
+            ->with('success', "{$removed}টি পুরোনো ভিজিট রেকর্ড মুছে ফেলা হয়েছে।");
     }
 
     /**

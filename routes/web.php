@@ -464,6 +464,8 @@ Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('marketing-settings', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'index'])->name('marketing-settings.index');
     Route::post('marketing-settings', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'update'])->name('marketing-settings.update');
     Route::post('marketing-settings/vendors/{vendorSetting}/toggle', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'toggleVendor'])->name('marketing-settings.vendors.toggle');
+    Route::post('marketing-settings/prune-visits', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'pruneVisits'])->middleware('throttle:5,1')->name('marketing-settings.prune-visits');
+    Route::get('marketing-report', [\App\Http\Controllers\Admin\MarketingReportController::class, 'index'])->name('marketing-report.index');
     Route::post('marketing-settings/capi-test', [\App\Http\Controllers\Admin\MarketingSettingController::class, 'testCapi'])->middleware('throttle:10,1')->name('marketing-settings.capi-test');
     Route::get('bot-api', [\App\Http\Controllers\Admin\BotApiController::class, 'index'])->name('bot-api.index');
     Route::post('bot-api/tokens', [\App\Http\Controllers\Admin\BotApiController::class, 'storeToken'])->name('bot-api.tokens.store');
