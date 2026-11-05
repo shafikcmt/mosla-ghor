@@ -24,9 +24,9 @@ class CourierSeeder extends Seeder
                 'slug'       => 'pathao',
                 'status'     => 'active',
                 'api_enabled'=> false,
-                'base_url'   => 'https://merchant.pathao.com/aladdin/api/v1',
+                'base_url'   => 'https://api-hermes.pathao.com',
                 'is_default' => false,
-                'notes'      => 'Pathao courier. API integration placeholder.',
+                'notes'      => 'Pathao Merchant API (OAuth: Client ID/Secret + login email/password + Store ID).',
             ],
             [
                 'name'       => 'Sundarban',

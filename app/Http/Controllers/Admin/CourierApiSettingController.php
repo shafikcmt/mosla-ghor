@@ -36,7 +36,7 @@ class CourierApiSettingController extends Controller
         }
         $data['api_enabled'] = $request->boolean('api_enabled');
         $courier->fill($data);
-        if ($courier->isDirty(array_keys($configuration->fields))) {
+        if ($courier->isDirty(array_merge(array_keys($configuration->fields), ['api_extra']))) {
             $courier->courier_api_last_checked_at = null;
             $courier->courier_api_last_status = null;
             $courier->courier_api_last_error = null;
