@@ -42,3 +42,15 @@ Left out: inactive / wholesale-only products, products without a real main photo
 
 Setup: Commerce Manager → Catalog → Data sources → Data feed → "Scheduled feed" → URL `https://<your-domain>/feeds/meta.xml`, schedule hourly or daily.
 After the first fetch check **Diagnostics** for rejected items (usually missing/low-resolution images). Then use the catalog in Advantage+ catalog ads.
+
+## Facebook ads launch checklist
+Already in the codebase: Pixel + CAPI events (above), catalog feed, `facebook-domain-verification` field (Admin → Site meta tags), OG / product OG tags (price, currency, availability), sitemap, privacy / terms / data-deletion pages.
+Public policy pages Meta reviewers look for: `/privacy-policy`, `/terms`, `/refund-policy`, `/delivery-policy`, `/about`, `/data-deletion` — all linked in the footer and listed in `/sitemap.xml`.
+
+To do in the Meta / admin dashboards (cannot be done from code):
+1. Business Settings → Brand Safety → Domains → add `moslamart.com`, copy the verification tag into Admin → Site meta tags.
+2. Admin → Marketing / Tracking: enter Pixel ID, CAPI token; send a Test Event and confirm PageView / ViewContent / AddToCart / Purchase show "Browser + Server" with matching event ids.
+3. Events Manager → Aggregated Event Measurement: prioritise Purchase > InitiateCheckout > AddToCart > ViewContent.
+4. Commerce Manager → add the feed `https://moslamart.com/feeds/meta.xml` (hourly) and fix any Diagnostics warnings.
+5. Make sure the Facebook page URL, phone and WhatsApp number are filled in Admin → Settings (they appear on the legal pages).
+6. Ad links: use the product page URL (not `/admin`, not checkout); `fbclid` is picked up automatically for CAPI matching.

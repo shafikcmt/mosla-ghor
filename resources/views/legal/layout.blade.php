@@ -36,6 +36,9 @@
     <p class="text-xs text-gray-400 pt-4 border-t border-amber-100">
         <a href="{{ route('legal.privacy') }}">Privacy Policy</a> ·
         <a href="{{ route('legal.terms') }}">Terms of Service</a> ·
+        <a href="{{ route('legal.refund') }}">Refund Policy</a> ·
+        <a href="{{ route('legal.delivery') }}">Delivery Policy</a> ·
+        <a href="{{ route('legal.about') }}">About</a> ·
         <a href="{{ route('legal.data-deletion') }}">Data Deletion</a>
     </p>
 </div>
