@@ -367,3 +367,35 @@ html{scroll-behavior:smooth}
 .market-home .hm-slider:has(.hm-slide-banner) .hm-slider-controls{bottom:8px;padding:0 4px}
 .market-home .hm-slider:has(.hm-slide-banner) .hm-slider-controls [data-prev],.market-home .hm-slider:has(.hm-slide-banner) .hm-slider-controls [data-next]{display:none}
 }
+
+/* ── Product cards polish (2026-11): richer cards + a clearly labelled add-to-cart ── */
+.market-home .product-card{border-radius:20px;border:1px solid #e9eee6;background:#fff;box-shadow:0 2px 6px rgba(20,40,25,.05),0 10px 24px rgba(20,40,25,.06)}
+.market-home .product-card:hover{transform:translateY(-5px);box-shadow:0 18px 38px rgba(20,83,45,.16);border-color:#cfe0c8}
+.market-home .product-card [data-slideshow]{position:relative}
+.market-home .product-card [data-slideshow]::after{content:"";position:absolute;inset:auto 0 0 0;height:38%;background:linear-gradient(to top,rgba(0,0,0,.18),transparent);pointer-events:none;z-index:1}
+.market-home .product-card [data-slideshow] .card-slide{transition:opacity .5s ease,transform .5s ease}
+.market-home .product-card:hover [data-slideshow] .card-slide{transform:scale(1.05)}
+.market-home .product-card .hm-stock-badge,.market-home .product-card .hm-cat-badge{z-index:2;backdrop-filter:blur(4px)}
+.market-home .product-card .hm-stock-badge{border-radius:999px;font-weight:700;letter-spacing:.01em}
+.market-home .product-card .card-dot{z-index:2}
+.market-home .product-card>.p-5{padding:14px 14px 14px}
+.market-home .product-card h3{font-size:16px;font-weight:700;color:#14301f}
+.market-home .product-card [id^=card-price-wrap]{margin-top:8px;padding:6px 10px;background:#fbf6e7;border-radius:10px;width:fit-content;max-width:100%;align-items:baseline}
+.market-home .product-card [id^=card-from-]{color:#14532d;font-size:21px;font-weight:800}
+.market-home .product-card .hm-from{color:#7a6a2b!important}
+.market-home .product-card [id^=card-retail-btns]{display:flex;flex-wrap:nowrap;gap:8px;margin-top:12px}
+.market-home .product-card [id^=card-retail-btns]>*{min-width:0;min-height:42px;border-radius:12px;font-size:13px;font-weight:700;white-space:nowrap;box-shadow:none}
+.market-home .product-card .hm-card-detail{flex:1 1 0;background:linear-gradient(135deg,#14532d,#1a6b3a)!important;box-shadow:0 6px 14px rgba(20,83,45,.25)!important}
+.market-home .product-card .hm-card-detail:hover{filter:brightness(1.08)}
+.market-home .product-card .hm-card-quickadd{flex:1 1 0;width:auto;padding:0 8px;background:#fff;border:1.5px solid #c9a227;color:#14532d}
+.market-home .product-card .hm-card-quickadd:hover{background:#c9a227;color:#0f3d22;border-color:#c9a227}
+.market-home .product-card .hm-card-quickadd svg{width:18px;height:18px;flex:none}
+.market-home .product-card .hm-qa-label{overflow:hidden;text-overflow:ellipsis}
+@media(max-width:767px){
+.market-home .product-card{border-radius:16px}
+.market-home .product-card [id^=card-price-wrap]{padding:4px 8px}
+.market-home .product-card [id^=card-from-]{font-size:18px}
+.market-home .product-card [id^=card-retail-btns]{gap:6px}
+.market-home .product-card [id^=card-retail-btns]>*{min-height:38px;font-size:12.5px}
+.market-home .product-card .hm-card-quickadd{width:auto}
+}
