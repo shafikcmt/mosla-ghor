@@ -144,9 +144,9 @@
                         </a>
                         @if($initRetailPrices->isNotEmpty())
                             <button type="button" onclick="cardAddToBag(this, {{ $product->id }})" {{ $product->isInStock() ? '' : 'disabled' }}
-                                    class="hm-card-quickadd shrink-0 w-11 border border-[#14532d] text-[#14532d] hover:bg-[#14532d] hover:text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                    class="hm-card-quickadd shrink-0 border border-[#14532d] text-[#14532d] hover:bg-[#14532d] hover:text-white rounded-xl flex items-center justify-center gap-1 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                     title="{{ $initRetailPrices->first()->label }} ব্যাগে যোগ করুন" aria-label="{{ $product->name_bn }} {{ $initRetailPrices->first()->label }} ব্যাগে যোগ করুন">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 11.2a2 2 0 002 1.6h8.2a2 2 0 002-1.5L21 8H6.2M10 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2zM14 9v4m-2-2h4"/></svg>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 11.2a2 2 0 002 1.6h8.2a2 2 0 002-1.5L21 8H6.2M10 21a1 1 0 100-2 1 1 0 000 2zm8 0a1 1 0 100-2 1 1 0 000 2zM14 9v4m-2-2h4"/></svg><span class="hm-qa-label">কার্টে যোগ</span>
                             </button>
                         @else
                             <button onclick="goToCombo({{ $product->id }})"
