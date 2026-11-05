@@ -91,6 +91,12 @@
     <meta property="og:image:alt" content="{{ $product->ogImageAlt() }}">
     <meta name="twitter:image:alt" content="{{ $product->ogImageAlt() }}">
     <meta property="og:url" content="{{ $canonical }}">
+    @if($hasRetail && $lowestRetail)
+    <meta property="product:price:amount" content="{{ number_format($lowestRetail, 2, '.', '') }}">
+    <meta property="product:price:currency" content="BDT">
+    <meta property="product:availability" content="{{ $product->isInStock() ? 'in stock' : 'out of stock' }}">
+    <meta property="og:availability" content="{{ $product->isInStock() ? 'instock' : 'out of stock' }}">
+    @endif
     <meta name="twitter:card" content="summary_large_image">
 
     <script type="application/ld+json">

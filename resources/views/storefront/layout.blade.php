@@ -79,6 +79,9 @@
             <a href="/#contact" class="hover:text-[#c9a227] transition-colors">যোগাযোগ</a>
             <a href="{{ route('legal.privacy') }}" class="hover:text-[#c9a227] transition-colors">গোপনীয়তা নীতি</a>
             <a href="{{ route('legal.terms') }}" class="hover:text-[#c9a227] transition-colors">শর্তাবলি</a>
+            <a href="{{ route('legal.refund') }}" class="hover:text-[#c9a227] transition-colors">রিটার্ন ও রিফান্ড</a>
+            <a href="{{ route('legal.delivery') }}" class="hover:text-[#c9a227] transition-colors">ডেলিভারি নীতি</a>
+            <a href="{{ route('legal.about') }}" class="hover:text-[#c9a227] transition-colors">আমাদের সম্পর্কে</a>
         </div>
         <div>© {{ date('Y') }} {{ $siteName }} — খাঁটি মশলার আস্থার দোকান।</div>
     </div>
