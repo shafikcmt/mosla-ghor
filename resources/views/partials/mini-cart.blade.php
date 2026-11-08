@@ -276,6 +276,40 @@
         if (items[i]) { items.splice(i, 1); msBagSave(items); msToast('পণ্য সরানো হয়েছে'); }
     };
 
+    // ── Pack sizes per product (for the drawer's size dropdown) ───────────
+    // Fetched once per product from /cart/packs and kept in memory; on failure the drawer
+    // simply keeps the plain label + stepper (nothing breaks).
+    window.msPacks = {};
+    let msPacksPending = false;
+    function msEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function msPacksFor(it) {
+        const e = window.msPacks[it.productId];
+        if (!e) return null;
+        const list = it.variantId ? ((e.variants || {})[it.variantId] || []) : (e.base || []);
+        return list.length ? list : null;
+    }
+    function msPacksFetch(items) {
+        if (msPacksPending) return;
+        const need = [];
+        items.forEach(function (it) { if (it.productId && !window.msPacks[it.productId] && need.indexOf(it.productId) < 0) need.push(it.productId); });
+        if (!need.length) return;
+        msPacksPending = true;
+        fetch('{{ route('cart.packs') }}?ids=' + need.join(','), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : {}; })
+            .catch(function () { return {}; })
+            .then(function (d) {
+                need.forEach(function (id) { window.msPacks[id] = (d && d[id]) || { base: [], variants: {} }; });
+                msPacksPending = false;
+                msCartRender();
+            });
+    }
+    // 125 → "১২৫ গ্রাম", 1500 → "১.৫ কেজি"
+    function msWeight(g) {
+        g = parseFloat(g) || 0;
+        if (g < 1000) return Math.round(g).toLocaleString('bn-BD') + ' গ্রাম';
+        return (Math.round(g / 10) / 100).toLocaleString('bn-BD') + ' কেজি';
+    }
+
     // ── Retail cart store (localStorage['ms_cart']) ───────────────────────
     const MS_CART_KEY = 'ms_cart';
     const MS_MAX_QTY  = {{ \App\Services\CheckoutService::MAX_PACKS_PER_LINE }};
@@ -313,6 +347,21 @@
             it.qty = Math.min(MS_MAX_QTY, Math.max(1, parseInt(q, 10) || 1));
             if (window.msComboBridge && window.msComboBridge.setQty) { window.msComboBridge.setQty(it.uid, it.qty); }
             else { this.replace(items); }
+        },
+        // Switch a line to another pack size of the same product/variant (qty resets to 1 pack).
+        changePack(uid, priceId) {
+            if (window.msComboBridge && window.msComboBridge.changePack) { window.msComboBridge.changePack(uid, priceId); return; }
+            const items = this.get();
+            const it = items.find(function (x) { return String(x.uid) === String(uid); });
+            const pack = it && (msPacksFor(it) || []).find(function (p) { return String(p.id) === String(priceId); });
+            if (!it || !pack) return;
+            it.priceId = pack.id; it.quantity_gram = pack.quantity_gram; it.label = pack.label; it.price = pack.final_price; it.qty = 1;
+            // Already have this exact pack in the bag → merge into that line.
+            const dup = items.find(function (x) {
+                return x !== it && x.productId === it.productId && x.priceId === it.priceId && (x.variantId || null) === (it.variantId || null);
+            });
+            if (dup) { dup.qty = Math.min(MS_MAX_QTY, msQty(dup) + 1); items.splice(items.indexOf(it), 1); }
+            this.replace(items);
         },
         remove(uid) {
             if (window.msComboBridge) { window.msComboBridge.remove(uid); }       // home: keep builder in sync
@@ -436,13 +485,28 @@
                 list.style.display = 'block';
                 if (empty) empty.style.display = 'none';
                 if (foot)  foot.style.display  = 'block';
+                msPacksFetch(items);
                 list.innerHTML = items.map(function (it) {
                     const variant = it.variantName ? '<span class="text-gray-400"> · ' + it.variantName + '</span>' : '';
+                    // Pack-size dropdown (e.g. ১০০ গ্রাম / ২৫০ গ্রাম / ১ কেজি) so the customer need not tap + many times.
+                    const packs = msPacksFor(it);
+                    let sizeUi;
+                    if (packs && packs.length > 1) {
+                        sizeUi = '<select onchange="msCart.changePack(\'' + it.uid + '\', this.value)" aria-label="পরিমাণ বেছে নিন" ' +
+                            'class="mt-1 w-full max-w-[150px] text-[11px] border border-gray-200 rounded-lg px-1.5 py-1 bg-white text-[#14532d] focus:outline-none focus:ring-1 focus:ring-[#c9a227]">' +
+                            packs.map(function (p) {
+                                return '<option value="' + p.id + '"' + (String(p.id) === String(it.priceId) ? ' selected' : '') + '>' + msEsc(p.label) + ' · ৳' + msFmt(p.final_price) + '</option>';
+                            }).join('') + '</select>';
+                    } else {
+                        sizeUi = '<div class="text-[11px] text-gray-500 mt-0.5">' + msEsc(it.label || '') + '</div>';
+                    }
+                    const total = (parseFloat(it.quantity_gram) || 0) * msQty(it);
+                    const totalUi = total > 0 && msQty(it) > 1 ? '<div class="text-[10px] text-gray-400 mt-0.5">মোট ' + msWeight(total) + '</div>' : '';
                     return '' +
                     '<div class="flex items-center gap-2 bg-white rounded-xl border border-green-50 px-3 py-2.5 shadow-sm">' +
                         '<div class="flex-1 min-w-0">' +
-                            '<div class="font-serif-bn text-[#14532d] text-sm font-semibold truncate">' + (it.nameBn || '') + '</div>' +
-                            '<div class="text-[11px] text-gray-500 mt-0.5">' + (it.label || '') + variant + '</div>' +
+                            '<div class="font-serif-bn text-[#14532d] text-sm font-semibold truncate">' + (it.nameBn || '') + variant + '</div>' +
+                            sizeUi + totalUi +
                         '</div>' +
                         '<div class="flex items-center border border-gray-200 rounded-lg overflow-hidden shrink-0">' +
                             '<button type="button" onclick="msCart.setQty(\'' + it.uid + '\',' + (msQty(it) - 1) + ')" aria-label="কমান" class="w-7 h-7 text-gray-600 hover:bg-gray-100 disabled:opacity-30"' + (msQty(it) <= 1 ? ' disabled' : '') + '>−</button>' +
