@@ -43,6 +43,22 @@ class HomeController extends Controller
 
         $products = $productsQuery->get();
 
+        // Retail list grouped by top-level category (sub-category products join their parent).
+        // Grouping is skipped when a single category is already selected.
+        $subToTop = Category::whereIn('parent_id', $navCategories->pluck('id'))->pluck('parent_id', 'id')->all();
+        $byTop    = $products->toBase()->groupBy(fn ($p) => $p->category_id ? ($subToTop[$p->category_id] ?? $p->category_id) : 0);
+        $productGroups = collect();
+        foreach ($navCategories as $navCat) {
+            if ($byTop->has($navCat->id)) {
+                $productGroups->push(['category' => $navCat, 'products' => $byTop->get($navCat->id)]);
+            }
+        }
+        $leftover = $byTop->except($navCategories->pluck('id')->all())->flatten(1);
+        if ($leftover->isNotEmpty()) {
+            $productGroups->push(['category' => null, 'products' => $leftover]);
+        }
+        $groupByCategory = ! $selectedCategory && $productGroups->count() > 1;
+
         // Featured strip: newest active products (independent of the active filter).
         $featuredProducts = Product::active()->with(['category', 'activePrices', 'activeVariants.activePrices'])
             ->orderByDesc('id')->limit(8)->get();
@@ -126,7 +142,8 @@ class HomeController extends Controller
             'bdDivisions', 'bdDistricts',
             'faqs', 'reviews', 'ws',
             'navCategories', 'selectedCategory', 'featuredProducts', 'heroSlides',
-            'categoryThumbs', 'categoryCounts', 'allProductCount'
+            'categoryThumbs', 'categoryCounts', 'allProductCount',
+            'productGroups', 'groupByCategory'
         ));
     }
 }

@@ -199,7 +199,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 <div class="gold-rule"></div>
 
 {{-- ━━━━━━━━━━━━━━━━  PRODUCTS  ━━━━━━━━━━━━━━━━ --}}
-<section id="products" class="py-16 md:py-20 px-5">
+<section id="products" data-mode="{{ $listMode }}" class="py-16 md:py-20 px-5">
     <div class="max-w-7xl mx-auto">
 
         <div class="hm-section-heading"><div><h2 id="home-catalog-title">{{ $listMode === 'wholesale' ? 'পাইকারি পণ্য' : 'খুচরা কেনাকাটা' }}</h2><p>পণ্য দেখুন, প্যাক বেছে নিন ও অর্ডার করুন।</p></div></div>
@@ -228,16 +228,38 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
 
         {{-- ══ CARD VIEW ══ (column counts come from public/css/storefront-home.css,
              which overrides these utilities: 1 col < 768px, 3 < 1200px, else 4) --}}
-        <div id="card-view" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            @foreach($products as $product)
-            @include("partials.storefront.product-card")
+        @php
+            // Retail: one section per category (heading only when grouping is on). পাইকারি hides the
+            // headings via CSS/JS and shows the same sections as one continuous list.
+            $listGroups = $groupByCategory
+                ? $productGroups
+                : collect([['category' => null, 'products' => $products]]);
+            $groupVisible = fn ($g) => $g['products']->contains(fn ($p) => $listMode === 'wholesale' ? $p->show_in_wholesale : $p->show_in_retail);
+        @endphp
+        <div id="card-view">
+            @foreach($listGroups as $group)
+            <section class="ms-cat-section" style="{{ $groupVisible($group) ? '' : 'display:none;' }}">
+                @if($groupByCategory)<h3 class="ms-cat-head">{{ $group['category']?->name_bn ?? 'অন্যান্য' }}</h3>@endif
+                <div class="ms-cat-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    @foreach($group['products'] as $product)
+                    @include("partials.storefront.product-card")
+                    @endforeach
+                </div>
+            </section>
             @endforeach
         </div>
 
         {{-- ══ LIST VIEW ══ --}}
         <div id="list-view">
-            @foreach($products as $product)
-            @include("partials.storefront.product-list-item")
+            @foreach($listGroups as $group)
+            <section class="ms-cat-section" style="{{ $groupVisible($group) ? '' : 'display:none;' }}">
+                @if($groupByCategory)<h3 class="ms-cat-head">{{ $group['category']?->name_bn ?? 'অন্যান্য' }}</h3>@endif
+                <div class="ms-cat-list">
+                    @foreach($group['products'] as $product)
+                    @include("partials.storefront.product-list-item")
+                    @endforeach
+                </div>
+            </section>
             @endforeach
         </div>
 
@@ -1755,6 +1777,8 @@ function filterCardsByMode() {
     const title = document.getElementById('home-catalog-title');
     if (title) title.textContent = isWholesale ? 'পাইকারি পণ্য' : 'খুচরা কেনাকাটা';
     let visible = 0;
+    const productsSection = document.getElementById('products');
+    if (productsSection) productsSection.setAttribute('data-mode', isWholesale ? 'wholesale' : 'retail');
     Object.values(PRODUCTS).forEach(function (p) {
         const inChannel = isWholesale ? !!p.show_in_wholesale : !!p.show_in_retail;
         const show = inChannel && [p.name_bn, p.name_en].filter(Boolean).join(' ').toLocaleLowerCase().includes(query);
@@ -1762,6 +1786,11 @@ function filterCardsByMode() {
         document
             .querySelectorAll('[data-card-product="' + p.id + '"], [data-list-product="' + p.id + '"]')
             .forEach(function (el) { el.style.display = show ? '' : 'none'; });
+    });
+    // Hide category sections that have no visible product for the current mode / search.
+    document.querySelectorAll('#products .ms-cat-section').forEach(function (sec) {
+        const any = Array.prototype.some.call(sec.querySelectorAll('[data-card-product],[data-list-product]'), function (el) { return el.style.display !== 'none'; });
+        sec.style.display = any ? '' : 'none';
     });
     // Separate পাইকারি cover photo: swap card/list covers to match the active channel.
     document.querySelectorAll('img[data-cover-wholesale]').forEach(function (img) {

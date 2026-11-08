@@ -53,7 +53,7 @@
 .market-home .hm-search{flex:1;min-width:200px;max-width:440px}
 .market-home .hm-search input{width:100%;min-height:46px;padding:10px 14px;border:1px solid #9aaa9c;border-radius:6px;background:white;font-size:15px}
 .market-home .hm-search>span{font-size:13px;color:var(--hm-muted);display:block;margin-bottom:4px}
-.market-home #card-view,.market-home .hm-product-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.market-home .ms-cat-grid,.market-home .hm-product-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
 .market-home .product-card,.market-home .hm-product-tile{border:1px solid var(--hm-border);border-radius:8px;box-shadow:none;background:white;min-width:0;overflow:hidden;display:flex;flex-direction:column}
 .market-home .product-card:hover,.market-home .hm-product-tile:hover{transform:none;box-shadow:0 3px 12px #143b2010;border-color:#a9bcad}
 .market-home .product-card [data-slideshow]{height:190px}
@@ -82,7 +82,7 @@
 .market-home .hm-wholesale-cta{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:28px;background:#eaf0e5;border:1px solid var(--hm-border);border-radius:8px;margin-bottom:24px}
 .market-home .hm-wholesale-cta h2{font-family:'Noto Serif Bengali',serif;font-size:25px;font-weight:700;color:var(--hm-green)}.market-home .hm-wholesale-cta p{margin-top:8px;color:var(--hm-muted);max-width:65ch;font-size:14px}
 .market-home :is(a,button,input):focus-visible{outline:3px solid #b78421;outline-offset:3px}
-@media(max-width:1199px){.market-home .hm-categories{grid-template-columns:repeat(3,minmax(0,1fr))}.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.market-home .hm-hero-copy{padding:24px}}
+@media(max-width:1199px){.market-home .hm-categories{grid-template-columns:repeat(3,minmax(0,1fr))}.market-home .ms-cat-grid,.market-home .hm-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.market-home .hm-hero-copy{padding:24px}}
 @media(max-width:767px){.market-home .hm-container{width:calc(100% - 28px)}.market-home .hm-hero{grid-template-columns:1fr;margin-top:14px}.market-home .hm-hero-copy{padding:22px}.market-home .hm-hero-media>img{height:190px}.market-home .hm-section{padding-block:24px}.market-home .hm-section-heading{align-items:flex-start;flex-wrap:wrap;gap:8px}.market-home .hm-section-heading h2{font-size:23px}.market-home .hm-categories{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.market-home #products{padding-inline:14px}.market-home .hm-benefits{grid-template-columns:repeat(2,minmax(0,1fr))}.market-home .hm-benefits>div{padding:16px 10px}.market-home .hm-wholesale-cta{flex-direction:column;align-items:flex-start;padding:22px}.market-home .hm-search{max-width:none}.market-home .hm-section-heading>a{white-space:normal}}
 @media(prefers-reduced-motion:reduce){.market-home .product-card,.market-home .card-slide{transition:none!important}}
 /* The desktop navigation exceeds tablet width; use its existing drawer. */
@@ -136,7 +136,7 @@
    are unchanged. Chip sizing lives here (not in the markup) because the
    mode-toggle JS rebuilds the chip HTML with its own classes. */
 @media(max-width:767px){
-.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+.market-home .ms-cat-grid,.market-home .hm-product-grid{grid-template-columns:minmax(0,1fr);gap:12px}
 .market-home .product-card,.market-home .hm-product-tile{width:100%;max-width:480px;margin-inline:auto;border-radius:16px;border-color:#f3f4f6;box-shadow:0 1px 2px #0000000d}
 .market-home .product-card [data-slideshow],.market-home .hm-tile-image{height:auto;aspect-ratio:4/3}
 .market-home .product-card>.p-5,.market-home .hm-tile-body{padding:12px}
@@ -224,7 +224,7 @@ html{scroll-behavior:smooth}
 .market-home .hm-cat-img{width:60px;height:60px;font-size:24px}
 .market-home .hm-cat-name{font-size:12.5px}
 .market-home .hm-catalog-tools{padding:8px;gap:8px}
-.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.market-home .ms-cat-grid,.market-home .hm-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .market-home .product-card,.market-home .hm-product-tile{max-width:none;border-radius:14px}
 .market-home .product-card:hover,.market-home .hm-product-tile:hover{transform:none}
 .market-home .product-card [data-slideshow],.market-home .hm-tile-image{aspect-ratio:1/1}
@@ -264,14 +264,14 @@ html{scroll-behavior:smooth}
 .market-home .product-card [id^=card-retail-btns]>*{min-height:40px;min-width:0;border-radius:11px;box-shadow:none}
 .market-home .product-card .hm-card-detail{display:flex!important;align-items:center;justify-content:center;flex:1;font-weight:700;padding:8px 6px}
 .market-home .product-card .hm-card-quickadd{flex:none;width:42px;padding:0}
-.market-home #card-view,.market-home .hm-product-grid{gap:16px}
-@media(min-width:1280px){.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
-@media(min-width:768px) and (max-width:1279px){.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(min-width:640px) and (max-width:767px){.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.market-home .ms-cat-grid,.market-home .hm-product-grid{gap:16px}
+@media(min-width:1280px){.market-home .ms-cat-grid,.market-home .hm-product-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(min-width:768px) and (max-width:1279px){.market-home .ms-cat-grid,.market-home .hm-product-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:640px) and (max-width:767px){.market-home .ms-cat-grid,.market-home .hm-product-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .market-home .hm-stock-badge{font-size:9.5px;padding:1px 7px}
 .market-home .hm-cat-badge{font-size:9.5px;padding:1px 7px}
 @media(max-width:767px){
-.market-home #card-view,.market-home .hm-product-grid{gap:10px}
+.market-home .ms-cat-grid,.market-home .hm-product-grid{gap:10px}
 .market-home .product-card>.p-5{padding:9px 10px 10px}
 .market-home .product-card h3{font-size:13.5px}
 .market-home .product-card [id^=card-from-]{font-size:16px}
@@ -283,7 +283,7 @@ html{scroll-behavior:smooth}
 
 /* ── Phones (2026-10-19 b): one card per row, photo left / details right ── */
 @media(max-width:767px){
-.market-home #card-view,.market-home .hm-product-grid{grid-template-columns:minmax(0,1fr);gap:10px}
+.market-home .ms-cat-grid,.market-home .hm-product-grid{grid-template-columns:minmax(0,1fr);gap:10px}
 .market-home .product-card,.market-home .hm-product-tile{flex-direction:row;align-items:stretch;border-radius:16px}
 .market-home .product-card>a.block,.market-home .hm-product-tile>.hm-tile-image{flex:0 0 38%;max-width:160px;align-self:stretch;background:#fff}
 .market-home .product-card [data-slideshow]{height:100%!important;min-height:150px;aspect-ratio:auto}
@@ -399,3 +399,17 @@ html{scroll-behavior:smooth}
 .market-home .product-card [id^=card-retail-btns]>*{min-height:38px;font-size:12.5px}
 .market-home .product-card .hm-card-quickadd{width:auto}
 }
+
+/* ── Category sections on the retail home list ── */
+.market-home .ms-cat-section+.ms-cat-section{margin-top:40px}
+.market-home .ms-cat-head{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-family:'Noto Serif Bengali',serif;font-size:22px;line-height:1.4;font-weight:700;color:var(--hm-green)}
+.market-home .ms-cat-head::before{content:"";width:4px;height:22px;border-radius:2px;background:#c9a227}
+.market-home #list-view .ms-cat-list{display:flex;flex-direction:column;gap:.75rem}
+/* পাইকারি mode: no category headings, tighter stacking, and NO product images on cards
+   (the photos are on the product detail page). */
+.market-home #products[data-mode=wholesale] .ms-cat-head{display:none}
+.market-home #products[data-mode=wholesale] .ms-cat-section+.ms-cat-section{margin-top:18px}
+.market-home #products[data-mode=wholesale] .ms-card-media,.market-home #products[data-mode=wholesale] .ms-list-thumb{display:none!important}
+.market-home .ms-ws-cat{display:none}
+.market-home #products[data-mode=wholesale] .ms-ws-cat{display:inline-block;margin-bottom:6px;padding:2px 9px;border-radius:999px;background:#eaf0e5;color:var(--hm-green);font-size:11px;font-weight:600}
+@media(max-width:767px){.market-home .ms-cat-head{font-size:19px}.market-home .ms-cat-section+.ms-cat-section{margin-top:28px}}

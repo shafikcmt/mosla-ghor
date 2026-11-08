@@ -31,7 +31,7 @@
                         ->merge($product->gallery_images ?? [])
                         ->filter()->values();
                 @endphp
-                <a href="{{ $detailUrl }}" class="block">
+                <a href="{{ $detailUrl }}" class="block ms-card-media">
                 <div class="relative h-52 overflow-hidden shrink-0" data-slideshow="{{ $product->id }}">
                     @if($cardSlides->isNotEmpty())
                         @foreach($cardSlides as $si => $slide)
@@ -74,6 +74,7 @@
 
                 {{-- Body --}}
                 <div class="p-5 flex flex-col flex-1">
+                    @if($product->cat)<span class="ms-ws-cat">{{ $product->cat->name_bn }}</span>@endif
                     <a href="{{ $detailUrl }}" class="hover:underline">
                         <h3 class="font-serif-bn text-[#14532d] text-xl font-bold leading-snug">{{ $product->name_bn }}</h3>
                     </a>

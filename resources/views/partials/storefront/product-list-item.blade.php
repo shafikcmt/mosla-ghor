@@ -17,7 +17,7 @@
             <article data-list-product="{{ $product->id }}" style="{{ $visibleInMode ? '' : 'display:none;' }}" class="bg-white rounded-xl border border-green-50 shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
 
                 {{-- Thumb --}}
-                <div class="w-28 sm:w-36 shrink-0 relative h-36 bg-gray-50">
+                <div class="ms-list-thumb w-28 sm:w-36 shrink-0 relative h-36 bg-gray-50">
                     @if($listCover = $product->coverImage($listMode))
                         <img src="{{ \App\Support\ProductMedia::url($listCover) }}" alt="{{ $product->coverImageAlt($listMode) }}" loading="lazy" decoding="async"
                              @if(filled($product->wholesale_main_image) && $product->main_image) data-cover-retail="{{ \App\Support\ProductMedia::url($product->main_image) }}" data-cover-wholesale="{{ \App\Support\ProductMedia::url($product->wholesale_main_image) }}" data-alt-retail="{{ $product->coverImageAlt('retail') }}" data-alt-wholesale="{{ $product->coverImageAlt('wholesale') }}" @endif
