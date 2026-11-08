@@ -158,6 +158,9 @@ Route::get('/wholesale/enquiry-bag', [ProductController::class, 'enquiryBag'])->
 // Active variants for products currently in the enquiry bag (JSON lookup).
 Route::get('/wholesale/variants', [ProductController::class, 'variantsLookup'])->name('wholesale.variants');
 
+// Retail pack sizes for products in the cart drawer (pack-size dropdown). Read-only JSON.
+Route::get('/cart/packs', [ProductController::class, 'cartPacks'])->middleware('throttle:60,1')->name('cart.packs');
+
 // Combo / box builder lives in the home-page section; this is a shareable entry point.
 Route::get('/combo', fn () => redirect('/#combo-builder'))->name('combo');
 

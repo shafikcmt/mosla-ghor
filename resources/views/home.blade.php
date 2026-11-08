@@ -2557,6 +2557,15 @@ window.msComboBridge = {
     // uid arrives as a string from the drawer; builder uids are numeric → coerce.
     remove: function (uid) { removeFromCombo(Number(uid)); },
     setQty: function (uid, q) { setComboQty(Number(uid), q); },
+    // Pack-size dropdown in the drawer: switch the line's pack, reset to 1 pack, merge with an identical line.
+    changePack: function (uid, priceId) {
+        const it = comboItems.find(x => x.uid === Number(uid));
+        if (!it) return;
+        it.qty = 1;
+        changeComboItem(Number(uid), priceId);
+        const dup = comboItems.find(x => x !== it && x.productId === it.productId && x.priceId === it.priceId && (x.variantId || null) === (it.variantId || null));
+        if (dup) { dup.qty = Math.min(COMBO_MAX_QTY, comboQty(dup) + 1); comboItems = comboItems.filter(x => x !== it); renderCombo(); }
+    },
     clear:  function () { comboItems = []; renderCombo(); }
 };
 msCartReady = true;

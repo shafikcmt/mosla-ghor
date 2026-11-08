@@ -123,6 +123,43 @@ class ProductController extends Controller
         return response()->json($map);
     }
 
+    /**
+     * Active retail pack sizes for the given products (JSON), so the cart drawer can offer a
+     * pack-size dropdown on any page. Shape: { productId: { base: [pack…], variants: { variantId: [pack…] } } }
+     */
+    public function cartPacks(Request $request)
+    {
+        $ids = collect(explode(',', (string) $request->query('ids')))
+            ->map(fn ($v) => (int) trim($v))->filter()->unique()->take(20)->values();
+        if ($ids->isEmpty()) {
+            return response()->json((object) []);
+        }
+
+        $prices = \App\Models\ProductPrice::query()
+            ->whereIn('product_id', $ids)
+            ->where('sell_type', 'retail')
+            ->where('is_active', true)
+            ->whereHas('product', fn ($q) => $q->where('is_active', true))
+            ->orderBy('quantity_gram')
+            ->get(['id', 'product_id', 'product_variant_id', 'label', 'quantity_gram', 'final_price']);
+
+        $out = [];
+        foreach ($prices as $pr) {
+            $pack = ['id' => $pr->id, 'label' => $pr->label, 'quantity_gram' => (int) $pr->quantity_gram, 'final_price' => (float) $pr->final_price];
+            $entry = $out[$pr->product_id] ?? ['base' => [], 'variants' => (object) []];
+            if ($pr->product_variant_id) {
+                $variants = (array) $entry['variants'];
+                $variants[$pr->product_variant_id][] = $pack;
+                $entry['variants'] = (object) $variants;
+            } else {
+                $entry['base'][] = $pack;
+            }
+            $out[$pr->product_id] = $entry;
+        }
+
+        return response()->json((object) $out)->header('Cache-Control', 'private, max-age=60');
+    }
+
     /** Public review submission — guest or logged-in. Starts as pending. */
     public function storeReview(Request $request, Product $product)
     {
