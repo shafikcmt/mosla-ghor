@@ -93,4 +93,11 @@ class HomeCategorySectionsTest extends TestCase
         $css = file_get_contents(public_path('css/storefront-home.css'));
         $this->assertStringContainsString('#products[data-mode=wholesale] .ms-card-media', $css);
     }
+
+    public function test_home_stylesheet_url_changes_with_the_file_so_browsers_never_use_stale_css(): void
+    {
+        $html = $this->get('/')->assertOk()->getContent();
+        $mtime = filemtime(public_path('css/storefront-home.css'));
+        $this->assertStringContainsString('css/storefront-home.css?v='.$mtime, $html);
+    }
 }
