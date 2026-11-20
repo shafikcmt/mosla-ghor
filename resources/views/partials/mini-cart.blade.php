@@ -303,6 +303,31 @@
                 msCartRender();
             });
     }
+    // Group the lines of one custom weight into a single display row.
+    function msRows(items) {
+        const seen = {}, rows = [];
+        items.forEach(function (it) {
+            if (!it.groupId) { rows.push(it); return; }
+            if (seen[it.groupId]) { seen[it.groupId].__group.push(it); return; }
+            seen[it.groupId] = { __group: [it] }; rows.push(seen[it.groupId]);
+        });
+        return rows;
+    }
+    function msGroupRow(lines) {
+        const f = lines[0], gid = f.groupId;
+        const total = lines.reduce(function (s, x) { return s + (parseFloat(x.price) || 0) * msQty(x); }, 0);
+        return '<div class="flex items-center gap-2 bg-white rounded-xl border border-green-50 px-3 py-2.5 shadow-sm">' +
+            '<div class="flex-1 min-w-0">' +
+                '<div class="font-serif-bn text-[#14532d] text-sm font-semibold truncate">' + msEsc(f.nameBn || '') + '</div>' +
+                '<div class="text-[11px] font-semibold text-[#14532d] mt-0.5">' + msWeight(f.groupGrams || 0) + '</div>' +
+                '<div class="text-[10px] text-gray-400 mt-0.5 leading-snug">' + msEsc((f.groupLabel || '').replace(/^[^=]*=\s*/, '')) + '</div>' +
+            '</div>' +
+            '<div class="text-[#c9a227] font-serif-bn font-bold text-sm whitespace-nowrap min-w-[56px] text-right">৳' + msFmt(total) + '</div>' +
+            '<button onclick="msCart.removeGroup(\'' + gid + '\')" aria-label="মুছুন" ' +
+                'class="w-7 h-7 rounded-full bg-gray-100 hover:bg-red-100 text-gray-400 hover:text-red-500 flex items-center justify-center text-lg leading-none transition shrink-0">&times;</button>' +
+        '</div>';
+    }
+
     // 125 → "১২৫ গ্রাম", 1500 → "১.৫ কেজি"
     function msWeight(g) {
         g = parseFloat(g) || 0;
@@ -329,7 +354,7 @@
             const items = this.get();
             const dup = items.find(function (x) {
                 return x.productId === item.productId && x.priceId === item.priceId &&
-                       (x.variantId || null) === (item.variantId || null);
+                       (x.variantId || null) === (item.variantId || null) && (x.groupId || null) === (item.groupId || null);
             });
             // Same pack again → more packs on the same line (2 × 1kg), not a no-op.
             if (dup) { dup.qty = Math.min(MS_MAX_QTY, msQty(dup) + (parseInt(item.qty, 10) || 1)); this.replace(items); return dup.uid; }
@@ -362,6 +387,11 @@
             });
             if (dup) { dup.qty = Math.min(MS_MAX_QTY, msQty(dup) + 1); items.splice(items.indexOf(it), 1); }
             this.replace(items);
+        },
+        // Remove every pack line that belongs to one custom-weight group (e.g. "১৭৫ গ্রাম").
+        removeGroup(gid) {
+            const left = this.get().filter(function (x) { return String(x.groupId || '') !== String(gid); });
+            if (window.msComboBridge && window.msComboBridge.replaceAll) { window.msComboBridge.replaceAll(left); } else { this.replace(left); }
         },
         remove(uid) {
             if (window.msComboBridge) { window.msComboBridge.remove(uid); }       // home: keep builder in sync
@@ -486,7 +516,8 @@
                 if (empty) empty.style.display = 'none';
                 if (foot)  foot.style.display  = 'block';
                 msPacksFetch(items);
-                list.innerHTML = items.map(function (it) {
+                list.innerHTML = msRows(items).map(function (it) {
+                    if (it.__group) return msGroupRow(it.__group);
                     const variant = it.variantName ? '<span class="text-gray-400"> · ' + it.variantName + '</span>' : '';
                     // Pack-size dropdown (e.g. ১০০ গ্রাম / ২৫০ গ্রাম / ১ কেজি) so the customer need not tap + many times.
                     const packs = msPacksFor(it);

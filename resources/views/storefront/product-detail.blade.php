@@ -1036,14 +1036,21 @@
 
         // Custom weight: one cart line per pack size (e.g. 200g = 2 × 100g).
         if (window.msCart && pdCustomPlan) {
+            // Lines share a groupId so the cart shows ONE row ("১৭৫ গ্রাম") instead of one per pack.
+            const gid = 'g' + Date.now() + Math.floor(Math.random() * 1000);
+            const gGrams = pdCustomPlan.reduce((s, p) => s + p.gram * p.qty, 0);
+            const gLabel = pdFmtWeight(gGrams) + ' = ' + pdCustomPlan.map(p => (p.qty > 1 ? pdBn(p.qty) + '×' : '') + p.label).join(' + ');
             pdCustomPlan.forEach(function (p) {
                 msCart.add({
+                    groupId:     gid,
+                    groupGrams:  gGrams,
+                    groupLabel:  gLabel,
                     productId:   @json($product->id),
                     priceId:     p.priceId,
                     variantId:   null,
                     variantName: null,
                     sellType:    'retail',
-                    nameBn:      @json($product->name),
+                    nameBn:      @json($product->display_name),
                     label:       p.label,
                     price:       p.price,
                     qty:         p.qty
@@ -1065,7 +1072,7 @@
                 variantId:   pdSelectedVariantId ? parseInt(pdSelectedVariantId, 10) : null,
                 variantName: pdSelectedVariantName,
                 sellType:    'retail',
-                nameBn:      @json($product->name),
+                nameBn:      @json($product->display_name),
                 label:       lblEl ? lblEl.textContent.trim() : '',
                 price:       active ? parseFloat(active.dataset.price) : 0,
                 qty:         pdQty

@@ -2595,6 +2595,8 @@ window.msComboBridge = {
         const dup = comboItems.find(x => x !== it && x.productId === it.productId && x.priceId === it.priceId && (x.variantId || null) === (it.variantId || null));
         if (dup) { dup.qty = Math.min(COMBO_MAX_QTY, comboQty(dup) + 1); comboItems = comboItems.filter(x => x !== it); renderCombo(); }
     },
+    // Removing a custom-weight group (e.g. "১৭৫ গ্রাম") drops all its pack lines at once.
+    replaceAll: function (items) { comboItems = items; renderCombo(); },
     clear:  function () { comboItems = []; renderCombo(); }
 };
 msCartReady = true;
@@ -2785,7 +2787,28 @@ function renderCombo() {
     badgeEl.textContent   = n;
 
     // Build item rows
-    listEl.innerHTML = comboItems.map(item => {
+    const gSeen = {}, comboRows = [];
+    comboItems.forEach(it => {
+        if (!it.groupId) { comboRows.push(it); return; }
+        if (gSeen[it.groupId]) { gSeen[it.groupId].__group.push(it); return; }
+        gSeen[it.groupId] = { __group: [it] }; comboRows.push(gSeen[it.groupId]);
+    });
+    listEl.innerHTML = comboRows.map(item => {
+        if (item.__group) {
+            const f = item.__group[0];
+            const gTotal = item.__group.reduce((s, x) => s + x.price * comboQty(x), 0);
+            return `
+        <div class="flex items-center gap-2 py-2.5 border-b border-green-700/30 last:border-0">
+            <div class="flex-1 min-w-0">
+                <div class="text-[#fef9ee] font-serif-bn text-sm font-semibold leading-tight truncate">${f.nameBn}</div>
+                <div class="text-[#c9a227] text-[11px] font-semibold mt-0.5">${fmt(f.groupGrams || 0)} গ্রাম</div>
+                <div class="text-green-400 text-[10px] leading-snug mt-0.5">${String(f.groupLabel || '').replace(/^[^=]*=\s*/, '')}</div>
+            </div>
+            <div class="text-[#c9a227] font-bold font-serif-bn text-sm shrink-0 min-w-[52px] text-right">৳${fmt(gTotal)}</div>
+            <button onclick="msCart.removeGroup('${f.groupId}')" aria-label="মুছুন"
+                    class="shrink-0 w-6 h-6 rounded-full bg-green-800 hover:bg-red-900 text-green-300 hover:text-red-300 flex items-center justify-center text-base leading-none transition-colors">&times;</button>
+        </div>`;
+        }
         const p = PRODUCTS[item.productId];
         let itemPrices;
         if (item.variantId && p && p.variants) {
