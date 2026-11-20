@@ -512,7 +512,10 @@ class Product extends Model
     public function syncPrices(): void
     {
         $settings  = PriceSetting::current();
-        $packSizes = [25, 50, 100, 250, 500, 1000];
+        // Standard sizes + any custom size the admin added, so custom packs also follow base-price changes.
+        $packSizes = collect([25, 50, 100, 250, 500, 1000])
+            ->merge($this->prices()->whereNull('product_variant_id')->where('sell_type', 'retail')->pluck('quantity_gram')->map(fn ($g) => (int) $g))
+            ->unique()->sort()->values()->all();
 
         foreach ($packSizes as $grams) {
             $markup    = $settings->markupFor($grams);
@@ -540,8 +543,30 @@ class Product extends Model
         }
     }
 
+    /** Add one custom retail pack size (e.g. 150 g). Optional manual price overrides the computed one. */
+    public function addRetailPack(int $grams, ?float $manualPrice = null): void
+    {
+        $settings = PriceSetting::current();
+        $auto = round(($this->retail_price_1kg / 1000) * $grams * (1 + $settings->markupFor($grams) / 100), 2);
+        $this->prices()->create([
+            'sell_type'          => 'retail',
+            'label'              => $this->packLabel($grams),
+            'quantity_gram'      => $grams,
+            'auto_price'         => $auto,
+            'manual_price'       => $manualPrice,
+            'final_price'        => $manualPrice ?? $settings->roundPrice($auto),
+            'is_manual_override' => $manualPrice !== null,
+            'is_active'          => true,
+        ]);
+    }
+
     private function packLabel(int $grams): string
     {
+        $bn = fn ($n) => strtr((string) $n, '0123456789', '০১২৩৪৫৬৭৮৯');
+        if (! in_array($grams, [25, 50, 100, 250, 500, 1000], true)) {
+            if ($grams >= 1000 && $grams % 1000 === 0) { return $bn($grams / 1000).' কেজি'; }
+            return $grams < 1000 ? $bn($grams).' গ্রাম' : $bn(rtrim(rtrim(number_format($grams / 1000, 2, '.', ''), '0'), '.')).' কেজি';
+        }
         return [
             25   => '২৫ গ্রাম',
             50   => '৫০ গ্রাম',

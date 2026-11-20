@@ -18,4 +18,14 @@
     </table>
 </div>
 <small>ভিত্তিমূল্য বদলালে ম্যানুয়াল দাম অপরিবর্তিত থাকবে। নতুন হিসাব সংরক্ষণের পর দেখা যাবে।</small>
+<div class="pe-note" style="margin-top:14px">
+    <strong>নতুন প্যাক সাইজ যোগ করুন</strong> — ক্রেতা শুধু এই তালিকার সক্রিয় প্যাকই কিনতে পারবে (কম-বেশি পরিমাণ নয়)। দাম ফাঁকা রাখলে ১ কেজির ভিত্তিমূল্য থেকে হিসাব হবে; অপ্রয়োজনীয় সাইজ উপরে "সক্রিয়" টিক তুলে বন্ধ করুন।
+    @for($i = 0; $i < 3; $i++)
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <input type="number" name="new_packs[{{ $i }}][grams]" value="{{ old('new_packs.'.$i.'.grams') }}" min="1" max="100000" step="1" placeholder="গ্রাম (যেমন ১৫০)" aria-label="নতুন প্যাকের গ্রাম" style="max-width:170px">
+        <input type="number" name="new_packs[{{ $i }}][manual_price]" value="{{ old('new_packs.'.$i.'.manual_price') }}" min="0.01" step="0.01" placeholder="দাম ৳ (ঐচ্ছিক)" aria-label="নতুন প্যাকের দাম" style="max-width:170px">
+        @error('new_packs.'.$i.'.grams')<span class="pe-error" style="color:#b91c1c;font-size:12px">{{ $message }}</span>@enderror
+    </div>
+    @endfor
+</div>
 @endif

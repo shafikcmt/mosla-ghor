@@ -303,36 +303,6 @@
                 msCartRender();
             });
     }
-    // ── Custom amount → cheapest exact combination of the listed packs ─────
-    // e.g. 150 g with packs 50/100/250 → 100 g + 50 g. Pure DP over multiples of the packs' gcd.
-    function msGcd(a, b) { return b ? msGcd(b, a % b) : a; }
-    function msPackStep(packs) { return packs.reduce(function (g, p) { return msGcd(g, Math.round(p.quantity_gram) || 0); }, 0) || 1; }
-    function msPlan(packs, grams) {
-        const step = msPackStep(packs);
-        if (!(grams > 0) || grams % step !== 0) return null;
-        const n = grams / step;
-        if (n > 4000) return null;
-        const cost = [0], pick = [-1], cnt = [0];
-        for (let i = 1; i <= n; i++) {
-            cost[i] = Infinity; pick[i] = -1; cnt[i] = 0;
-            packs.forEach(function (p, k) {
-                const s = Math.round(p.quantity_gram) / step;
-                if (s < 1 || s > i || cost[i - s] === Infinity) return;
-                const c = cost[i - s] + Math.round(p.final_price * 100), m = cnt[i - s] + 1;
-                if (c < cost[i] || (c === cost[i] && m < cnt[i])) { cost[i] = c; pick[i] = k; cnt[i] = m; }
-            });
-        }
-        if (cost[n] === Infinity) return null;
-        const tally = {};
-        for (let i = n; i > 0; i -= Math.round(packs[pick[i]].quantity_gram) / step) {
-            tally[pick[i]] = (tally[pick[i]] || 0) + 1;
-        }
-        return Object.keys(tally).map(function (k) { return { pack: packs[k], qty: tally[k] }; })
-            .sort(function (a, b) { return b.pack.quantity_gram - a.pack.quantity_gram; });
-    }
-    window.msCustomUid = null;
-    window.msPlan = msPlan; window.msPackStep = msPackStep;   // shared with the home combo builder
-
     // 125 → "১২৫ গ্রাম", 1500 → "১.৫ কেজি"
     function msWeight(g) {
         g = parseFloat(g) || 0;
@@ -392,39 +362,6 @@
             });
             if (dup) { dup.qty = Math.min(MS_MAX_QTY, msQty(dup) + 1); items.splice(items.indexOf(it), 1); }
             this.replace(items);
-        },
-        openCustom(uid) {
-            window.msCustomUid = uid;
-            msCartRender();
-            if (uid) { const el = document.getElementById('ms-custom-g'); if (el) { el.focus(); el.select(); } }
-        },
-        // Customer typed a total weight → swap the line for the cheapest exact set of listed packs.
-        applyCustom(uid) {
-            const el = document.getElementById('ms-custom-g');
-            const grams = Math.round(parseFloat(el && el.value) || 0);
-            const items = this.get();
-            const idx = items.findIndex(function (x) { return String(x.uid) === String(uid); });
-            if (idx < 0) return;
-            const it = items[idx], packs = msPacksFor(it) || [];
-            const plan = packs.length ? msPlan(packs, grams) : null;
-            if (!plan) { msToast(packs.length ? msFmt(msPackStep(packs)) + ' গ্রামের গুণিতকে পরিমাণ দিন (যেমন ' + msFmt(msPackStep(packs) * 3) + ')' : 'পরিমাণ পরিবর্তন করা যাচ্ছে না'); return; }
-            items.splice(idx, 1);
-            let at = idx;
-            plan.forEach(function (row, k) {
-                const dup = items.find(function (x) {
-                    return x.productId === it.productId && x.priceId === row.pack.id && (x.variantId || null) === (it.variantId || null);
-                });
-                if (dup) { dup.qty = Math.min(MS_MAX_QTY, msQty(dup) + row.qty); return; }
-                const line = Object.assign({}, it, {
-                    uid: Date.now() + k + Math.floor(Math.random() * 1000),
-                    priceId: row.pack.id, quantity_gram: row.pack.quantity_gram, label: row.pack.label,
-                    price: row.pack.final_price, qty: Math.min(MS_MAX_QTY, row.qty)
-                });
-                items.splice(at++, 0, line);
-            });
-            window.msCustomUid = null;
-            if (window.msComboBridge && window.msComboBridge.replaceAll) { window.msComboBridge.replaceAll(items); } else { this.replace(items); }
-            msToast('✓ ' + msWeight(grams) + ' = ' + plan.map(function (r) { return (r.qty > 1 ? msFmt(r.qty) + '×' : '') + r.pack.label; }).join(' + '));
         },
         remove(uid) {
             if (window.msComboBridge) { window.msComboBridge.remove(uid); }       // home: keep builder in sync
@@ -554,27 +491,12 @@
                     // Pack-size dropdown (e.g. ১০০ গ্রাম / ২৫০ গ্রাম / ১ কেজি) so the customer need not tap + many times.
                     const packs = msPacksFor(it);
                     let sizeUi;
-                    const open = String(window.msCustomUid) === String(it.uid);
                     if (packs && packs.length > 1) {
-                        sizeUi = '<div class="mt-1 flex items-center gap-1"><select onchange="msCart.changePack(\'' + it.uid + '\', this.value)" aria-label="পরিমাণ বেছে নিন" ' +
-                            'class="min-w-0 flex-1 max-w-[130px] text-[11px] border border-gray-200 rounded-lg px-1.5 py-1 bg-white text-[#14532d] focus:outline-none focus:ring-1 focus:ring-[#c9a227]">' +
+                        sizeUi = '<select onchange="msCart.changePack(\'' + it.uid + '\', this.value)" aria-label="পরিমাণ বেছে নিন" ' +
+                            'class="mt-1 w-full max-w-[150px] text-[11px] border border-gray-200 rounded-lg px-1.5 py-1 bg-white text-[#14532d] focus:outline-none focus:ring-1 focus:ring-[#c9a227]">' +
                             packs.map(function (p) {
                                 return '<option value="' + p.id + '"' + (String(p.id) === String(it.priceId) ? ' selected' : '') + '>' + msEsc(p.label) + ' · ৳' + msFmt(p.final_price) + '</option>';
-                            }).join('') + '</select>' +
-                            // Any amount that isn't a listed pack (150 g, 200 g…): small ✎ beside the dropdown, typed once, auto-split into packs.
-                            (open ? '' : '<button type="button" onclick="msCart.openCustom(\'' + it.uid + '\')" title="অন্য পরিমাণ (যেমন ১৫০ গ্রাম)" aria-label="অন্য পরিমাণ" class="shrink-0 w-6 h-6 rounded-md border border-[#c9a227] text-[#b8860b] text-xs leading-none hover:bg-amber-50">✎</button>') +
-                            '</div>' +
-                            (open
-                                ? '<div class="mt-1 flex items-center gap-1">' +
-                                    '<input id="ms-custom-g" type="number" inputmode="numeric" min="' + msPackStep(packs) + '" step="' + msPackStep(packs) + '" placeholder="গ্রাম" ' +
-                                        'value="' + Math.round((parseFloat(it.quantity_gram) || 0) * msQty(it)) + '" ' +
-                                        'onkeydown="if(event.key===\'Enter\'){msCart.applyCustom(\'' + it.uid + '\');}" aria-label="গ্রাম" ' +
-                                        'class="w-16 text-[11px] border border-[#c9a227] rounded-md px-1.5 py-0.5 focus:outline-none">' +
-                                    '<span class="text-[10px] text-gray-500">গ্রাম</span>' +
-                                    '<button type="button" onclick="msCart.applyCustom(\'' + it.uid + '\')" aria-label="নিশ্চিত" class="w-6 h-6 rounded-md bg-[#14532d] text-white text-xs leading-none">✓</button>' +
-                                    '<button type="button" onclick="msCart.openCustom(null)" aria-label="বাতিল" class="w-6 h-6 text-gray-400 text-base leading-none">&times;</button>' +
-                                  '</div>'
-                                : '');
+                            }).join('') + '</select>';
                     } else {
                         sizeUi = '<div class="text-[11px] text-gray-500 mt-0.5">' + msEsc(it.label || '') + '</div>';
                     }

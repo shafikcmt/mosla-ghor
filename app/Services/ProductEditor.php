@@ -237,6 +237,12 @@ class ProductEditor
                         ]);
                     }
                 }
+                if ($retail) {
+                    foreach ($data['new_packs'] ?? [] as $row) {
+                        if (blank($row['grams'] ?? null)) { continue; }
+                        $product->addRetailPack((int) $row['grams'], isset($row['manual_price']) && $row['manual_price'] !== '' ? (float) $row['manual_price'] : null);
+                    }
+                }
                 $this->saveVariants($request, $product, $data, $media);
                 if (array_key_exists('tags', $data)) {
                     $ids = [];
@@ -359,7 +365,10 @@ class ProductEditor
         ];
         if ($retail) {
             $rules += ['prices.*' => 'array', 'prices.*.manual_price' => 'nullable|numeric|min:0.01|max:99999999.99',
-                'prices.*.is_manual_override' => 'sometimes|boolean', 'prices.*.is_active' => 'sometimes|boolean'];
+                'prices.*.is_manual_override' => 'sometimes|boolean', 'prices.*.is_active' => 'sometimes|boolean',
+                'new_packs' => 'sometimes|array|max:20', 'new_packs.*' => 'array',
+                'new_packs.*.grams' => 'nullable|integer|min:1|max:100000',
+                'new_packs.*.manual_price' => 'nullable|numeric|min:0.01|max:99999999.99'];
         }
         foreach (['variants', 'new_variants'] as $group) {
             $rules[$group] = 'sometimes|array|max:50';
@@ -437,6 +446,18 @@ class ProductEditor
                         $v->errors()->add("unit_conversions.$i", Product::unitLabel($unit).'-এর কনভার্শন একবারই দিন।');
                     }
                     if (! blank($unit)) { $seen[] = $unit; }
+                }
+            }
+            // New custom pack sizes (admin picks the exact grams customers may buy).
+            if ($retail) {
+                $taken = $product ? $product->prices()->whereNull('product_variant_id')->where('sell_type', 'retail')->pluck('quantity_gram')->map(fn ($g) => (int) $g)->all() : [];
+                foreach ((array) ($input['new_packs'] ?? []) as $i => $row) {
+                    if (! is_array($row) || blank($row['grams'] ?? null)) { continue; }
+                    $g = (int) $row['grams'];
+                    if (in_array($g, $taken, true)) {
+                        $v->errors()->add("new_packs.$i.grams", $g.' গ্রামের প্যাক আগে থেকেই আছে — তালিকায় সক্রিয় করুন।');
+                    }
+                    $taken[] = $g;
                 }
             }
             foreach ($retail ? ($input['prices'] ?? []) : [] as $id => $row) {
