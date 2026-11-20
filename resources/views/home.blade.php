@@ -2595,6 +2595,8 @@ window.msComboBridge = {
         const dup = comboItems.find(x => x !== it && x.productId === it.productId && x.priceId === it.priceId && (x.variantId || null) === (it.variantId || null));
         if (dup) { dup.qty = Math.min(COMBO_MAX_QTY, comboQty(dup) + 1); comboItems = comboItems.filter(x => x !== it); renderCombo(); }
     },
+    // Custom-amount entry in the drawer rebuilds the whole line set (one weight → several packs).
+    replaceAll: function (items) { comboItems = items; renderCombo(); },
     clear:  function () { comboItems = []; renderCombo(); }
 };
 msCartReady = true;
