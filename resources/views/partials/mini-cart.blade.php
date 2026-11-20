@@ -553,25 +553,27 @@
                     // Pack-size dropdown (e.g. ১০০ গ্রাম / ২৫০ গ্রাম / ১ কেজি) so the customer need not tap + many times.
                     const packs = msPacksFor(it);
                     let sizeUi;
+                    const open = String(window.msCustomUid) === String(it.uid);
                     if (packs && packs.length > 1) {
-                        sizeUi = '<select onchange="msCart.changePack(\'' + it.uid + '\', this.value)" aria-label="পরিমাণ বেছে নিন" ' +
-                            'class="mt-1 w-full max-w-[150px] text-[11px] border border-gray-200 rounded-lg px-1.5 py-1 bg-white text-[#14532d] focus:outline-none focus:ring-1 focus:ring-[#c9a227]">' +
+                        sizeUi = '<div class="mt-1 flex items-center gap-1"><select onchange="msCart.changePack(\'' + it.uid + '\', this.value)" aria-label="পরিমাণ বেছে নিন" ' +
+                            'class="min-w-0 flex-1 max-w-[130px] text-[11px] border border-gray-200 rounded-lg px-1.5 py-1 bg-white text-[#14532d] focus:outline-none focus:ring-1 focus:ring-[#c9a227]">' +
                             packs.map(function (p) {
                                 return '<option value="' + p.id + '"' + (String(p.id) === String(it.priceId) ? ' selected' : '') + '>' + msEsc(p.label) + ' · ৳' + msFmt(p.final_price) + '</option>';
                             }).join('') + '</select>' +
-                            // Any amount that isn't a listed pack (150 g, 200 g, 350 g…) — typed once, split into packs automatically.
-                            (String(window.msCustomUid) === String(it.uid)
-                                ? '<div class="mt-1.5 flex items-center gap-1">' +
-                                    '<input id="ms-custom-g" type="number" inputmode="numeric" min="' + msPackStep(packs) + '" step="' + msPackStep(packs) + '" ' +
+                            // Any amount that isn't a listed pack (150 g, 200 g…): small ✎ beside the dropdown, typed once, auto-split into packs.
+                            (open ? '' : '<button type="button" onclick="msCart.openCustom(\'' + it.uid + '\')" title="অন্য পরিমাণ (যেমন ১৫০ গ্রাম)" aria-label="অন্য পরিমাণ" class="shrink-0 w-6 h-6 rounded-md border border-[#c9a227] text-[#b8860b] text-xs leading-none hover:bg-amber-50">✎</button>') +
+                            '</div>' +
+                            (open
+                                ? '<div class="mt-1 flex items-center gap-1">' +
+                                    '<input id="ms-custom-g" type="number" inputmode="numeric" min="' + msPackStep(packs) + '" step="' + msPackStep(packs) + '" placeholder="গ্রাম" ' +
                                         'value="' + Math.round((parseFloat(it.quantity_gram) || 0) * msQty(it)) + '" ' +
                                         'onkeydown="if(event.key===\'Enter\'){msCart.applyCustom(\'' + it.uid + '\');}" aria-label="গ্রাম" ' +
-                                        'class="w-[72px] text-[12px] border border-[#c9a227] rounded-lg px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-[#c9a227]">' +
-                                    '<span class="text-[11px] text-gray-500">গ্রাম</span>' +
-                                    '<button type="button" onclick="msCart.applyCustom(\'' + it.uid + '\')" class="text-[11px] font-bold bg-[#14532d] text-white rounded-lg px-2 py-1">ঠিক আছে</button>' +
-                                    '<button type="button" onclick="msCart.openCustom(null)" aria-label="বাতিল" class="text-gray-400 text-base leading-none px-1">&times;</button>' +
-                                  '</div>' +
-                                  '<div class="text-[10px] text-gray-400 mt-0.5">যেমন ১৫০ বা ৩৫০ — ' + msFmt(msPackStep(packs)) + ' গ্রামের গুণিতক</div>'
-                                : '<button type="button" onclick="msCart.openCustom(\'' + it.uid + '\')" class="block mt-1 text-[11px] font-semibold text-[#b8860b] underline decoration-dotted underline-offset-2">✎ অন্য পরিমাণ (যেমন ১৫০ গ্রাম)</button>');
+                                        'class="w-16 text-[11px] border border-[#c9a227] rounded-md px-1.5 py-0.5 focus:outline-none">' +
+                                    '<span class="text-[10px] text-gray-500">গ্রাম</span>' +
+                                    '<button type="button" onclick="msCart.applyCustom(\'' + it.uid + '\')" aria-label="নিশ্চিত" class="w-6 h-6 rounded-md bg-[#14532d] text-white text-xs leading-none">✓</button>' +
+                                    '<button type="button" onclick="msCart.openCustom(null)" aria-label="বাতিল" class="w-6 h-6 text-gray-400 text-base leading-none">&times;</button>' +
+                                  '</div>'
+                                : '');
                     } else {
                         sizeUi = '<div class="text-[11px] text-gray-500 mt-0.5">' + msEsc(it.label || '') + '</div>';
                     }
