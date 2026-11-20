@@ -64,6 +64,7 @@
             <a href="/"                       class="{{ $navIsHome && ! $navWholesale && ! $navIsTrack ? $dActive : $dLink }}">হোম</a>
             <a href="{{ $retailHref }}"       class="{{ $dLink }}">সব পণ্য</a>
             <a href="{{ $wholesaleHref }}"    class="{{ $navWholesale ? $dActive : $dLink }}">পাইকারি</a>
+            <a href="{{ url('/') }}#combo-builder" class="{{ $dLink }}">🧺 কম্বো বানান</a>
             <a href="{{ route('track-order') }}" class="{{ $navIsTrack ? $dActive : $dLink }}">অর্ডার ট্র্যাক</a>
         </nav>
 
@@ -188,6 +189,10 @@
             <a href="{{ $wholesaleHref }}" class="{{ $navWholesale ? $mActive : $mLink }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7h18M3 7l1.5 12.5A1 1 0 005.5 21h13a1 1 0 001-.5L21 7M3 7l2-4h14l2 4M9 11v6m6-6v6"/></svg>
                 পাইকারি পণ্য
+            </a>
+            <a href="{{ url('/') }}#combo-builder" class="{{ $mLink }}">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4v16m8-8H4"/></svg>
+                কম্বো / নিজের বাক্স বানান
             </a>
             <a href="{{ $navCustomer ? route('customer.orders.index') : route('track-order') }}" class="{{ $navIsTrack ? $mActive : $mLink }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>

@@ -2770,6 +2770,46 @@ function flashComboItem(uid) {
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+// ── Custom amount (e.g. 150 g): split into the cheapest exact set of listed packs ──
+var comboCustomUid = null;
+function comboPricesFor(item) {
+    const p = PRODUCTS[item.productId];
+    if (item.variantId && p && p.variants) {
+        const v = p.variants.find(x => x.id === item.variantId);
+        if (v) return item.sellType === 'retail' ? (v.retail_prices || []) : (v.wholesale_prices || []);
+    }
+    return p ? (item.sellType === 'retail' ? (p.retail_prices || []) : (p.wholesale_prices || [])) : [];
+}
+function openComboCustom(uid) {
+    comboCustomUid = uid;
+    renderCombo();
+    const el = document.getElementById('combo-custom-g');
+    if (uid && el) { el.focus(); el.select(); }
+}
+function applyComboCustom(uid) {
+    const el = document.getElementById('combo-custom-g');
+    const grams = Math.round(parseFloat(el && el.value) || 0);
+    const idx = comboItems.findIndex(x => x.uid === uid);
+    if (idx < 0) return;
+    const it = comboItems[idx], packs = comboPricesFor(it);
+    const plan = packs.length ? msPlan(packs, grams) : null;
+    if (!plan) { msToast(packs.length ? fmt(msPackStep(packs)) + ' গ্রামের গুণিতকে পরিমাণ দিন (যেমন ' + fmt(msPackStep(packs) * 3) + ')' : 'পরিমাণ পরিবর্তন করা যাচ্ছে না'); return; }
+    comboItems.splice(idx, 1);
+    let at = idx;
+    plan.forEach((row, k) => {
+        const dup = comboItems.find(x => x.productId === it.productId && x.priceId === row.pack.id && (x.variantId || null) === (it.variantId || null));
+        if (dup) { dup.qty = Math.min(COMBO_MAX_QTY, comboQty(dup) + row.qty); return; }
+        comboItems.splice(at++, 0, Object.assign({}, it, {
+            uid: Date.now() + k + Math.floor(Math.random() * 1000),
+            priceId: row.pack.id, quantity_gram: row.pack.quantity_gram, label: row.pack.label,
+            price: row.pack.final_price, qty: Math.min(COMBO_MAX_QTY, row.qty)
+        }));
+    });
+    comboCustomUid = null;
+    renderCombo();
+    msToast('✓ ' + grams + ' গ্রাম = ' + plan.map(r => (r.qty > 1 ? r.qty + '×' : '') + r.pack.label).join(' + '));
+}
+
 function renderCombo() {
     const listEl   = document.getElementById('combo-list');
     const emptyEl  = document.getElementById('combo-empty');
@@ -2804,10 +2844,23 @@ function renderCombo() {
             <div class="flex-1 min-w-0">
                 <div class="text-[#fef9ee] font-serif-bn text-sm font-semibold leading-tight truncate">${item.nameBn}</div>
                 ${variantLine}
-                <select onchange="changeComboItem(${item.uid},this.value)"
-                        class="mt-1 text-[11px] border border-green-600 rounded-lg px-2 py-1 bg-[#1a6b3a] text-green-200 w-full focus:outline-none focus:ring-1 focus:ring-[#c9a227]">
-                    ${opts}
-                </select>
+                <div class="mt-1 flex items-center gap-1">
+                    <select onchange="changeComboItem(${item.uid},this.value)"
+                            class="text-[11px] border border-green-600 rounded-lg px-2 py-1 bg-[#1a6b3a] text-green-200 min-w-0 flex-1 focus:outline-none focus:ring-1 focus:ring-[#c9a227]">
+                        ${opts}
+                    </select>
+                    ${itemPrices.length > 1 && comboCustomUid !== item.uid ? `<button type="button" onclick="openComboCustom(${item.uid})" title="অন্য পরিমাণ (যেমন ১৫০ গ্রাম)" aria-label="অন্য পরিমাণ"
+                            class="shrink-0 w-6 h-6 rounded-md border border-[#c9a227] text-[#c9a227] text-xs leading-none hover:bg-green-800">✎</button>` : ''}
+                </div>
+                ${comboCustomUid === item.uid && itemPrices.length > 1 ? `<div class="mt-1 flex items-center gap-1">
+                    <input id="combo-custom-g" type="number" inputmode="numeric" min="${msPackStep(itemPrices)}" step="${msPackStep(itemPrices)}" placeholder="গ্রাম"
+                           value="${Math.round((parseFloat(item.quantity_gram) || 0) * comboQty(item))}"
+                           onkeydown="if(event.key==='Enter'){applyComboCustom(${item.uid});}" aria-label="গ্রাম"
+                           class="w-16 text-[11px] border border-[#c9a227] rounded-md px-1.5 py-0.5 bg-[#1a6b3a] text-[#fef9ee] focus:outline-none">
+                    <span class="text-[10px] text-green-300">গ্রাম</span>
+                    <button type="button" onclick="applyComboCustom(${item.uid})" aria-label="নিশ্চিত" class="w-6 h-6 rounded-md bg-[#c9a227] text-[#0f3d22] text-xs font-bold leading-none">✓</button>
+                    <button type="button" onclick="openComboCustom(null)" aria-label="বাতিল" class="w-6 h-6 text-green-300 text-base leading-none">&times;</button>
+                </div>` : ''}
             </div>
             <div class="flex items-center shrink-0 border border-green-600 rounded-lg overflow-hidden">
                 <button type="button" onclick="setComboQty(${item.uid}, ${comboQty(item) - 1})" ${comboQty(item) <= 1 ? 'disabled' : ''} aria-label="কমান"

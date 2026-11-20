@@ -331,6 +331,7 @@
             .sort(function (a, b) { return b.pack.quantity_gram - a.pack.quantity_gram; });
     }
     window.msCustomUid = null;
+    window.msPlan = msPlan; window.msPackStep = msPackStep;   // shared with the home combo builder
 
     // 125 → "১২৫ গ্রাম", 1500 → "১.৫ কেজি"
     function msWeight(g) {
