@@ -82,15 +82,10 @@
                         <div class="flex gap-2">
                             <a href="{{ $detailUrl }}"
                                class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
-                                বিস্তারিত
+                                অর্ডার করুন
                             </a>
                             @unless($wholesaleOnly)
-                                @if($initRetailPrices->isNotEmpty())
-                                <button type="button" onclick="cardAddToBag(this, {{ $product->id }})" {{ $product->isInStock() ? '' : 'disabled' }}
-                                        class="bg-[#14532d] hover:bg-[#166534] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed">
-                                    🛍️ ব্যাগে
-                                </button>
-                                @else
+                                @if($initRetailPrices->isEmpty())
                                 <button onclick="goToCombo({{ $product->id }})"
                                         class="border border-[#c9a227] text-[#c9a227] hover:bg-[#c9a227] hover:text-[#0f3d22] text-xs font-semibold px-3 py-2 rounded-lg transition-colors whitespace-nowrap">
                                     বাক্সে যোগ
