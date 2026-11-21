@@ -334,10 +334,27 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                 margin="mb-5" />
             @include('partials.storefront.how-to-steps', ['tone' => 'green', 'steps' => ['"＋ যোগ করুন" চেপে পণ্য বাছুন', 'আরও পণ্য লাগলে একইভাবে যোগ করুন', 'শেষে একবারেই সব অর্ডার করুন']])
 
+        @php
+            // product id → top-level category id (0 = uncategorised), for the picker's category chips.
+            $pickCat = [];
+            foreach ($productGroups as $g) { foreach ($g['products'] as $gp) { $pickCat[$gp->id] = $g['category']?->id ?? 0; } }
+            $pickChips = $navCategories->filter(fn ($c) => in_array($c->id, $pickCat, true));
+        @endphp
+        <style>.pk-hide{display:none!important}</style>
         <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-start">
 
             {{-- ── Product Picker ── --}}
             <div class="flex-1 min-w-0">
+                @if($pickChips->count() > 1)
+                <div id="picker-cats" class="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1" role="tablist" aria-label="ক্যাটাগরি">
+                    <button type="button" data-pcat-btn="all" onclick="pickerFilterCat('all')"
+                            class="pk-chip shrink-0 px-4 py-2 rounded-full text-sm font-semibold border bg-[#14532d] text-white border-[#14532d] transition-colors">সব</button>
+                    @foreach($pickChips as $pc)
+                    <button type="button" data-pcat-btn="{{ $pc->id }}" onclick="pickerFilterCat('{{ $pc->id }}')"
+                            class="pk-chip shrink-0 px-4 py-2 rounded-full text-sm font-semibold border bg-white text-gray-600 border-gray-200 hover:border-[#14532d] hover:text-[#14532d] transition-colors whitespace-nowrap">{{ $pc->name_bn }}</button>
+                    @endforeach
+                </div>
+                @endif
                 <div class="space-y-2.5">
                 @foreach($products as $product)
                     @php
@@ -352,7 +369,7 @@ $wholesaleHref = url('/') . '?mode=wholesale' . ($catParam ? '&category=' . urle
                         $showRow = ($product->activePrices->isNotEmpty() || $hasVariants) && $product->show_in_retail;
                     @endphp
                     @if($showRow)
-                    <div id="picker-row-{{ $product->id }}"
+                    <div id="picker-row-{{ $product->id }}" data-pcat="{{ $pickCat[$product->id] ?? 0 }}"
                          class="bg-white border border-green-100 rounded-2xl p-3.5 sm:p-4 shadow-sm transition-colors duration-300"
                          style="{{ (!$hasVariants && $pickerRetailPrices->isEmpty()) ? 'display:none;' : '' }}">
 
@@ -2601,6 +2618,16 @@ window.msComboBridge = {
 };
 msCartReady = true;
 renderCombo();
+
+// Category chips above the combo picker: show only that category's products (no reload).
+function pickerFilterCat(cat) {
+    document.querySelectorAll('[data-pcat]').forEach(r => r.classList.toggle('pk-hide', cat !== 'all' && r.dataset.pcat !== String(cat)));
+    document.querySelectorAll('[data-pcat-btn]').forEach(b => {
+        const on = b.dataset.pcatBtn === String(cat);
+        b.className = 'pk-chip shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-colors whitespace-nowrap ' +
+            (on ? 'bg-[#14532d] text-white border-[#14532d]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#14532d] hover:text-[#14532d]');
+    });
+}
 
 function pickerPriceUpdate(productId) {
     const sel = document.getElementById('picker-qty-' + productId);
