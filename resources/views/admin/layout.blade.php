@@ -70,7 +70,7 @@
 
     $menuGroups = [
         [
-            'label' => 'Products', 'icon' => $icons['box'],
+            'label' => 'পণ্য', 'icon' => $icons['box'],
             'items' => [
                 ['label' => 'পণ্যসমূহ',  'route' => 'admin.products.index',   'active' => 'admin.products.*'],
                 ['label' => 'প্রাইস বোর্ড', 'route' => 'admin.price-board.index', 'active' => 'admin.price-board.*'],
@@ -79,65 +79,65 @@
             ],
         ],
         [
-            'label' => 'Orders & Sales', 'icon' => $icons['clip'],
+            'label' => 'অর্ডার ও বিক্রয়', 'icon' => $icons['clip'],
             'items' => [
                 ['label' => 'অর্ডার',   'route' => 'admin.orders.index',    'active' => ['admin.orders.index', 'admin.orders.show', 'admin.orders.invoice']],
-                ['label' => '+ ফোন / WhatsApp অর্ডার', 'route' => 'admin.orders.manual.create', 'active' => ['admin.orders.manual.create', 'admin.orders.manual.share']],
+                ['label' => '+ ফোন / হোয়াটসঅ্যাপ অর্ডার', 'route' => 'admin.orders.manual.create', 'active' => ['admin.orders.manual.create', 'admin.orders.manual.share']],
                 ['label' => 'মুছে ফেলা অর্ডার', 'route' => 'admin.orders.trash', 'active' => 'admin.orders.trash'],
                 ['label' => 'কাস্টমার', 'route' => 'admin.customers.index', 'active' => 'admin.customers.*'],
             ],
         ],
         [
-            'label' => 'Wholesale Orders', 'icon' => $icons['chat'],
+            'label' => 'পাইকারি অর্ডার', 'icon' => $icons['chat'],
             'items' => [
-                ['label' => 'Enquiry সমূহ',     'route' => 'admin.wholesale.enquiry.index', 'active' => 'admin.wholesale.enquiry.*'],
+                ['label' => 'এনকোয়ারি সমূহ',     'route' => 'admin.wholesale.enquiry.index', 'active' => 'admin.wholesale.enquiry.*'],
                 ['label' => 'কোটেশন অনুমোদন',  'route' => 'admin.wholesale.quote.index',   'active' => 'admin.wholesale.quote.*'],
-                ['label' => 'Chat Monitor',     'route' => 'admin.wholesale.chat.index',    'active' => 'admin.wholesale.chat.*'],
+                ['label' => 'চ্যাট মনিটর',     'route' => 'admin.wholesale.chat.index',    'active' => 'admin.wholesale.chat.*'],
             ],
         ],
         [
-            'label' => 'Vendors', 'icon' => $icons['shop'],
+            'label' => 'ভেন্ডর', 'icon' => $icons['shop'],
             'items' => [
                 ['label' => 'ভেন্ডর / মার্চেন্ট', 'route' => 'admin.vendors.index',          'active' => 'admin.vendors.*'],
                 ['label' => 'ভেন্ডর পণ্য অনুমোদন', 'route' => 'admin.vendor-products.index', 'active' => 'admin.vendor-products.*'],
                 ['label' => 'ভেন্ডর স্টক',        'route' => 'admin.vendor-stock.index',     'active' => 'admin.vendor-stock.*'],
                 ['label' => 'ভেন্ডর কাস্টমার',    'route' => 'admin.vendor-customers.index', 'active' => 'admin.vendor-customers.*'],
                 ['label' => 'পেআউট রিকুয়েস্ট',   'route' => 'admin.vendor-payouts.index',   'active' => 'admin.vendor-payouts.*'],
-                ['label' => 'Vendor Wallet',       'route' => 'admin.vendor-wallet.index',    'active' => 'admin.vendor-wallet.*'],
-                ['label' => 'Commission সেটিং',   'route' => 'admin.commission.settings.index', 'active' => 'admin.commission.*'],
+                ['label' => 'ভেন্ডর ওয়ালেট',       'route' => 'admin.vendor-wallet.index',    'active' => 'admin.vendor-wallet.*'],
+                ['label' => 'কমিশন সেটিং',   'route' => 'admin.commission.settings.index', 'active' => 'admin.commission.*'],
             ],
         ],
         [
-            'label' => 'Delivery & Courier', 'icon' => $icons['truck'],
+            'label' => 'ডেলিভারি ও কুরিয়ার', 'icon' => $icons['truck'],
             'items' => [
                 ['label' => 'কুরিয়ার',        'route' => 'admin.couriers.index',             'active' => 'admin.couriers.*'],
                 ['label' => 'ডেলিভারি রেট',    'route' => 'admin.delivery-rates.index',       'active' => 'admin.delivery-rates.*'],
-                ['label' => 'API সেটিং',       'route' => 'admin.courier-api-settings.index', 'active' => 'admin.courier-api-settings.*'],
+                ['label' => 'এপিআই সেটিং',       'route' => 'admin.courier-api-settings.index', 'active' => 'admin.courier-api-settings.*'],
                 ['label' => 'পার্সেল অর্ডার',  'route' => 'admin.courier-orders.index',        'active' => 'admin.courier-orders.*'],
                 ['label' => 'ভেন্ডর পিকআপ',    'route' => 'admin.vendor-pickup-points.index', 'active' => 'admin.vendor-pickup-points.*'],
                 ['label' => 'ডেলিভারি জোন',    'route' => 'admin.delivery-zones.index',        'active' => 'admin.delivery-zones.*'],
             ],
         ],
         [
-            'label' => 'Customers & Support', 'icon' => $icons['return'],
+            'label' => 'কাস্টমার ও সাপোর্ট', 'icon' => $icons['return'],
             'items' => [
                 ['label' => 'রিটার্ন রিকোয়েস্ট', 'route' => 'admin.return-requests.index', 'active' => 'admin.return-requests.*'],
                 ['label' => 'সাপোর্ট টিকেট',      'route' => 'admin.support-tickets.index', 'active' => 'admin.support-tickets.*'],
-                ['label' => 'Bot API ও সোশ্যাল লিড', 'route' => 'admin.bot-api.index',     'active' => 'admin.bot-api.*'],
+                ['label' => 'বট এপিআই ও সোশ্যাল লিড', 'route' => 'admin.bot-api.index',     'active' => 'admin.bot-api.*'],
             ],
         ],
         [
-            'label' => 'Reviews & Content', 'icon' => $icons['star'],
+            'label' => 'রিভিউ ও কনটেন্ট', 'icon' => $icons['star'],
             'items' => [
-                ['label' => 'FAQ',           'route' => 'admin.faqs.index',            'active' => 'admin.faqs.*'],
+                ['label' => 'সাধারণ জিজ্ঞাসা (FAQ)',           'route' => 'admin.faqs.index',            'active' => 'admin.faqs.*'],
                 ['label' => 'রিভিউ',         'route' => 'admin.reviews.index',         'active' => 'admin.reviews.*'],
                 ['label' => 'পণ্য রিভিউ',     'route' => 'admin.product-reviews.index', 'active' => 'admin.product-reviews.*'],
-                ['label' => 'Hero Slides', 'route' => 'admin.hero-slides.index', 'active' => 'admin.hero-slides.*'],
+                ['label' => 'হিরো স্লাইড', 'route' => 'admin.hero-slides.index', 'active' => 'admin.hero-slides.*'],
                 ['label' => 'ওয়েবসাইট সেটিং', 'route' => 'admin.website-settings.index', 'active' => 'admin.website-settings.*'],
             ],
         ],
         [
-            'label' => 'Settings', 'icon' => $icons['gear'],
+            'label' => 'সেটিংস', 'icon' => $icons['gear'],
             'items' => [
                 ['label' => 'পেমেন্ট সেটিং',  'route' => 'admin.payment-settings.index',  'active' => 'admin.payment-settings.*'],
                 ['label' => 'ডেলিভারি সেটিং',  'route' => 'admin.delivery-settings.index', 'active' => 'admin.delivery-settings.*'],
@@ -170,7 +170,7 @@
         </div>
         <div>
             <div class="text-white text-sm font-bold leading-tight">মসলা ঘর</div>
-            <div class="text-[#4d7a5a] text-[10px] leading-none mt-0.5">Admin Panel</div>
+            <div class="text-[#4d7a5a] text-[10px] leading-none mt-0.5">অ্যাডমিন প্যানেল</div>
         </div>
     </div>
 
